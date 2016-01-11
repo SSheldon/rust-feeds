@@ -25,48 +25,52 @@ enum ApiRequest {
     MarkGroupRead(u32, u32),
 }
 
-fn request_type(query: &str) -> Option<ApiRequest> {
-    let components: Vec<_> = query.split('&').map(|c| {
-        let mut split = c.splitn(2, '=');
-        (split.next().unwrap(), split.next())
-    }).collect();
+impl ApiRequest {
+    pub fn parse(query: &str) -> Option<ApiRequest> {
+        let components: Vec<_> = query.split('&').map(|c| {
+            let mut split = c.splitn(2, '=');
+            (split.next().unwrap(), split.next())
+        }).collect();
 
-    let components = match components.split_first() {
-        Some((&("api", None), components)) => components,
-        _ => return None,
-    };
-    let (action, components) = match components.split_first() {
-        Some((&action, components)) => (action, components),
-        None => return Some(ApiRequest::None),
-    };
+        let components = match components.split_first() {
+            Some((&("api", None), components)) => components,
+            _ => return None,
+        };
+        let (action, components) = match components.split_first() {
+            Some((&action, components)) => (action, components),
+            None => return Some(ApiRequest::None),
+        };
 
-    match action {
-        ("groups", None) => Some(ApiRequest::Groups),
-        ("feeds", None) => Some(ApiRequest::Feeds),
-        ("items", None) => match components.first() {
-            Some(&("since_id", val)) => val.and_then(|v| v.parse().ok())
-                                           .map(|v| ApiRequest::ItemsSince(v)),
-            Some(&("max_id", val)) => val.and_then(|v| v.parse().ok())
-                                         .map(|v| ApiRequest::ItemsBefore(v)),
-            Some(&("with_ids", val)) => val.and_then(|v| {
-                let ids: Result<_, _> = v.split(',').map(|v| v.parse()).collect();
-                ids.map(|v| ApiRequest::Items(v)).ok()
-            }),
-            None => Some(ApiRequest::LatestItems),
+        match action {
+            ("groups", None) => Some(ApiRequest::Groups),
+            ("feeds", None) => Some(ApiRequest::Feeds),
+            ("favicons", None) => unimplemented!(),
+            ("items", None) => match components.first() {
+                Some(&("since_id", val)) => val.and_then(|v| v.parse().ok())
+                                               .map(|v| ApiRequest::ItemsSince(v)),
+                Some(&("max_id", val)) => val.and_then(|v| v.parse().ok())
+                                             .map(|v| ApiRequest::ItemsBefore(v)),
+                Some(&("with_ids", val)) => val.and_then(|v| {
+                    let ids: Result<_, _> = v.split(',').map(|v| v.parse()).collect();
+                    ids.map(|v| ApiRequest::Items(v)).ok()
+                }),
+                None => Some(ApiRequest::LatestItems),
+                _ => None,
+            },
+            ("links", None) => unimplemented!(),
+            ("unread_item_ids", None) => Some(ApiRequest::UnreadItems),
+            ("saved_item_ids", None) => Some(ApiRequest::SavedItems),
+            ("mark", Some("item")) => {
+                unimplemented!();
+            }
+            ("mark", Some("feed")) => {
+                unimplemented!();
+            }
+            ("mark", Some("group")) => {
+                unimplemented!();
+            }
             _ => None,
-        },
-        ("unread_item_ids", None) => Some(ApiRequest::UnreadItems),
-        ("saved_item_ids", None) => Some(ApiRequest::SavedItems),
-        ("mark", Some("item")) => {
-            unimplemented!();
         }
-        ("mark", Some("feed")) => {
-            unimplemented!();
-        }
-        ("mark", Some("group")) => {
-            unimplemented!();
-        }
-        _ => None,
     }
 }
 
@@ -77,7 +81,7 @@ fn handle_request(request: &mut Request) -> IronResult<Response> {
     }
 
     let query = iexpect!(request.url.query.as_ref());
-    let req_type = iexpect!(request_type(query));
+    let req_type = iexpect!(ApiRequest::parse(query));
     println!("{:?}", req_type);
 
     let mut body = String::new();
@@ -93,17 +97,17 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    use super::{ApiRequest, request_type};
+    use super::ApiRequest;
 
     #[test]
     fn test_request_type() {
-        assert_eq!(request_type("api"), Some(ApiRequest::None));
-        assert_eq!(request_type("api&feeds"), Some(ApiRequest::Feeds));
-        assert_eq!(request_type("api&unread_item_ids"),
+        assert_eq!(ApiRequest::parse("api"), Some(ApiRequest::None));
+        assert_eq!(ApiRequest::parse("api&feeds"), Some(ApiRequest::Feeds));
+        assert_eq!(ApiRequest::parse("api&unread_item_ids"),
                    Some(ApiRequest::UnreadItems));
-        assert_eq!(request_type("api&items&since_id=0"),
+        assert_eq!(ApiRequest::parse("api&items&since_id=0"),
                    Some(ApiRequest::ItemsSince(0)));
-        assert_eq!(request_type("api&items&with_ids=0,1,2"),
+        assert_eq!(ApiRequest::parse("api&items&with_ids=0,1,2"),
                    Some(ApiRequest::Items(vec![0, 1, 2])));
     }
 }
