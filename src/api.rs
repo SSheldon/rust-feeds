@@ -12,8 +12,8 @@ pub enum ApiRequest {
     MarkItemRead(u32),
     MarkItemSaved(u32),
     MarkItemUnsaved(u32),
-    MarkFeedRead(u32, u32),
-    MarkGroupRead(u32, u32),
+    MarkFeedRead(u32, i32),
+    MarkGroupRead(u32, i32),
 }
 
 impl ApiRequest {
@@ -101,6 +101,34 @@ impl ApiRequest {
                 format!("api&mark=group&as=read&id={}&before={}", id, before),
         }
     }
+}
+
+pub struct Group {
+    pub id: u32,
+    pub title: String,
+    pub feed_ids: Vec<u32>,
+}
+
+pub struct Feed {
+    pub id: u32,
+    pub favicon_id: u32,
+    pub title: String,
+    pub url: String,
+    pub site_url: String,
+    pub is_spark: bool,
+    pub last_updated_on_time: i32,
+}
+
+pub struct Item {
+    pub id: u32,
+    pub feed_id: u32,
+    pub title: String,
+    pub author: String,
+    pub html: String,
+    pub url: String,
+    pub is_saved: bool,
+    pub is_read: bool,
+    pub created_on_time: i32,
 }
 
 #[cfg(test)]
