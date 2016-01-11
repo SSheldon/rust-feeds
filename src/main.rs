@@ -41,13 +41,22 @@ fn request_type(query: &str) -> Option<ApiRequest> {
     };
 
     match action {
-        ("groups", _) => Some(ApiRequest::Groups),
-        ("feeds", _) => Some(ApiRequest::Feeds),
-        ("items", _) => {
-            unimplemented!();
-        }
-        ("unread_item_ids", _) => Some(ApiRequest::UnreadItems),
-        ("saved_item_ids", _) => Some(ApiRequest::SavedItems),
+        ("groups", None) => Some(ApiRequest::Groups),
+        ("feeds", None) => Some(ApiRequest::Feeds),
+        ("items", None) => match components.first() {
+            Some(&("since_id", val)) => val.and_then(|v| v.parse().ok())
+                                           .map(|v| ApiRequest::ItemsSince(v)),
+            Some(&("max_id", val)) => val.and_then(|v| v.parse().ok())
+                                         .map(|v| ApiRequest::ItemsBefore(v)),
+            Some(&("with_ids", val)) => val.and_then(|v| {
+                let ids: Result<_, _> = v.split(',').map(|v| v.parse()).collect();
+                ids.map(|v| ApiRequest::Items(v)).ok()
+            }),
+            None => Some(ApiRequest::LatestItems),
+            _ => None,
+        },
+        ("unread_item_ids", None) => Some(ApiRequest::UnreadItems),
+        ("saved_item_ids", None) => Some(ApiRequest::SavedItems),
         ("mark", Some("item")) => {
             unimplemented!();
         }
@@ -90,6 +99,11 @@ mod tests {
     fn test_request_type() {
         assert_eq!(request_type("api"), Some(ApiRequest::None));
         assert_eq!(request_type("api&feeds"), Some(ApiRequest::Feeds));
-        assert_eq!(request_type("api&unread_item_ids"), Some(ApiRequest::UnreadItems));
+        assert_eq!(request_type("api&unread_item_ids"),
+                   Some(ApiRequest::UnreadItems));
+        assert_eq!(request_type("api&items&since_id=0"),
+                   Some(ApiRequest::ItemsSince(0)));
+        assert_eq!(request_type("api&items&with_ids=0,1,2"),
+                   Some(ApiRequest::Items(vec![0, 1, 2])));
     }
 }
