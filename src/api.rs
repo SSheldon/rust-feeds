@@ -22,25 +22,25 @@ pub enum ApiRequest {
 
 impl ApiRequest {
     pub fn parse(query: &str) -> Option<ApiRequest> {
-        let components: Vec<_> = query.split('&').map(|c| {
+        let mut components = query.split('&');
+        match components.next() {
+            Some("api") => (),
+            _ => return None,
+        };
+
+        let action = components.next();
+        let components: Vec<_> = components.map(|c| {
             let mut split = c.splitn(2, '=');
             (split.next().unwrap(), split.next())
         }).collect();
 
-        let components = match components.split_first() {
-            Some((&("api", None), components)) => components,
-            _ => return None,
-        };
-        let (action, components) = match components.split_first() {
-            Some((&action, components)) => (action, components),
-            None => return Some(ApiRequest::None),
-        };
-
         match action {
-            ("groups", None) => Some(ApiRequest::Groups),
-            ("feeds", None) => Some(ApiRequest::Feeds),
-            ("favicons", None) => unimplemented!(),
-            ("items", None) => match components.first() {
+            // TODO: there may still be post params with no action
+            None => Some(ApiRequest::None),
+            Some("groups") => Some(ApiRequest::Groups),
+            Some("feeds") => Some(ApiRequest::Feeds),
+            Some("favicons") => unimplemented!(),
+            Some("items") => match components.first() {
                 Some(&("since_id", val)) => val.and_then(|v| v.parse().ok())
                                                .map(|v| ApiRequest::ItemsSince(v)),
                 Some(&("max_id", val)) => val.and_then(|v| v.parse().ok())
@@ -52,18 +52,9 @@ impl ApiRequest {
                 None => Some(ApiRequest::LatestItems),
                 _ => None,
             },
-            ("links", None) => unimplemented!(),
-            ("unread_item_ids", None) => Some(ApiRequest::UnreadItems),
-            ("saved_item_ids", None) => Some(ApiRequest::SavedItems),
-            ("mark", Some("item")) => {
-                unimplemented!();
-            }
-            ("mark", Some("feed")) => {
-                unimplemented!();
-            }
-            ("mark", Some("group")) => {
-                unimplemented!();
-            }
+            Some("links") => unimplemented!(),
+            Some("unread_item_ids") => Some(ApiRequest::UnreadItems),
+            Some("saved_item_ids") => Some(ApiRequest::SavedItems),
             _ => None,
         }
     }
@@ -73,7 +64,12 @@ impl ApiRequest {
         use self::ApiRequest::*;
 
         match *self {
-            None => "api".to_owned(),
+            None  |
+            MarkItemRead(_) |
+            MarkItemSaved(_) |
+            MarkItemUnsaved(_) |
+            MarkFeedRead(_, _) |
+            MarkGroupRead(_, _) => "api".to_owned(),
             Groups => "api&groups".to_owned(),
             Feeds => "api&feeds".to_owned(),
             LatestItems => "api&items".to_owned(),
@@ -93,16 +89,6 @@ impl ApiRequest {
             }
             UnreadItems => "api&unread_item_ids".to_owned(),
             SavedItems => "api&saved_item_ids".to_owned(),
-            MarkItemRead(id) =>
-                format!("api&mark=item&as=read&id={}", id),
-            MarkItemSaved(id) =>
-                format!("api&mark=item&as=saved&id={}", id),
-            MarkItemUnsaved(id) =>
-                format!("api&mark=item&as=unsaved&id={}", id),
-            MarkFeedRead(id, before) =>
-                format!("api&mark=feed&as=read&id={}&before={}", id, before),
-            MarkGroupRead(id, before) =>
-                format!("api&mark=group&as=read&id={}&before={}", id, before),
         }
     }
 }
