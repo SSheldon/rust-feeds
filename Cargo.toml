@@ -2,3 +2,6 @@
 name = "feeds"
 version = "0.0.0"
 authors = ["Steven Sheldon"]
+
+[dependencies]
+iron = "0.2"
