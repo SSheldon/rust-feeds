@@ -72,6 +72,44 @@ impl ApiRequest {
             _ => None,
         }
     }
+
+    pub fn query(&self) -> String {
+        use std::fmt::Write;
+        use ApiRequest::*;
+
+        match *self {
+            None => "api".to_owned(),
+            Groups => "api&groups".to_owned(),
+            Feeds => "api&feeds".to_owned(),
+            LatestItems => "api&items".to_owned(),
+            ItemsSince(id) =>
+                format!("api&items&since_id={}", id),
+            ItemsBefore(id) =>
+                format!("api&items&max_id={}", id),
+            Items(ref ids) => {
+                let mut result = "api&items&with_ids=".to_owned();
+                let mut first = true;
+                for &id in ids {
+                    let sep = if first {""} else {","};
+                    write!(&mut result, "{}{}", sep, id).unwrap();
+                    first = false;
+                }
+                result
+            }
+            UnreadItems => "api&unread_item_ids".to_owned(),
+            SavedItems => "api&saved_item_ids".to_owned(),
+            MarkItemRead(id) =>
+                format!("api&mark=item&as=read&id={}", id),
+            MarkItemSaved(id) =>
+                format!("api&mark=item&as=saved&id={}", id),
+            MarkItemUnsaved(id) =>
+                format!("api&mark=item&as=unsaved&id={}", id),
+            MarkFeedRead(id, before) =>
+                format!("api&mark=feed&as=read&id={}&before={}", id, before),
+            MarkGroupRead(id, before) =>
+                format!("api&mark=group&as=read&id={}&before={}", id, before),
+        }
+    }
 }
 
 fn handle_request(request: &mut Request) -> IronResult<Response> {
