@@ -3,7 +3,7 @@
 name = "atom_syndication"
 version = "0.1.2"
 authors = ["Duncan <duncan@vtllf.org>", "Corey Farwell <coreyf@rwell.org>"]
-license = "Apache-2.0"
+license = "MIT OR Apache-2.0"
 repository = "https://github.com/vtduncan/rust-atom"
 documentation = "https://vtduncan.github.io/rust-atom/atom_syndication/index.html"
 description = "Library for serializing the Atom web content syndication format"
