@@ -1,3 +1,7 @@
+use std::collections::BTreeMap;
+
+use serde_json::Value;
+
 #[derive(Debug, PartialEq)]
 pub enum ApiRequest {
     None,
@@ -109,6 +113,7 @@ pub struct Group {
     pub feed_ids: Vec<u32>,
 }
 
+#[derive(Default)]
 pub struct Feed {
     pub id: u32,
     pub favicon_id: u32,
@@ -119,6 +124,21 @@ pub struct Feed {
     pub last_updated_on_time: i32,
 }
 
+impl Feed {
+    pub fn into_json(self) -> Value {
+        let mut obj = BTreeMap::new();
+        obj.insert("id".to_owned(), Value::U64(self.id as u64));
+        // obj.insert("favicon_id".to_owned(), Value::U64(self.favicon_id as u64));
+        obj.insert("title".to_owned(), Value::String(self.title));
+        obj.insert("url".to_owned(), Value::String(self.url));
+        // obj.insert("site_url".to_owned(), Value::String(self.site_url));
+        // obj.insert("is_spark".to_owned(), Value::U64(if self.is_spark {1} else {0}));
+        obj.insert("last_updated_on_time".to_owned(), Value::I64(self.last_updated_on_time as i64));
+        Value::Object(obj)
+    }
+}
+
+#[derive(Default)]
 pub struct Item {
     pub id: u32,
     pub feed_id: u32,
@@ -129,6 +149,22 @@ pub struct Item {
     pub is_saved: bool,
     pub is_read: bool,
     pub created_on_time: i32,
+}
+
+impl Item {
+    pub fn into_json(self) -> Value {
+        let mut obj = BTreeMap::new();
+        obj.insert("id".to_owned(), Value::U64(self.id as u64));
+        obj.insert("feed_id".to_owned(), Value::U64(self.feed_id as u64));
+        obj.insert("title".to_owned(), Value::String(self.title));
+        // obj.insert("author".to_owned(), Value::String(self.author));
+        obj.insert("html".to_owned(), Value::String(self.html));
+        obj.insert("url".to_owned(), Value::String(self.url));
+        obj.insert("is_saved".to_owned(), Value::U64(if self.is_saved {1} else {0}));
+        obj.insert("is_read".to_owned(), Value::U64(if self.is_read {1} else {0}));
+        obj.insert("created_on_time".to_owned(), Value::I64(self.created_on_time as i64));
+        Value::Object(obj)
+    }
 }
 
 #[cfg(test)]

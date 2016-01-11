@@ -5,3 +5,4 @@ authors = ["Steven Sheldon"]
 
 [dependencies]
 iron = "0.2"
+serde_json = "0.6"
