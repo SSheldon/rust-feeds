@@ -3,6 +3,7 @@ extern crate iron;
 use std::io::Read;
 
 use iron::prelude::*;
+use iron::method;
 use iron::status;
 
 #[derive(Debug, PartialEq)]
@@ -60,6 +61,11 @@ fn request_type(query: &str) -> ApiRequest {
 }
 
 fn handle_request(request: &mut Request) -> IronResult<Response> {
+    match request.method {
+        method::Post => (),
+        _ => return Ok(Response::with(status::MethodNotAllowed)),
+    }
+
     let query = request.url.query.as_ref().unwrap();
     let req_type = request_type(query);
     println!("{:?}", req_type);
