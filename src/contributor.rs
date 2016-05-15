@@ -5,7 +5,7 @@ use ::{ElementUtils, NS, Person, ViaXml};
 
 /// [The Atom Syndication Format § The "atom:contributor" Element]
 /// (https://tools.ietf.org/html/rfc4287#section-4.2.3)
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Contributor(pub Person);
 
 

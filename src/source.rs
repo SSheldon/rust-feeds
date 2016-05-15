@@ -5,7 +5,7 @@ use ::{Author, Category, Contributor, ElementUtils, Generator, Link, NS, Person,
 
 /// [The Atom Syndication Format § The "atom:source" Element]
 /// (https://tools.ietf.org/html/rfc4287#section-4.2.11)
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Source {
     pub id: Option<String>,
     pub title: Option<String>,

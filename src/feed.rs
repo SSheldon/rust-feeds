@@ -20,7 +20,7 @@ use ::{Author, Category, Contributor, ElementUtils, Entry, Generator, Link, NS, 
 ///     ..Default::default()
 /// };
 /// ```
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Feed {
     pub id: String,
     pub title: String,

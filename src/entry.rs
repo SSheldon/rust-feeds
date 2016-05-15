@@ -18,7 +18,7 @@ use ::{Author, Category, Contributor, ElementUtils, Feed, Link, NS, Person, ViaX
 ///     ..Default::default()
 /// };
 /// ```
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Entry {
     pub id: String,
     pub title: String,

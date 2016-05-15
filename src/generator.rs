@@ -7,7 +7,7 @@ use ::{ElementUtils, NS, ViaXml};
 
 /// [The Atom Syndication Format § The "atom:generator" Element]
 /// (https://tools.ietf.org/html/rfc4287#section-4.2.4)
-#[derive(Default)]
+#[derive(Clone, Default)]
 pub struct Generator {
     pub name: String,
     pub uri: Option<String>,
