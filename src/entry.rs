@@ -1,7 +1,7 @@
 use xml::Element;
 
 use {Author, Category, Contributor, Link, NS, Person, Source};
-use utils::{ElementUtils, ViaXml};
+use utils::{ElementUtils, Flip, ViaXml};
 
 
 /// [The Atom Syndication Format § The "atom:entry" Element]
@@ -86,28 +86,25 @@ impl ViaXml for Entry {
             Some(elem) => elem.content_str(),
             None => return Err("<entry> is missing required <updated> element"),
         };
-        
-        let source = elem.get_child("source", Some(NS)).map(|e| ViaXml::from_xml(e.clone()).unwrap());
 
-        let links = elem.get_children("link", Some(NS))
-            .map(|e| ViaXml::from_xml(e.clone()).unwrap())
-            .collect();
+        let source = try!(elem.get_child("source", Some(NS))
+            .map(|e| ViaXml::from_xml(e.clone())).flip());
 
-        let categories = elem.get_children("category", Some(NS))
-            .map(|e| ViaXml::from_xml(e.clone()).unwrap())
-            .collect();
+        let links = try!(elem.get_children("link", Some(NS))
+            .map(|e| ViaXml::from_xml(e.clone()))
+            .collect());
 
-        let authors = elem.get_children("author", Some(NS))
-            .map(|e| {
-                let Author(person) = ViaXml::from_xml(e.clone()).unwrap();
-                person
-            }).collect();
+        let categories = try!(elem.get_children("category", Some(NS))
+            .map(|e| ViaXml::from_xml(e.clone()))
+            .collect());
 
-        let contributors = elem.get_children("contributor", Some(NS))
-            .map(|e| {
-                let Contributor(person) = ViaXml::from_xml(e.clone()).unwrap();
-                person
-            }).collect();
+        let authors = try!(elem.get_children("author", Some(NS))
+            .map(|e| ViaXml::from_xml(e.clone()).map(|Author(person)| person))
+            .collect());
+
+        let contributors = try!(elem.get_children("contributor", Some(NS))
+            .map(|e| ViaXml::from_xml(e.clone()).map(|Contributor(person)| person))
+            .collect());
 
         let published = elem.get_child("published", Some(NS)).map(Element::content_str);
         let summary = elem.get_child("summary", Some(NS)).map(Element::content_str);

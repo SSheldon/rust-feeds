@@ -44,3 +44,23 @@ pub trait ViaXml where Self: Sized {
     fn to_xml(&self) -> Element;
     fn from_xml(elem: Element) -> Result<Self, &'static str>;
 }
+
+
+pub trait Flip {
+    type Output;
+
+    fn flip(self) -> Self::Output;
+}
+
+
+impl<T, E> Flip for Option<Result<T, E>> {
+    type Output = Result<Option<T>, E>;
+
+    fn flip(self) -> Self::Output {
+        match self {
+            Some(Ok(x)) => Ok(Some(x)),
+            Some(Err(x)) => Err(x),
+            None => Ok(None),
+        }
+    }
+}

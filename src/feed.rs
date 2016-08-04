@@ -2,7 +2,7 @@ use std::str::FromStr;
 use xml::{Element, ElementBuilder, Parser, Xml};
 
 use {Author, Category, Contributor, Entry, Generator, Link, NS, Person};
-use utils::{ElementUtils, ViaXml};
+use utils::{ElementUtils, Flip, ViaXml};
 
 
 /// [The Atom Syndication Format § The "atom:feed" Element]
@@ -98,31 +98,29 @@ impl ViaXml for Feed {
         let logo = elem.get_child("logo", Some(NS)).map(Element::content_str);
         let rights = elem.get_child("rights", Some(NS)).map(Element::content_str);
         let subtitle = elem.get_child("subtitle", Some(NS)).map(Element::content_str);
-        let generator = elem.get_child("generator", Some(NS)).map(|e| ViaXml::from_xml(e.clone()).unwrap());
 
-        let links = elem.get_children("link", Some(NS))
-            .map(|e| ViaXml::from_xml(e.clone()).unwrap())
-            .collect();
+        let generator = try!(elem.get_child("generator", Some(NS))
+            .map(|e| ViaXml::from_xml(e.clone())).flip());
 
-        let categories = elem.get_children("category", Some(NS))
-            .map(|e| ViaXml::from_xml(e.clone()).unwrap())
-            .collect();
+        let links = try!(elem.get_children("link", Some(NS))
+            .map(|e| ViaXml::from_xml(e.clone()))
+            .collect());
 
-        let authors = elem.get_children("author", Some(NS))
-            .map(|e| {
-                let Author(person) = ViaXml::from_xml(e.clone()).unwrap();
-                person
-            }).collect();
+        let categories = try!(elem.get_children("category", Some(NS))
+            .map(|e| ViaXml::from_xml(e.clone()))
+            .collect());
 
-        let contributors = elem.get_children("contributor", Some(NS))
-            .map(|e| {
-                let Contributor(person) = ViaXml::from_xml(e.clone()).unwrap();
-                person
-            }).collect();
+        let authors = try!(elem.get_children("author", Some(NS))
+            .map(|e| ViaXml::from_xml(e.clone()).map(|Author(person)| person))
+            .collect());
 
-        let entries = elem.get_children("entry", Some(NS))
-            .map(|e| ViaXml::from_xml(e.clone()).unwrap())
-            .collect();
+        let contributors = try!(elem.get_children("contributor", Some(NS))
+            .map(|e| ViaXml::from_xml(e.clone()).map(|Contributor(person)| person))
+            .collect());
+
+        let entries = try!(elem.get_children("entry", Some(NS))
+            .map(|e| ViaXml::from_xml(e.clone()))
+            .collect());
 
         Ok(Feed {
             id: id,
