@@ -104,7 +104,7 @@ impl ElementUtils for Element {
 
     fn tag_with_optional_text(&mut self, child_name: &'static str, child_body: &Option<String>) {
         if let Some(ref c) = *child_body {
-            self.tag_with_text(child_name, &c);
+            self.tag_with_text(child_name, c);
         }
     }
 
@@ -114,7 +114,7 @@ impl ElementUtils for Element {
 
     fn attribute_with_optional_text(&mut self, attribute_name: &'static str, attribute_value: &Option<String>) {
         if let Some(ref v) = *attribute_value {
-            self.attribute_with_text(attribute_name, &v);
+            self.attribute_with_text(attribute_name, v);
         }
     }
 }

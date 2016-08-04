@@ -147,7 +147,7 @@ impl FromStr for Feed {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut parser = Parser::new();
-        parser.feed_str(&s);
+        parser.feed_str(s);
 
         let mut builder = ElementBuilder::new();
 
