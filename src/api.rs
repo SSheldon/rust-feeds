@@ -21,34 +21,29 @@ pub enum ApiRequest {
 }
 
 impl ApiRequest {
-    pub fn parse(query: &str) -> Option<ApiRequest> {
-        let mut components = query.split('&');
-        match components.next() {
-            Some("api") => (),
+    pub fn parse<'a, I>(mut query_params: I) -> Option<ApiRequest>
+            where I: Iterator<Item=(&'a str, &'a str)> {
+        match query_params.next() {
+            Some(("api", "")) => (),
             _ => return None,
         };
 
-        let action = components.next();
-        let components: Vec<_> = components.map(|c| {
-            let mut split = c.splitn(2, '=');
-            (split.next().unwrap(), split.next())
-        }).collect();
-
+        let action = query_params.next().map(|(k, _)| k);
         match action {
             // TODO: there may still be post params with no action
             None => Some(ApiRequest::None),
             Some("groups") => Some(ApiRequest::Groups),
             Some("feeds") => Some(ApiRequest::Feeds),
             Some("favicons") => unimplemented!(),
-            Some("items") => match components.first() {
-                Some(&("since_id", val)) => val.and_then(|v| v.parse().ok())
-                                               .map(|v| ApiRequest::ItemsSince(v)),
-                Some(&("max_id", val)) => val.and_then(|v| v.parse().ok())
-                                             .map(|v| ApiRequest::ItemsBefore(v)),
-                Some(&("with_ids", val)) => val.and_then(|v| {
-                    let ids: Result<_, _> = v.split(',').map(|v| v.parse()).collect();
+            Some("items") => match query_params.next() {
+                Some(("since_id", val)) => val.parse().ok()
+                                              .map(|v| ApiRequest::ItemsSince(v)),
+                Some(("max_id", val)) => val.parse().ok()
+                                            .map(|v| ApiRequest::ItemsBefore(v)),
+                Some(("with_ids", val)) => {
+                    let ids: Result<_, _> = val.split(',').map(|v| v.parse()).collect();
                     ids.map(|v| ApiRequest::Items(v)).ok()
-                }),
+                },
                 None => Some(ApiRequest::LatestItems),
                 _ => None,
             },

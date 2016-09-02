@@ -14,14 +14,22 @@ use serde_json::Value;
 
 use api::{ApiRequest, Feed, Item};
 
+/// Converts a reference to a pair of Strings into a pair of str references.
+fn deref_str_pair<'a>(&(ref a, ref b): &'a (String, String))
+        -> (&'a str, &'a str) {
+    (a, b)
+}
+
 fn handle_request(request: &mut Request) -> IronResult<Response> {
     match request.method {
         method::Post => (),
         _ => return Ok(Response::with(status::MethodNotAllowed)),
     }
 
-    let query = iexpect!(request.url.query.as_ref());
-    let req_type = iexpect!(ApiRequest::parse(query));
+    let url = request.url.clone().into_generic_url();
+    let query_pairs = url.query_pairs().unwrap_or_else(Vec::new);
+    let query_pairs = query_pairs.iter().map(deref_str_pair);
+    let req_type = iexpect!(ApiRequest::parse(query_pairs));
     println!("{:?}", req_type);
 
     let mut body = String::new();
