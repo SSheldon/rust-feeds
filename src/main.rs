@@ -3,6 +3,7 @@
 
 #[macro_use]
 extern crate iron;
+extern crate serde;
 extern crate serde_json;
 
 mod api;
@@ -57,7 +58,7 @@ fn handle_request(request: &mut Request) -> IronResult<Response> {
         created_on_time: 1452495806,
         ..Default::default()
     };
-    let item = item.into_json();
+    let item = serde_json::to_value(&item);
 
     let mut response = BTreeMap::new();
     response.insert("api_version".to_owned(), Value::U64(1));

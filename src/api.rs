@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 
+use serde::{Serialize, self};
 use serde_json::Value;
 
 #[derive(Debug, PartialEq)]
@@ -88,6 +89,13 @@ impl ApiRequest {
     }
 }
 
+fn serialize_bool_as_number<S>(value: &bool, serializer: &mut S)
+        -> Result<(), S::Error>
+        where S: serde::Serializer {
+    let i = if *value {1} else {0};
+    i.serialize(serializer)
+}
+
 pub struct Group {
     pub id: u32,
     pub title: String,
@@ -103,38 +111,25 @@ pub struct Feed {
     pub url: String,
     #[serde(skip_serializing)]
     pub site_url: String,
-    #[serde(skip_serializing)]
+    #[serde(serialize_with = "serialize_bool_as_number")]
     pub is_spark: bool,
     pub last_updated_on_time: i32,
 }
 
-#[derive(Default)]
+#[derive(Default, Serialize)]
 pub struct Item {
     pub id: u32,
     pub feed_id: u32,
     pub title: String,
+    #[serde(skip_serializing)]
     pub author: String,
     pub html: String,
     pub url: String,
+    #[serde(serialize_with = "serialize_bool_as_number")]
     pub is_saved: bool,
+    #[serde(serialize_with = "serialize_bool_as_number")]
     pub is_read: bool,
     pub created_on_time: i32,
-}
-
-impl Item {
-    pub fn into_json(self) -> Value {
-        let mut obj = BTreeMap::new();
-        obj.insert("id".to_owned(), Value::U64(self.id as u64));
-        obj.insert("feed_id".to_owned(), Value::U64(self.feed_id as u64));
-        obj.insert("title".to_owned(), Value::String(self.title));
-        // obj.insert("author".to_owned(), Value::String(self.author));
-        obj.insert("html".to_owned(), Value::String(self.html));
-        obj.insert("url".to_owned(), Value::String(self.url));
-        obj.insert("is_saved".to_owned(), Value::U64(if self.is_saved {1} else {0}));
-        obj.insert("is_read".to_owned(), Value::U64(if self.is_read {1} else {0}));
-        obj.insert("created_on_time".to_owned(), Value::I64(self.created_on_time as i64));
-        Value::Object(obj)
-    }
 }
 
 #[cfg(test)]
