@@ -42,7 +42,7 @@ fn handle_request(request: &mut Request) -> IronResult<Response> {
     println!("{:?}", body_params);
 
     let query_pairs = query_pairs.iter().map(deref_str_pair);
-    let req_type = iexpect!(ApiRequest::parse(query_pairs));
+    let req_type = iexpect!(ApiRequest::parse(query_pairs, &body_params));
     println!("{:?}", req_type);
 
     let feed = Feed {

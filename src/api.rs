@@ -1,7 +1,6 @@
-use std::collections::BTreeMap;
+use std::collections::HashMap;
 
 use serde::{Serialize, self};
-use serde_json::Value;
 
 #[derive(Debug, PartialEq)]
 pub enum ApiRequest {
@@ -15,6 +14,7 @@ pub enum ApiRequest {
     UnreadItems,
     SavedItems,
     MarkItemRead(u32),
+    MarkItemUnread(u32),
     MarkItemSaved(u32),
     MarkItemUnsaved(u32),
     MarkFeedRead(u32, i32),
@@ -22,7 +22,9 @@ pub enum ApiRequest {
 }
 
 impl ApiRequest {
-    pub fn parse<'a, I>(mut query_params: I) -> Option<ApiRequest>
+    pub fn parse<'a, I>(mut query_params: I,
+                        body_params: &HashMap<String, String>)
+            -> Option<ApiRequest>
             where I: Iterator<Item=(&'a str, &'a str)> {
         match query_params.next() {
             Some(("api", "")) => (),
@@ -31,8 +33,32 @@ impl ApiRequest {
 
         let action = query_params.next().map(|(k, _)| k);
         match action {
-            // TODO: there may still be post params with no action
-            None => Some(ApiRequest::None),
+            None => {
+                let mark = body_params.get("mark").map(|v| &**v);
+                let mark_as = body_params.get("as").map(|v| &**v);
+                match (mark, mark_as) {
+                    (None, None) => Some(ApiRequest::None),
+                    (Some("item"), Some("read")) => {
+                        Some(ApiRequest::MarkItemRead(0))
+                    }
+                    (Some("item"), Some("unread")) => {
+                        Some(ApiRequest::MarkItemUnread(0))
+                    }
+                    (Some("item"), Some("saved")) => {
+                        Some(ApiRequest::MarkItemSaved(0))
+                    }
+                    (Some("item"), Some("unsaved")) => {
+                        Some(ApiRequest::MarkItemUnsaved(0))
+                    }
+                    (Some("feed"), Some("read")) => {
+                        Some(ApiRequest::MarkFeedRead(0, 0))
+                    }
+                    (Some("group"), Some("read")) => {
+                        Some(ApiRequest::MarkGroupRead(0, 0))
+                    }
+                    _ => None,
+                }
+            },
             Some("groups") => Some(ApiRequest::Groups),
             Some("feeds") => Some(ApiRequest::Feeds),
             Some("favicons") => unimplemented!(),
@@ -62,6 +88,7 @@ impl ApiRequest {
         match *self {
             None  |
             MarkItemRead(_) |
+            MarkItemUnread(_) |
             MarkItemSaved(_) |
             MarkItemUnsaved(_) |
             MarkFeedRead(_, _) |
