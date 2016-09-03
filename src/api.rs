@@ -105,12 +105,10 @@ pub struct Group {
 #[derive(Default, Serialize)]
 pub struct Feed {
     pub id: u32,
-    #[serde(skip_serializing)]
-    pub favicon_id: u32,
+    // pub favicon_id: u32,
     pub title: String,
     pub url: String,
-    #[serde(skip_serializing)]
-    pub site_url: String,
+    // pub site_url: String,
     #[serde(serialize_with = "serialize_bool_as_number")]
     pub is_spark: bool,
     pub last_updated_on_time: i32,
@@ -121,8 +119,7 @@ pub struct Item {
     pub id: u32,
     pub feed_id: u32,
     pub title: String,
-    #[serde(skip_serializing)]
-    pub author: String,
+    // pub author: String,
     pub html: String,
     pub url: String,
     #[serde(serialize_with = "serialize_bool_as_number")]
