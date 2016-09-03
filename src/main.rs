@@ -5,16 +5,18 @@
 extern crate iron;
 extern crate serde;
 extern crate serde_json;
+extern crate url;
 
 mod api;
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::io::Read;
 
 use iron::prelude::*;
 use iron::method;
 use iron::status;
 use serde_json::Value;
+use url::form_urlencoded;
 
 use api::{ApiRequest, Feed, Item};
 
@@ -32,13 +34,16 @@ fn handle_request(request: &mut Request) -> IronResult<Response> {
 
     let url = request.url.clone().into_generic_url();
     let query_pairs: Vec<_> = url.query_pairs().into_owned().collect();
+
+    let mut body = Vec::new();
+    itry!(request.body.read_to_end(&mut body));
+    let body_params: HashMap<_, _> =
+        form_urlencoded::parse(&body).into_owned().collect();
+    println!("{:?}", body_params);
+
     let query_pairs = query_pairs.iter().map(deref_str_pair);
     let req_type = iexpect!(ApiRequest::parse(query_pairs));
     println!("{:?}", req_type);
-
-    let mut body = String::new();
-    itry!(request.body.read_to_string(&mut body));
-    println!("{}", body);
 
     let feed = Feed {
         id: 1,
