@@ -1,3 +1,6 @@
+#![feature(plugin, custom_derive)]
+#![plugin(serde_macros)]
+
 #[macro_use]
 extern crate iron;
 extern crate serde_json;
@@ -43,7 +46,7 @@ fn handle_request(request: &mut Request) -> IronResult<Response> {
         last_updated_on_time: 1452495906,
         ..Default::default()
     };
-    let feed = feed.into_json();
+    let feed = serde_json::to_value(&feed);
 
     let item = Item {
         id: 1,

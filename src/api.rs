@@ -94,29 +94,18 @@ pub struct Group {
     pub feed_ids: Vec<u32>,
 }
 
-#[derive(Default)]
+#[derive(Default, Serialize)]
 pub struct Feed {
     pub id: u32,
+    #[serde(skip_serializing)]
     pub favicon_id: u32,
     pub title: String,
     pub url: String,
+    #[serde(skip_serializing)]
     pub site_url: String,
+    #[serde(skip_serializing)]
     pub is_spark: bool,
     pub last_updated_on_time: i32,
-}
-
-impl Feed {
-    pub fn into_json(self) -> Value {
-        let mut obj = BTreeMap::new();
-        obj.insert("id".to_owned(), Value::U64(self.id as u64));
-        // obj.insert("favicon_id".to_owned(), Value::U64(self.favicon_id as u64));
-        obj.insert("title".to_owned(), Value::String(self.title));
-        obj.insert("url".to_owned(), Value::String(self.url));
-        // obj.insert("site_url".to_owned(), Value::String(self.site_url));
-        // obj.insert("is_spark".to_owned(), Value::U64(if self.is_spark {1} else {0}));
-        obj.insert("last_updated_on_time".to_owned(), Value::I64(self.last_updated_on_time as i64));
-        Value::Object(obj)
-    }
 }
 
 #[derive(Default)]
