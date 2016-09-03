@@ -27,7 +27,7 @@ fn handle_request(request: &mut Request) -> IronResult<Response> {
     }
 
     let url = request.url.clone().into_generic_url();
-    let query_pairs = url.query_pairs().unwrap_or_else(Vec::new);
+    let query_pairs: Vec<_> = url.query_pairs().into_owned().collect();
     let query_pairs = query_pairs.iter().map(deref_str_pair);
     let req_type = iexpect!(ApiRequest::parse(query_pairs));
     println!("{:?}", req_type);

@@ -4,5 +4,6 @@ version = "0.0.0"
 authors = ["Steven Sheldon"]
 
 [dependencies]
-iron = "0.2"
-serde_json = "0.6"
+iron = "0.4"
+serde_json = "0.8"
+url = "1.2"
