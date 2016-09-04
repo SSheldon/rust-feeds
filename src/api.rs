@@ -3,6 +3,17 @@ use std::collections::HashMap;
 use chrono::NaiveDateTime;
 use serde::{Serialize, self};
 
+fn join_ids(ids: &[u32], out: &mut String) {
+    use std::fmt::Write;
+
+    let mut first = true;
+    for &id in ids {
+        let sep = if first {""} else {","};
+        write!(out, "{}{}", sep, id).unwrap();
+        first = false;
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum ApiRequest {
     None,
@@ -83,11 +94,10 @@ impl ApiRequest {
     }
 
     pub fn query(&self) -> String {
-        use std::fmt::Write;
         use self::ApiRequest::*;
 
         match *self {
-            None  |
+            None |
             MarkItemRead(_) |
             MarkItemUnread(_) |
             MarkItemSaved(_) |
@@ -103,12 +113,7 @@ impl ApiRequest {
                 format!("api&items&max_id={}", id),
             Items(ref ids) => {
                 let mut result = "api&items&with_ids=".to_owned();
-                let mut first = true;
-                for &id in ids {
-                    let sep = if first {""} else {","};
-                    write!(&mut result, "{}{}", sep, id).unwrap();
-                    first = false;
-                }
+                join_ids(ids, &mut result);
                 result
             }
             UnreadItems => "api&unread_item_ids".to_owned(),
@@ -131,9 +136,24 @@ fn serialize_datetime_as_timestamp<S>(value: &NaiveDateTime, serializer: &mut S)
     t.serialize(serializer)
 }
 
+fn serialize_ids_as_comma_string<S>(value: &[u32], serializer: &mut S)
+        -> Result<(), S::Error>
+        where S: serde::Serializer {
+    let mut s = String::new();
+    join_ids(value, &mut s);
+    s.serialize(serializer)
+}
+
+#[derive(Serialize)]
 pub struct Group {
     pub id: u32,
     pub title: String,
+}
+
+#[derive(Serialize)]
+pub struct FeedsGroup {
+    pub group_id: u32,
+    #[serde(serialize_with = "serialize_ids_as_comma_string")]
     pub feed_ids: Vec<u32>,
 }
 
