@@ -36,26 +36,24 @@ impl ApiRequest {
             None => {
                 let mark = body_params.get("mark").map(|v| &**v);
                 let mark_as = body_params.get("as").map(|v| &**v);
+                let id = body_params.get("id").and_then(|v| v.parse().ok());
+                let before = body_params.get("before").and_then(|v| v.parse().ok());
                 match (mark, mark_as) {
                     (None, None) => Some(ApiRequest::None),
-                    (Some("item"), Some("read")) => {
-                        Some(ApiRequest::MarkItemRead(0))
-                    }
-                    (Some("item"), Some("unread")) => {
-                        Some(ApiRequest::MarkItemUnread(0))
-                    }
-                    (Some("item"), Some("saved")) => {
-                        Some(ApiRequest::MarkItemSaved(0))
-                    }
-                    (Some("item"), Some("unsaved")) => {
-                        Some(ApiRequest::MarkItemUnsaved(0))
-                    }
-                    (Some("feed"), Some("read")) => {
-                        Some(ApiRequest::MarkFeedRead(0, 0))
-                    }
-                    (Some("group"), Some("read")) => {
-                        Some(ApiRequest::MarkGroupRead(0, 0))
-                    }
+                    (Some("item"), Some("read")) =>
+                        id.map(ApiRequest::MarkItemRead),
+                    (Some("item"), Some("unread")) =>
+                        id.map(ApiRequest::MarkItemUnread),
+                    (Some("item"), Some("saved")) =>
+                        id.map(ApiRequest::MarkItemSaved),
+                    (Some("item"), Some("unsaved")) =>
+                        id.map(ApiRequest::MarkItemUnsaved),
+                    (Some("feed"), Some("read")) =>
+                        id.and_then(|i| before.map(|b| (i, b)))
+                          .map(|(i, b)| ApiRequest::MarkFeedRead(i, b)),
+                    (Some("group"), Some("read")) =>
+                        id.and_then(|i| before.map(|b| (i, b)))
+                          .map(|(i, b)| ApiRequest::MarkGroupRead(i, b)),
                     _ => None,
                 }
             },
