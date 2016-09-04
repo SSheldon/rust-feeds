@@ -13,6 +13,7 @@ mod api;
 use std::collections::{BTreeMap, HashMap};
 use std::io::Read;
 
+use chrono::NaiveDateTime;
 use iron::prelude::*;
 use iron::method;
 use iron::status;
@@ -50,8 +51,8 @@ fn handle_request(request: &mut Request) -> IronResult<Response> {
         id: 1,
         title: "Hello feed".to_owned(),
         url: "example.com".to_owned(),
-        last_updated_on_time: 1452495906,
-        ..Default::default()
+        is_spark: false,
+        last_updated_on_time: NaiveDateTime::from_timestamp(1472799906, 0),
     };
     let feed = serde_json::to_value(&feed);
 
@@ -61,8 +62,9 @@ fn handle_request(request: &mut Request) -> IronResult<Response> {
         title: "Hello item".to_owned(),
         url: "example.com".to_owned(),
         html: "Hello world!".to_owned(),
-        created_on_time: 1452495806,
-        ..Default::default()
+        is_saved: false,
+        is_read: false,
+        created_on_time: NaiveDateTime::from_timestamp(1472799806, 0),
     };
     let item = serde_json::to_value(&item);
 

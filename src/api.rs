@@ -124,13 +124,20 @@ fn serialize_bool_as_number<S>(value: &bool, serializer: &mut S)
     i.serialize(serializer)
 }
 
+fn serialize_datetime_as_timestamp<S>(value: &NaiveDateTime, serializer: &mut S)
+        -> Result<(), S::Error>
+        where S: serde::Serializer {
+    let t = value.timestamp();
+    t.serialize(serializer)
+}
+
 pub struct Group {
     pub id: u32,
     pub title: String,
     pub feed_ids: Vec<u32>,
 }
 
-#[derive(Default, Serialize)]
+#[derive(Serialize)]
 pub struct Feed {
     pub id: u32,
     // pub favicon_id: u32,
@@ -139,10 +146,11 @@ pub struct Feed {
     // pub site_url: String,
     #[serde(serialize_with = "serialize_bool_as_number")]
     pub is_spark: bool,
-    pub last_updated_on_time: i32,
+    #[serde(serialize_with = "serialize_datetime_as_timestamp")]
+    pub last_updated_on_time: NaiveDateTime,
 }
 
-#[derive(Default, Serialize)]
+#[derive(Serialize)]
 pub struct Item {
     pub id: u32,
     pub feed_id: u32,
@@ -154,7 +162,8 @@ pub struct Item {
     pub is_saved: bool,
     #[serde(serialize_with = "serialize_bool_as_number")]
     pub is_read: bool,
-    pub created_on_time: i32,
+    #[serde(serialize_with = "serialize_datetime_as_timestamp")]
+    pub created_on_time: NaiveDateTime,
 }
 
 #[cfg(test)]
