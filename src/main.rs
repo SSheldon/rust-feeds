@@ -1,6 +1,7 @@
 #![feature(plugin, custom_derive)]
 #![plugin(serde_macros)]
 
+extern crate chrono;
 #[macro_use]
 extern crate iron;
 extern crate serde;

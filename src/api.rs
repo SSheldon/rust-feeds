@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use chrono::NaiveDateTime;
 use serde::{Serialize, self};
 
 #[derive(Debug, PartialEq)]
@@ -17,8 +18,8 @@ pub enum ApiRequest {
     MarkItemUnread(u32),
     MarkItemSaved(u32),
     MarkItemUnsaved(u32),
-    MarkFeedRead(u32, i32),
-    MarkGroupRead(u32, i32),
+    MarkFeedRead(u32, NaiveDateTime),
+    MarkGroupRead(u32, NaiveDateTime),
 }
 
 impl ApiRequest {
@@ -37,7 +38,9 @@ impl ApiRequest {
                 let mark = body_params.get("mark").map(|v| &**v);
                 let mark_as = body_params.get("as").map(|v| &**v);
                 let id = body_params.get("id").and_then(|v| v.parse().ok());
-                let before = body_params.get("before").and_then(|v| v.parse().ok());
+                let before = body_params.get("before")
+                    .and_then(|v| v.parse().ok())
+                    .map(|t| NaiveDateTime::from_timestamp(t, 0));
                 match (mark, mark_as) {
                     (None, None) => Some(ApiRequest::None),
                     (Some("item"), Some("read")) =>
@@ -61,10 +64,10 @@ impl ApiRequest {
             Some("feeds") => Some(ApiRequest::Feeds),
             Some("favicons") => unimplemented!(),
             Some("items") => match query_params.next() {
-                Some(("since_id", val)) => val.parse().ok()
-                                              .map(|v| ApiRequest::ItemsSince(v)),
-                Some(("max_id", val)) => val.parse().ok()
-                                            .map(|v| ApiRequest::ItemsBefore(v)),
+                Some(("since_id", val)) =>
+                    val.parse().ok().map(|v| ApiRequest::ItemsSince(v)),
+                Some(("max_id", val)) =>
+                    val.parse().ok().map(|v| ApiRequest::ItemsBefore(v)),
                 Some(("with_ids", val)) => {
                     let ids: Result<_, _> = val.split(',').map(|v| v.parse()).collect();
                     ids.map(|v| ApiRequest::Items(v)).ok()
