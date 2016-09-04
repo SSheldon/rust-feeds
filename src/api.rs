@@ -238,10 +238,14 @@ impl ApiResponsePayload {
                 serializer.serialize_struct_elt(state, "total_items", total_items)
             },
             UnreadItems { ref unread_item_ids } => {
-                serializer.serialize_struct_elt(state, "unread_item_ids", unread_item_ids)
+                let mut s = String::new();
+                join_ids(unread_item_ids, &mut s);
+                serializer.serialize_struct_elt(state, "unread_item_ids", s)
             },
             SavedItems { ref saved_item_ids } => {
-                serializer.serialize_struct_elt(state, "saved_item_ids", saved_item_ids)
+                let mut s = String::new();
+                join_ids(saved_item_ids, &mut s);
+                serializer.serialize_struct_elt(state, "saved_item_ids", s)
             },
             None => Ok(())
         }
