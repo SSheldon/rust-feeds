@@ -186,6 +186,96 @@ pub struct Item {
     pub created_on_time: NaiveDateTime,
 }
 
+pub enum ApiResponsePayload {
+    None,
+    Groups {
+        groups: Vec<Group>,
+        feeds_groups: Vec<FeedsGroup>,
+    },
+    Feeds {
+        feeds: Vec<Feed>,
+        feeds_groups: Vec<FeedsGroup>,
+    },
+    Items {
+        items: Vec<Item>,
+        total_items: u32,
+    },
+    UnreadItems {
+        unread_item_ids: Vec<u32>,
+    },
+    SavedItems {
+        saved_item_ids: Vec<u32>,
+    },
+}
+
+impl ApiResponsePayload {
+    fn num_fields(&self) -> usize {
+        use self::ApiResponsePayload::*;
+
+        match *self {
+            None => 0,
+            Groups {..} | Feeds {..} | Items {..} => 2,
+            UnreadItems {..} | SavedItems {..} => 1,
+        }
+    }
+
+    fn serialize_fields<S>(&self, state: &mut S::StructState, serializer: &mut S)
+            -> Result<(), S::Error>
+            where S: serde::Serializer {
+        use self::ApiResponsePayload::*;
+
+        match *self {
+            Groups { ref groups, ref feeds_groups } => {
+                try!(serializer.serialize_struct_elt(state, "groups", groups));
+                serializer.serialize_struct_elt(state, "feeds_groups", feeds_groups)
+            },
+            Feeds { ref feeds, ref feeds_groups } => {
+                try!(serializer.serialize_struct_elt(state, "feeds", feeds));
+                serializer.serialize_struct_elt(state, "feeds_groups", feeds_groups)
+            },
+            Items { ref items, total_items } => {
+                try!(serializer.serialize_struct_elt(state, "items", items));
+                serializer.serialize_struct_elt(state, "total_items", total_items)
+            },
+            UnreadItems { ref unread_item_ids } => {
+                serializer.serialize_struct_elt(state, "unread_item_ids", unread_item_ids)
+            },
+            SavedItems { ref saved_item_ids } => {
+                serializer.serialize_struct_elt(state, "saved_item_ids", saved_item_ids)
+            },
+            None => Ok(())
+        }
+    }
+}
+
+pub struct ApiResponse {
+    pub api_version: u32,
+    pub auth: bool,
+    pub last_refreshed_on_time: Option<NaiveDateTime>,
+    pub payload: ApiResponsePayload,
+}
+
+impl Serialize for ApiResponse {
+    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+        where S: serde::Serializer
+    {
+        let num_fields = 2 + self.payload.num_fields() +
+            if self.last_refreshed_on_time.is_some() {1} else {0};
+        let mut state = try!(serializer.serialize_struct("ApiResponse", num_fields));
+
+        try!(serializer.serialize_struct_elt(&mut state, "api_version", self.api_version));
+        let auth_num = if self.auth {1} else {0};
+        try!(serializer.serialize_struct_elt(&mut state, "auth", auth_num));
+        if let Some(refresh_time) = self.last_refreshed_on_time {
+            let timestamp = refresh_time.timestamp();
+            try!(serializer.serialize_struct_elt(&mut state, "last_refreshed_on_time", timestamp));
+        }
+        try!(self.payload.serialize_fields(&mut state, serializer));
+
+        serializer.serialize_struct_end(state)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::ApiRequest;
