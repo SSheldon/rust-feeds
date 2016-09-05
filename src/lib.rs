@@ -74,9 +74,7 @@ mod person;
 mod source;
 mod utils;
 
-pub use author::Author;
 pub use category::Category;
-pub use contributor::Contributor;
 pub use entry::Entry;
 pub use feed::Feed;
 pub use generator::Generator;

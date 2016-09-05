@@ -1,7 +1,9 @@
 use std::str::FromStr;
 use xml::{Element, ElementBuilder, Parser, Xml};
 
-use {Author, Category, Contributor, Entry, Generator, Link, NS, Person};
+use {Category, Entry, Generator, Link, NS, Person};
+use author::Author;
+use contributor::Contributor;
 use utils::{ElementUtils, Flip, ViaXml};
 
 

@@ -1,6 +1,8 @@
 use xml::Element;
 
-use {Author, Category, Contributor, Link, NS, Person, Source};
+use {Category, Link, NS, Person, Source};
+use author::Author;
+use contributor::Contributor;
 use utils::{ElementUtils, Flip, ViaXml};
 
 
