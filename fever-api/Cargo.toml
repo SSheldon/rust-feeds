@@ -1,13 +1,10 @@
 [package]
-name = "feeds"
+name = "fever-api"
 version = "0.0.0"
 authors = ["Steven Sheldon"]
 
 [dependencies]
 chrono = "0.2"
-fever-api = { path = "fever-api" }
-iron = "0.4"
 serde = "0.8"
 serde_json = "0.8"
 serde_macros = "0.8"
-url = "1.2"

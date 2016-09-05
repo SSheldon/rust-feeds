@@ -1,14 +1,10 @@
-#![feature(plugin, custom_derive)]
-#![plugin(serde_macros)]
-
 extern crate chrono;
+extern crate fever_api;
 #[macro_use]
 extern crate iron;
 extern crate serde;
 extern crate serde_json;
 extern crate url;
-
-mod api;
 
 use std::collections::HashMap;
 use std::io::Read;
@@ -19,7 +15,7 @@ use iron::method;
 use iron::status;
 use url::form_urlencoded;
 
-use api::{ApiRequest, ApiResponse, ApiResponsePayload, Feed, Item};
+use fever_api::{ApiRequest, ApiResponse, ApiResponsePayload, Feed, Item};
 
 /// Converts a reference to a pair of Strings into a pair of str references.
 fn deref_str_pair<'a>(&(ref a, ref b): &'a (String, String))
