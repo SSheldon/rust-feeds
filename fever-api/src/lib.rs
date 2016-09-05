@@ -1,7 +1,14 @@
+#![feature(plugin, custom_derive)]
+#![plugin(serde_macros)]
+
+extern crate chrono;
+extern crate serde;
+extern crate serde_json;
+
 use std::collections::HashMap;
 
 use chrono::NaiveDateTime;
-use serde::{Serialize, self};
+use serde::Serialize;
 
 fn join_ids(ids: &[u32], out: &mut String) {
     use std::fmt::Write;
