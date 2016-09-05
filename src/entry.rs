@@ -1,6 +1,6 @@
 use xml::Element;
 
-use ::{Author, Category, Contributor, ElementUtils, Feed, Link, NS, Person, ViaXml};
+use ::{Author, Category, Contributor, ElementUtils, Link, NS, Person, Source, ViaXml};
 
 
 /// [The Atom Syndication Format § The "atom:entry" Element]
@@ -24,7 +24,7 @@ pub struct Entry {
     pub title: String,
     pub updated: String,
     pub published: Option<String>,
-    pub source: Option<Feed>,
+    pub source: Option<Source>,
     pub links: Vec<Link>,
     pub categories: Vec<Category>,
     pub authors: Vec<Person>,

@@ -139,7 +139,7 @@ mod test {
     use std::fs::File;
     use std::io::Read;
     use std::str::FromStr;
-    use super::{Person, Entry, Feed, Link};
+    use super::{Person, Entry, Feed, Link, Source};
 
     #[test]
     fn test_basic_to_string() {
@@ -183,8 +183,8 @@ mod test {
                             ..Default::default()
                         }
                     ],
-                    source: Some(Feed {
-                        title: "Original Blog".to_string(),
+                    source: Some(Source {
+                        title: Some("Original Blog".to_string()),
                         links: vec![
                             Link {
                                 href: "http://original.blog/feed.atom".to_string(),
