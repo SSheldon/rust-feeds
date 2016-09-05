@@ -4,7 +4,7 @@ use xml::{Element, ElementBuilder, Parser, Xml};
 use {Category, Entry, Generator, Link, NS, Person};
 use author::Author;
 use contributor::Contributor;
-use utils::{ElementUtils, Flip, ViaXml};
+use utils::{ElementUtils, Flip, FromXml, ToXml};
 
 
 /// [The Atom Syndication Format § The "atom:feed" Element]
@@ -40,7 +40,8 @@ pub struct Feed {
     pub entries: Vec<Entry>,
 }
 
-impl ViaXml for Feed {
+
+impl ToXml for Feed {
     fn to_xml(&self) -> Element {
         let mut feed = Element::new("feed".to_string(), Some(NS.to_string()), vec![]);
 
@@ -79,7 +80,10 @@ impl ViaXml for Feed {
 
         feed
     }
+}
 
+
+impl FromXml for Feed {
     fn from_xml(elem: Element) -> Result<Self, &'static str> {
         let id = match elem.get_child("id", Some(NS)) {
             Some(elem) => elem.content_str(),
@@ -102,26 +106,26 @@ impl ViaXml for Feed {
         let subtitle = elem.get_child("subtitle", Some(NS)).map(Element::content_str);
 
         let generator = try!(elem.get_child("generator", Some(NS))
-            .map(|e| ViaXml::from_xml(e.clone())).flip());
+            .map(|e| FromXml::from_xml(e.clone())).flip());
 
         let links = try!(elem.get_children("link", Some(NS))
-            .map(|e| ViaXml::from_xml(e.clone()))
+            .map(|e| FromXml::from_xml(e.clone()))
             .collect());
 
         let categories = try!(elem.get_children("category", Some(NS))
-            .map(|e| ViaXml::from_xml(e.clone()))
+            .map(|e| FromXml::from_xml(e.clone()))
             .collect());
 
         let authors = try!(elem.get_children("author", Some(NS))
-            .map(|e| ViaXml::from_xml(e.clone()).map(|Author(person)| person))
+            .map(|e| FromXml::from_xml(e.clone()).map(|Author(person)| person))
             .collect());
 
         let contributors = try!(elem.get_children("contributor", Some(NS))
-            .map(|e| ViaXml::from_xml(e.clone()).map(|Contributor(person)| person))
+            .map(|e| FromXml::from_xml(e.clone()).map(|Contributor(person)| person))
             .collect());
 
         let entries = try!(elem.get_children("entry", Some(NS))
-            .map(|e| ViaXml::from_xml(e.clone()))
+            .map(|e| FromXml::from_xml(e.clone()))
             .collect());
 
         Ok(Feed {
@@ -154,13 +158,14 @@ impl FromStr for Feed {
 
         for event in parser {
             if let Some(Ok(elem)) = builder.handle_event(event) {
-                return ViaXml::from_xml(elem);
+                return FromXml::from_xml(elem);
             }
         }
 
         Err("Atom read error")
     }
 }
+
 
 impl ToString for Feed {
     fn to_string(&self) -> String {

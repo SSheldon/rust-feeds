@@ -3,7 +3,7 @@ use std::convert::AsRef;
 use xml::Element;
 
 use NS;
-use utils::{ElementUtils, ViaXml};
+use utils::{ElementUtils, FromXml, ToXml};
 
 
 /// [The Atom Syndication Format § The "atom:generator" Element]
@@ -16,7 +16,7 @@ pub struct Generator {
 }
 
 
-impl ViaXml for Generator {
+impl ToXml for Generator {
     fn to_xml(&self) -> Element {
         let mut link = Element::new("generator".to_string(), Some(NS.to_string()), vec![]);
 
@@ -27,7 +27,10 @@ impl ViaXml for Generator {
 
         link
     }
+}
 
+
+impl FromXml for Generator {
     fn from_xml(elem: Element) -> Result<Self, &'static str> {
         let name = match elem.content_str().as_ref() {
             "" => return Err(r#"<generator> is missing required name"#),

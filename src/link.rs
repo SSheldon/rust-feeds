@@ -1,7 +1,7 @@
 use xml::Element;
 
 use NS;
-use utils::{ElementUtils, ViaXml};
+use utils::{ElementUtils, FromXml, ToXml};
 
 
 /// [The Atom Syndication Format § The "atom:link" Element]
@@ -17,7 +17,7 @@ pub struct Link {
 }
 
 
-impl ViaXml for Link {
+impl ToXml for Link {
     fn to_xml(&self) -> Element {
         let mut link = Element::new("link".to_string(), Some(NS.to_string()), vec![]);
 
@@ -31,7 +31,10 @@ impl ViaXml for Link {
 
         link
     }
+}
 
+
+impl FromXml for Link {
     fn from_xml(elem: Element) -> Result<Self, &'static str> {
         let href = match elem.get_attribute("href", None) {
             Some(attr) => attr.to_string(),

@@ -1,7 +1,7 @@
 use xml::Element;
 
 use NS;
-use utils::{ElementUtils, ViaXml};
+use utils::{ElementUtils, FromXml, ToXml};
 
 
 /// [The Atom Syndication Format § The "atom:category" Element]
@@ -14,7 +14,7 @@ pub struct Category {
 }
 
 
-impl ViaXml for Category {
+impl ToXml for Category {
     fn to_xml(&self) -> Element {
         let mut link = Element::new("category".to_string(), Some(NS.to_string()), vec![]);
 
@@ -25,7 +25,10 @@ impl ViaXml for Category {
 
         link
     }
+}
 
+
+impl FromXml for Category {
     fn from_xml(elem: Element) -> Result<Self, &'static str> {
         let term = match elem.get_attribute("term", None) {
             Some(attr) => attr.to_string(),

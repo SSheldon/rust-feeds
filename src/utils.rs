@@ -40,8 +40,12 @@ fn elem_with_text(tag_name: &'static str, chars: &str) -> Element {
 }
 
 
-pub trait ViaXml where Self: Sized {
+pub trait ToXml {
     fn to_xml(&self) -> Element;
+}
+
+
+pub trait FromXml: Sized {
     fn from_xml(elem: Element) -> Result<Self, &'static str>;
 }
 

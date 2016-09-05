@@ -3,7 +3,7 @@ use xml::Element;
 use {Category, Generator, Link, NS, Person};
 use author::Author;
 use contributor::Contributor;
-use utils::{ElementUtils, Flip, ViaXml};
+use utils::{ElementUtils, Flip, FromXml, ToXml};
 
 
 /// [The Atom Syndication Format § The "atom:source" Element]
@@ -24,7 +24,8 @@ pub struct Source {
     pub contributors: Vec<Person>,
 }
 
-impl ViaXml for Source {
+
+impl ToXml for Source {
     fn to_xml(&self) -> Element {
         let mut elem = Element::new("source".to_string(), Some(NS.to_string()), vec![]);
 
@@ -58,7 +59,10 @@ impl ViaXml for Source {
 
         elem
     }
+}
 
+
+impl FromXml for Source {
     fn from_xml(elem: Element) -> Result<Self, &'static str> {
         let id = elem.get_child("id", Some(NS)).map(Element::content_str);
         let title = elem.get_child("title", Some(NS)).map(Element::content_str);
@@ -69,22 +73,22 @@ impl ViaXml for Source {
         let subtitle = elem.get_child("subtitle", Some(NS)).map(Element::content_str);
 
         let generator = try!(elem.get_child("generator", Some(NS))
-            .map(|e| ViaXml::from_xml(e.clone())).flip());
+            .map(|e| FromXml::from_xml(e.clone())).flip());
 
         let links = try!(elem.get_children("link", Some(NS))
-            .map(|e| ViaXml::from_xml(e.clone()))
+            .map(|e| FromXml::from_xml(e.clone()))
             .collect());
 
         let categories = try!(elem.get_children("category", Some(NS))
-            .map(|e| ViaXml::from_xml(e.clone()))
+            .map(|e| FromXml::from_xml(e.clone()))
             .collect());
 
         let authors = try!(elem.get_children("author", Some(NS))
-            .map(|e| ViaXml::from_xml(e.clone()).map(|Author(person)| person))
+            .map(|e| FromXml::from_xml(e.clone()).map(|Author(person)| person))
             .collect());
 
         let contributors = try!(elem.get_children("contributor", Some(NS))
-            .map(|e| ViaXml::from_xml(e.clone()).map(|Contributor(person)| person))
+            .map(|e| FromXml::from_xml(e.clone()).map(|Contributor(person)| person))
             .collect());
 
         Ok(Source {

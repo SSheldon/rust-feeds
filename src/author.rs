@@ -1,7 +1,7 @@
 use xml::Element;
 
 use {NS, Person};
-use utils::{ElementUtils, ViaXml};
+use utils::{ElementUtils, FromXml, ToXml};
 
 
 /// [The Atom Syndication Format § The "atom:author" Element]
@@ -10,7 +10,7 @@ use utils::{ElementUtils, ViaXml};
 pub struct Author(pub Person);
 
 
-impl ViaXml for Author {
+impl ToXml for Author {
     fn to_xml(&self) -> Element {
         let mut elem = Element::new("author".to_string(), Some(NS.to_string()), vec![]);
 
@@ -22,7 +22,10 @@ impl ViaXml for Author {
 
         elem
     }
+}
 
+
+impl FromXml for Author {
     fn from_xml(elem: Element) -> Result<Self, &'static str> {
         let name = match elem.get_child("name", Some(NS)) {
             Some(elem) => elem.content_str(),
