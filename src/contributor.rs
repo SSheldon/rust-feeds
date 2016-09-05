@@ -27,7 +27,7 @@ impl<P: Borrow<Person>> ToXml for Contributor<P> {
 
 
 impl FromXml for Contributor<Person> {
-    fn from_xml(elem: Element) -> Result<Self, &'static str> {
+    fn from_xml(elem: &Element) -> Result<Self, &'static str> {
         let name = match elem.get_child("name", Some(NS)) {
             Some(elem) => elem.content_str(),
             None => return Err("<contributor> is missing required <name> element"),

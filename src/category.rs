@@ -29,7 +29,7 @@ impl ToXml for Category {
 
 
 impl FromXml for Category {
-    fn from_xml(elem: Element) -> Result<Self, &'static str> {
+    fn from_xml(elem: &Element) -> Result<Self, &'static str> {
         let term = match elem.get_attribute("term", None) {
             Some(attr) => attr.to_string(),
             None => return Err(r#"<link> is missing required "term" element"#),

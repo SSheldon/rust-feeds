@@ -76,7 +76,7 @@ impl ToXml for Entry {
 
 
 impl FromXml for Entry {
-    fn from_xml(elem: Element) -> Result<Self, &'static str> {
+    fn from_xml(elem: &Element) -> Result<Self, &'static str> {
         let id = match elem.get_child("id", Some(NS)) {
             Some(elem) => elem.content_str(),
             None => return Err("<entry> is missing required <id> element"),
@@ -93,22 +93,22 @@ impl FromXml for Entry {
         };
 
         let source = try!(elem.get_child("source", Some(NS))
-            .map(|e| FromXml::from_xml(e.clone())).flip());
+            .map(|e| FromXml::from_xml(e)).flip());
 
         let links = try!(elem.get_children("link", Some(NS))
-            .map(|e| FromXml::from_xml(e.clone()))
+            .map(|e| FromXml::from_xml(e))
             .collect());
 
         let categories = try!(elem.get_children("category", Some(NS))
-            .map(|e| FromXml::from_xml(e.clone()))
+            .map(|e| FromXml::from_xml(e))
             .collect());
 
         let authors = try!(elem.get_children("author", Some(NS))
-            .map(|e| FromXml::from_xml(e.clone()).map(|Author(person)| person))
+            .map(|e| FromXml::from_xml(e).map(|Author(person)| person))
             .collect());
 
         let contributors = try!(elem.get_children("contributor", Some(NS))
-            .map(|e| FromXml::from_xml(e.clone()).map(|Contributor(person)| person))
+            .map(|e| FromXml::from_xml(e).map(|Contributor(person)| person))
             .collect());
 
         let published = elem.get_child("published", Some(NS)).map(Element::content_str);

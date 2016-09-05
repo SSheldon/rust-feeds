@@ -46,7 +46,7 @@ pub trait ToXml {
 
 
 pub trait FromXml: Sized {
-    fn from_xml(elem: Element) -> Result<Self, &'static str>;
+    fn from_xml(elem: &Element) -> Result<Self, &'static str>;
 }
 
 

@@ -35,7 +35,7 @@ impl ToXml for Link {
 
 
 impl FromXml for Link {
-    fn from_xml(elem: Element) -> Result<Self, &'static str> {
+    fn from_xml(elem: &Element) -> Result<Self, &'static str> {
         let href = match elem.get_attribute("href", None) {
             Some(attr) => attr.to_string(),
             None => return Err(r#"<link> is missing required "href" element"#),

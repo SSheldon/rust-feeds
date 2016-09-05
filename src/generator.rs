@@ -31,7 +31,7 @@ impl ToXml for Generator {
 
 
 impl FromXml for Generator {
-    fn from_xml(elem: Element) -> Result<Self, &'static str> {
+    fn from_xml(elem: &Element) -> Result<Self, &'static str> {
         let name = match elem.content_str().as_ref() {
             "" => return Err(r#"<generator> is missing required name"#),
             n => n.to_string(),
