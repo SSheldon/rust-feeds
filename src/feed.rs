@@ -67,11 +67,11 @@ impl ToXml for Feed {
         }
 
         for person in &self.authors {
-            feed.tag(Author(person.clone()).to_xml());
+            feed.tag(Author(person).to_xml());
         }
 
         for person in &self.contributors {
-            feed.tag(Contributor(person.clone()).to_xml());
+            feed.tag(Contributor(person).to_xml());
         }
 
         for entry in &self.entries {

@@ -60,11 +60,11 @@ impl ToXml for Entry {
         }
 
         for person in &self.authors {
-            entry.tag(Author(person.clone()).to_xml());
+            entry.tag(Author(person).to_xml());
         }
 
         for person in &self.contributors {
-            entry.tag(Contributor(person.clone()).to_xml());
+            entry.tag(Contributor(person).to_xml());
         }
 
         entry.tag_with_optional_text("summary", &self.summary);

@@ -50,11 +50,11 @@ impl ToXml for Source {
         }
 
         for person in &self.authors {
-            elem.tag(Author(person.clone()).to_xml());
+            elem.tag(Author(person).to_xml());
         }
 
         for person in &self.contributors {
-            elem.tag(Contributor(person.clone()).to_xml());
+            elem.tag(Contributor(person).to_xml());
         }
 
         elem
