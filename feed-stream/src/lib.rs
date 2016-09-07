@@ -1,3 +1,5 @@
+extern crate xml;
+
 use std::ascii::AsciiExt;
 use std::io::{ErrorKind, Read, self};
 use std::str;
