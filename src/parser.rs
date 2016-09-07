@@ -1,3 +1,4 @@
+use std::ascii::AsciiExt;
 use std::io::{ErrorKind, Read, self};
 use std::str;
 
@@ -71,7 +72,7 @@ impl<R: Read> RssParser<R> {
         while let Some(event) = parser.next_event() {
             let event = try!(event);
             match event {
-                Event::ElementStart(StartTag { ref name, .. }) if name == "channel" => break,
+                Event::ElementStart(StartTag { ref name, .. }) if name.eq_ignore_ascii_case("channel") => break,
                 _ => (),
             }
         }
@@ -102,7 +103,7 @@ impl<R: Read> Iterator for RssParser<R> {
             // println!("{:?}", event);
             match self.builder.handle_event(event) {
                 Some(Ok(elem)) => {
-                    if elem.name == "item" {
+                    if elem.name.eq_ignore_ascii_case("item") {
                         return Some(elem)
                     }
                 }
