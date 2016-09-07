@@ -11,6 +11,15 @@ struct StrBufReader<R> {
 }
 
 impl<R: Read> StrBufReader<R> {
+    fn with_capacity(capacity: usize, source: R) -> StrBufReader<R> {
+        StrBufReader {
+            reader: source,
+            buffer: vec![0; capacity],
+            len: 0,
+            extra: 0,
+        }
+    }
+
     fn next_str(&mut self) -> Option<io::Result<&str>> {
         // copy extra bytes to the front
         for i in 0..self.extra {
