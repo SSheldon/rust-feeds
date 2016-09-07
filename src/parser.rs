@@ -54,40 +54,51 @@ impl<R: Read> StrBufReader<R> {
     }
 }
 
-pub struct RssParser {
+pub struct RssParser<R> {
+    reader: StrBufReader<R>,
     parser: Parser,
     builder: ElementBuilder,
 }
 
-impl RssParser {
-    pub fn new(s: &str) -> Result<RssParser, ParserError> {
-        let mut parser = Parser::new();
-        parser.feed_str(&s);
+impl<R: Read> RssParser<R> {
+    pub fn new(source: R) -> Result<RssParser<R>, ParserError> {
+        let mut parser = RssParser {
+            reader: StrBufReader::with_capacity(4096, source),
+            parser: Parser::new(),
+            builder: ElementBuilder::new(),
+        };
 
-        for event in &mut parser {
-            let event = match event {
-                Ok(o) => o,
-                Err(e) => return Err(e),
-            };
-
+        while let Some(event) = parser.next_event() {
+            let event = try!(event);
             match event {
                 Event::ElementStart(StartTag { ref name, .. }) if name == "channel" => break,
                 _ => (),
             }
         }
 
-        Ok(RssParser {
-            parser: parser,
-            builder: ElementBuilder::new(),
-        })
+        Ok(parser)
+    }
+
+    fn next_event(&mut self) -> Option<Result<Event, ParserError>> {
+        loop {
+            if let Some(event) = self.parser.next() {
+                return Some(event);
+            }
+            match self.reader.next_str() {
+                Some(Ok(s)) => {
+                    self.parser.feed_str(s);
+                }
+                _ => return None,
+            }
+        }
     }
 }
 
-impl Iterator for RssParser {
+impl<R: Read> Iterator for RssParser<R> {
     type Item = Element;
 
     fn next(&mut self) -> Option<Element> {
-        for event in &mut self.parser {
+        while let Some(event) = self.next_event() {
             // println!("{:?}", event);
             match self.builder.handle_event(event) {
                 Some(Ok(elem)) => {
