@@ -54,10 +54,11 @@ impl<R: Read> StrBufReader<R> {
 
 #[cfg(test)]
 mod tests {
-    use std::io::{Read, self};
+    use std::io;
     use super::StrBufReader;
 
-    fn read_to_end<R: Read>(mut reader: StrBufReader<R>) -> io::Result<String> {
+    fn read_to_end<R: io::Read>(mut reader: StrBufReader<R>)
+            -> io::Result<String> {
         let mut result = String::new();
         while let Some(s) = reader.next_str() {
             result.push_str(try!(s));
@@ -89,7 +90,23 @@ mod tests {
     #[test]
     fn test_unicode_split() {
         let data = "💖💖💖💖";
-        let reader = StrBufReader::with_capacity(6, data.as_bytes());
+        let reader = StrBufReader::with_capacity(12, data.as_bytes());
         assert_eq!(read_to_end(reader).unwrap(), data);
+    }
+
+    #[test]
+    fn test_last_buf_single_wide_char() {
+        let data = "fooooooooooooo💖";
+        let reader = StrBufReader::with_capacity(16, data.as_bytes());
+        assert_eq!(read_to_end(reader).unwrap(), data);
+    }
+
+    #[test]
+    fn test_invalid_bytes() {
+        let data = b"fo\xF0\x9F\x92\x96ooo\x00\x9F\x92\x96o";
+        let mut reader = StrBufReader::with_capacity(8, data.as_ref());
+        assert_eq!(reader.next_str().unwrap().unwrap(), "fo💖o");
+        let err = reader.next_str().unwrap().unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
     }
 }
