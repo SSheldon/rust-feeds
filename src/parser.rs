@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::io::{ErrorKind, Read, self};
 use std::str;
 
 use xml::{Element, ElementBuilder, Event, Parser, ParserError, StartTag};
@@ -6,31 +6,39 @@ use xml::{Element, ElementBuilder, Event, Parser, ParserError, StartTag};
 struct StrBufReader<R> {
     reader: R,
     buffer: Vec<u8>,
-    last: usize,
+    len: usize,
+    extra: usize,
 }
 
 impl<R: Read> StrBufReader<R> {
-    fn next_str(&mut self) -> Option<&str> {
+    fn next_str(&mut self) -> Option<io::Result<&str>> {
         // copy extra bytes to the front
-        let extra_bytes = self.buffer.len() - self.last;
-        for i in 0..extra_bytes {
-            self.buffer[i] = self.buffer[self.last + i];
+        for i in 0..self.extra {
+            self.buffer[i] = self.buffer[self.len + i];
         }
+        self.len = 0;
 
-        let capacity = self.buffer.capacity();
-        self.buffer.resize(capacity, 0);
-        let new_bytes = self.reader.read(&mut self.buffer[extra_bytes..]);
-        self.buffer.truncate(extra_bytes + new_bytes.as_ref().ok().map_or(0, |&b| b));
-
+        let new_bytes = self.reader.read(&mut self.buffer[self.extra..]);
         // find a character boundary
-        self.last = match new_bytes {
+        let (len, extra) = match new_bytes {
             // If there are no more bytes coming, don't save any extra bytes
-            Ok(0) => self.buffer.len(),
-            _ => self.buffer.iter().rposition(|&b| b < 128 || b >= 192).unwrap_or(0),
+            Ok(0) => (self.extra, 0),
+            Ok(i) => {
+                let full_len = self.extra + i;
+                let last = (&self.buffer[..full_len]).iter()
+                    .rposition(|&b| b < 128 || b >= 192)
+                    .unwrap_or(0);
+                (last, full_len - last)
+            },
+            Err(e) => return Some(Err(e)),
         };
+        self.len = len;
+        self.extra = extra;
 
-        if self.last > 0 {
-            str::from_utf8(&self.buffer[..self.last]).ok()
+        if len > 0 {
+            Some(str::from_utf8(&self.buffer[..len]).map_err(|e| {
+                io::Error::new(ErrorKind::InvalidData, e)
+            }))
         } else {
             None
         }
