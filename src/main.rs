@@ -1,13 +1,11 @@
 extern crate chrono;
+extern crate feed_stream;
 extern crate fever_api;
 #[macro_use]
 extern crate iron;
 extern crate serde;
 extern crate serde_json;
 extern crate url;
-extern crate xml;
-
-mod parser;
 
 use std::collections::HashMap;
 use std::io::Read;

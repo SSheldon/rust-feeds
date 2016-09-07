@@ -5,9 +5,9 @@ authors = ["Steven Sheldon"]
 
 [dependencies]
 chrono = "0.2"
+feed-stream = { path = "feed-stream" }
 fever-api = { path = "fever-api" }
 iron = "0.4"
-RustyXML = "0.1"
 serde = "0.8"
 serde_json = "0.8"
 serde_macros = "0.8"

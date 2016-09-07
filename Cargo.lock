@@ -2,8 +2,8 @@
 name = "feeds"
 version = "0.0.0"
 dependencies = [
- "RustyXML 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.2.25 (registry+https://github.com/rust-lang/crates.io-index)",
+ "feed-stream 0.0.0",
  "fever-api 0.0.0",
  "iron 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -60,6 +60,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "traitobject 0.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "typeable 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "feed-stream"
+version = "0.0.0"
+dependencies = [
+ "RustyXML 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
