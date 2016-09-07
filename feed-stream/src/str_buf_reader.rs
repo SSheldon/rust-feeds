@@ -42,12 +42,12 @@ impl<R: Read> StrBufReader<R> {
         self.len = len;
         self.extra = extra;
 
-        if len > 0 {
+        if len == 0 && extra == 0 {
+            None
+        } else {
             Some(str::from_utf8(&self.buffer[..len]).map_err(|e| {
                 io::Error::new(ErrorKind::InvalidData, e)
             }))
-        } else {
-            None
         }
     }
 }
@@ -80,7 +80,14 @@ mod tests {
     }
 
     #[test]
-    fn test_unicode() {
+    fn test_unicode_fits() {
+        let data = "💖💖💖💖";
+        let reader = StrBufReader::with_capacity(64, data.as_bytes());
+        assert_eq!(read_to_end(reader).unwrap(), data);
+    }
+
+    #[test]
+    fn test_unicode_split() {
         let data = "💖💖💖💖";
         let reader = StrBufReader::with_capacity(6, data.as_bytes());
         assert_eq!(read_to_end(reader).unwrap(), data);
