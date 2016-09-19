@@ -1,6 +1,6 @@
 use xml::Element;
 
-use ::{ElementUtils, NS, ViaXml};
+use {ElementUtils, NS, ViaXml};
 
 
 /// [The Atom Syndication Format § The "atom:category" Element]

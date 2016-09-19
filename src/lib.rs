@@ -61,6 +61,8 @@
 //! let feed = atom_str.parse::<Feed>().unwrap();
 //! ```
 
+extern crate xml;
+
 mod author;
 mod category;
 mod contributor;
@@ -71,19 +73,17 @@ mod link;
 mod person;
 mod source;
 
-extern crate xml;
-
 use xml::Element;
 
-pub use ::author::Author;
-pub use ::category::Category;
-pub use ::contributor::Contributor;
-pub use ::entry::Entry;
-pub use ::feed::Feed;
-pub use ::generator::Generator;
-pub use ::link::Link;
-pub use ::person::Person;
-pub use ::source::Source;
+pub use author::Author;
+pub use category::Category;
+pub use contributor::Contributor;
+pub use entry::Entry;
+pub use feed::Feed;
+pub use generator::Generator;
+pub use link::Link;
+pub use person::Person;
+pub use source::Source;
 
 
 const NS: &'static str = "http://www.w3.org/2005/Atom";
