@@ -55,9 +55,12 @@ let feed = atom_str.parse::<Feed>().unwrap();
 
 ## Acknowledgements
 
-Thanks to [Corey Farwell](https://rwell.org/) for writing
-[rust-rss](https://github.com/frewsxcv/rust-rss). This library is a
-fairly direct port of it to Atom.
+Thanks to:
+
+ * Francis Gagné for contributing many improvements to the quality of
+   this library, including writing an extensive test suite.
+ * Corey Farwell for writing [rust-rss](https://github.com/frewsxcv/rust-rss).
+   This library is a fairly direct port of it to Atom.
 
 ## License
 

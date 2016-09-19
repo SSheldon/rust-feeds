@@ -2,7 +2,11 @@
 
 name = "atom_syndication"
 version = "0.2.0-pre"
-authors = ["Duncan <duncan@vtllf.org>", "Corey Farwell <coreyf@rwell.org>"]
+authors = [
+  "Francis Gagné <fragag1@gmail.com>",
+  "Duncan <duncan@vtllf.org>",
+  "Corey Farwell <coreyf@rwell.org>"
+]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/vtduncan/rust-atom"
 documentation = "https://vtduncan.github.io/rust-atom/atom_syndication/index.html"
