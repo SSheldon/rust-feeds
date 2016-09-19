@@ -169,9 +169,7 @@ impl FromStr for Feed {
 
 impl ToString for Feed {
     fn to_string(&self) -> String {
-        let mut ret = format!("{}", Xml::PINode(r#"xml version="1.0" encoding="utf-8""#.to_string()));
-        ret.push_str(&format!("{}", self.to_xml()));
-        ret
+        format!("{}{}", Xml::PINode(r#"xml version="1.0" encoding="utf-8""#.to_string()), self.to_xml())
     }
 }
 
