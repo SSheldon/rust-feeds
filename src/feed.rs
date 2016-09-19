@@ -1,7 +1,8 @@
 use std::str::FromStr;
 use xml::{Element, ElementBuilder, Parser, Xml};
 
-use {Author, Category, Contributor, ElementUtils, Entry, Generator, Link, NS, Person, ViaXml};
+use {Author, Category, Contributor, Entry, Generator, Link, NS, Person};
+use utils::{ElementUtils, ViaXml};
 
 
 /// [The Atom Syndication Format § The "atom:feed" Element]

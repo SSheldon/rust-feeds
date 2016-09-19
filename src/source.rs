@@ -1,6 +1,7 @@
 use xml::Element;
 
-use {Author, Category, Contributor, ElementUtils, Generator, Link, NS, Person, ViaXml};
+use {Author, Category, Contributor, Generator, Link, NS, Person};
+use utils::{ElementUtils, ViaXml};
 
 
 /// [The Atom Syndication Format § The "atom:source" Element]
