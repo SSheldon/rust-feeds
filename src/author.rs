@@ -7,7 +7,7 @@ use utils::{ElementUtils, FromXml, ToXml};
 
 /// [The Atom Syndication Format § The "atom:author" Element]
 /// (https://tools.ietf.org/html/rfc4287#section-4.2.1)
-#[derive(Clone, Default)]
+#[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub struct Author<P: Borrow<Person>>(pub P);
 
 
@@ -41,5 +41,120 @@ impl FromXml for Author<Person> {
             uri: uri,
             email: email,
         }))
+    }
+}
+
+
+#[cfg(test)]
+mod tests {
+    use std::str;
+
+    use Person;
+    use author::Author;
+    use utils::{FromXml, ToXml};
+
+    #[test]
+    fn to_xml_name_only() {
+        let author = Author(Person {
+            name: "John Doe".to_string(),
+            uri: None,
+            email: None,
+        });
+
+        let xml = format!("{}", author.to_xml());
+        assert_eq!(xml, "<author xmlns='http://www.w3.org/2005/Atom'><name>John Doe</name></author>");
+    }
+
+    #[test]
+    fn to_xml_with_uri() {
+        let author = Author(Person {
+            name: "John Doe".to_string(),
+            uri: Some("http://john.doe.example/".to_string()),
+            email: None,
+        });
+
+        let xml = format!("{}", author.to_xml());
+        assert_eq!(xml, "<author xmlns='http://www.w3.org/2005/Atom'><name>John Doe</name><uri>http://john.doe.example/</uri></author>");
+    }
+
+    #[test]
+    fn to_xml_with_email() {
+        let author = Author(Person {
+            name: "John Doe".to_string(),
+            uri: None,
+            email: Some("john@john.doe.example".to_string()),
+        });
+
+        let xml = format!("{}", author.to_xml());
+        assert_eq!(xml, "<author xmlns='http://www.w3.org/2005/Atom'><name>John Doe</name><email>john@john.doe.example</email></author>");
+    }
+
+    #[test]
+    fn to_xml_with_uri_and_email() {
+        let author = Author(Person {
+            name: "John Doe".to_string(),
+            uri: Some("http://john.doe.example/".to_string()),
+            email: Some("john@john.doe.example".to_string()),
+        });
+
+        let xml = format!("{}", author.to_xml());
+        assert_eq!(xml, "<author xmlns='http://www.w3.org/2005/Atom'><name>John Doe</name><uri>http://john.doe.example/</uri><email>john@john.doe.example</email></author>");
+    }
+
+    #[test]
+    fn from_xml_missing_name() {
+        let author = Author::from_xml(&str::parse("<author xmlns='http://www.w3.org/2005/Atom'></author>").unwrap());
+        assert_eq!(author, Err("<author> is missing required <name> element"));
+    }
+
+    #[test]
+    fn from_xml_name_only() {
+        let author = Author::from_xml(&str::parse("<author xmlns='http://www.w3.org/2005/Atom'><name>John Doe</name></author>").unwrap());
+        assert_eq!(author, Ok(Author(Person {
+            name: "John Doe".to_string(),
+            uri: None,
+            email: None,
+        })));
+    }
+
+    #[test]
+    fn from_xml_with_uri() {
+        let author = Author::from_xml(&str::parse("<author xmlns='http://www.w3.org/2005/Atom'><name>John Doe</name><uri>http://john.doe.example/</uri></author>").unwrap());
+        assert_eq!(author, Ok(Author(Person {
+            name: "John Doe".to_string(),
+            uri: Some("http://john.doe.example/".to_string()),
+            email: None,
+        })));
+    }
+
+    #[test]
+    fn from_xml_with_email() {
+        let author = Author::from_xml(&str::parse("<author xmlns='http://www.w3.org/2005/Atom'><name>John Doe</name><email>john@john.doe.example</email></author>").unwrap());
+        assert_eq!(author, Ok(Author(Person {
+            name: "John Doe".to_string(),
+            uri: None,
+            email: Some("john@john.doe.example".to_string()),
+        })));
+    }
+
+    #[test]
+    fn from_xml_with_uri_and_email() {
+        let author = Author::from_xml(&str::parse("<author xmlns='http://www.w3.org/2005/Atom'><name>John Doe</name><uri>http://john.doe.example/</uri><email>john@john.doe.example</email></author>").unwrap());
+        assert_eq!(author, Ok(Author(Person {
+            name: "John Doe".to_string(),
+            uri: Some("http://john.doe.example/".to_string()),
+            email: Some("john@john.doe.example".to_string()),
+        })));
+    }
+
+    #[test]
+    fn from_xml_with_uri_and_email_shuffled() {
+        // § Person Constructs: "This specification assigns no significance to the order of appearance of the child elements in a Person construct."
+        let author = Author::from_xml(&str::parse("<author xmlns='http://www.w3.org/2005/Atom'><email>john@john.doe.example</email><uri>http://john.doe.example/</uri><name>John Doe</name></author>").unwrap());
+        assert_eq!(author, Ok(Author(Person {
+            name: "John Doe".to_string(),
+            uri: Some("http://john.doe.example/".to_string()),
+            email: Some("john@john.doe.example".to_string()),
+        })));
     }
 }
