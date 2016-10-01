@@ -1,8 +1,9 @@
-#![feature(plugin, custom_derive)]
-#![plugin(serde_macros)]
+#![feature(rustc_macro)]
 
 extern crate chrono;
 extern crate serde;
+#[macro_use]
+extern crate serde_derive;
 extern crate serde_json;
 
 use std::collections::HashMap;
