@@ -1,14 +1,11 @@
 [root]
-name = "feeds"
+name = "fever-api"
 version = "0.0.0"
 dependencies = [
  "chrono 0.2.25 (registry+https://github.com/rust-lang/crates.io-index)",
- "feed-stream 0.0.0",
- "fever-api 0.0.0",
- "iron 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_derive 0.8.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "url 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -64,13 +61,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "fever-api"
+name = "feeds"
 version = "0.0.0"
 dependencies = [
  "chrono 0.2.25 (registry+https://github.com/rust-lang/crates.io-index)",
+ "feed-stream 0.0.0",
+ "fever-api 0.0.0",
+ "iron 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 0.8.6 (registry+https://github.com/rust-lang/crates.io-index)",
- "serde_derive 0.8.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "url 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
