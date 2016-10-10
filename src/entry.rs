@@ -5,6 +5,46 @@ use author::Author;
 use contributor::Contributor;
 use utils::{ElementUtils, Flip, FromXml, ToXml};
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Content {
+    Text(String),
+    Html(String),
+}
+
+impl Content {
+    fn type_string(&self) -> String {
+        match *self {
+            Content::Text(_) => "text".to_string(),
+            Content::Html(_) => "html".to_string(),
+        }
+    }
+
+    fn text(&self) -> String {
+        match *self {
+            Content::Text(ref text) | Content::Html(ref text) => text.clone(),
+        }
+    }
+}
+
+impl ToXml for Content {
+    fn to_xml(&self) -> Element {
+        let type_attr = ("type".to_string(), None, self.type_string());
+        let mut content = Element::new("content".to_string(), Some(NS.to_string()), vec![type_attr]);
+        content.text(self.text());
+        content
+    }
+}
+
+impl FromXml for Content {
+    fn from_xml(elem: &Element) -> Result<Self, &'static str> {
+        let text = elem.content_str();
+        match elem.get_attribute("type", Some(NS)) {
+            Some("text") | None => Ok(Content::Text(text)),
+            Some("html") => Ok(Content::Html(text)),
+            Some(_) => Err("<content> has unknown type")
+        }
+    }
+}
 
 /// [The Atom Syndication Format § The "atom:entry" Element]
 /// (https://tools.ietf.org/html/rfc4287#section-4.1.2)
@@ -33,7 +73,7 @@ pub struct Entry {
     pub authors: Vec<Person>,
     pub contributors: Vec<Person>,
     pub summary: Option<String>,
-    pub content: Option<String>,
+    pub content: Option<Content>,
 }
 
 
@@ -68,7 +108,10 @@ impl ToXml for Entry {
         }
 
         entry.tag_with_optional_text("summary", &self.summary);
-        entry.tag_with_optional_text("content", &self.content);
+
+        if let Some(ref content) = self.content {
+            entry.tag(content.to_xml());
+        }
 
         entry
     }
@@ -113,7 +156,8 @@ impl FromXml for Entry {
 
         let published = elem.get_child("published", Some(NS)).map(Element::content_str);
         let summary = elem.get_child("summary", Some(NS)).map(Element::content_str);
-        let content = elem.get_child("content", Some(NS)).map(Element::content_str);
+        let content = try!(elem.get_child("content", Some(NS))
+            .map(|e| FromXml::from_xml(e)).flip());
 
         Ok(Entry {
             id: id,
@@ -137,6 +181,7 @@ mod tests {
     use xml::Element;
 
     use {Category, Entry, Generator, Link, NS, Person, Source};
+    use entry::Content;
     use utils::{FromXml, ToXml};
 
     #[test]
@@ -590,12 +635,26 @@ mod tests {
             id: "http://example.com/1".to_string(),
             title: "First!".to_string(),
             updated: "2016-09-17T19:18:32Z".to_string(),
-            content: Some("Content of the first post.".to_string()),
+            content: Some(Content::Text("Content of the first post.".to_string())),
             ..Default::default()
         };
 
         let xml = format!("{}", entry.to_xml());
-        assert_eq!(xml, "<entry xmlns='http://www.w3.org/2005/Atom'><id>http://example.com/1</id><title>First!</title><updated>2016-09-17T19:18:32Z</updated><content>Content of the first post.</content></entry>");
+        assert_eq!(xml, "<entry xmlns='http://www.w3.org/2005/Atom'><id>http://example.com/1</id><title>First!</title><updated>2016-09-17T19:18:32Z</updated><content type='text'>Content of the first post.</content></entry>");
+    }
+
+    #[test]
+    fn to_xml_with_html_content() {
+        let entry = Entry {
+            id: "http://example.com/1".to_string(),
+            title: "First!".to_string(),
+            updated: "2016-09-17T19:18:32Z".to_string(),
+            content: Some(Content::Html("<p>Content of the first post.</p>".to_string())),
+            ..Default::default()
+        };
+
+        let xml = format!("{}", entry.to_xml());
+        assert_eq!(xml, "<entry xmlns='http://www.w3.org/2005/Atom'><id>http://example.com/1</id><title>First!</title><updated>2016-09-17T19:18:32Z</updated><content type='html'>&lt;p&gt;Content of the first post.&lt;/p&gt;</content></entry>");
     }
 
     #[test]
@@ -746,7 +805,7 @@ mod tests {
                 },
             ],
             summary: Some("Summary of the first post.".to_string()),
-            content: Some("Content of the first post.".to_string()),
+            content: Some(Content::Text("Content of the first post.".to_string())),
         };
 
         // RustyXML renders attributes in a random order, so we can't compare the rendered XML.
@@ -1112,7 +1171,11 @@ mod tests {
             .tag_stay(contributor3_name_element);
         let mut summary_element = Element::new("summary".to_string(), Some(NS.to_string()), vec![]);
         summary_element.text("Summary of the first post.".to_string());
-        let mut content_element = Element::new("content".to_string(), Some(NS.to_string()), vec![]);
+        let mut content_element = Element::new(
+            "content".to_string(),
+            Some(NS.to_string()),
+            vec![("type".to_string(), None, "text".to_string())]
+        );
         content_element.text("Content of the first post.".to_string());
         expected_element
             .tag_stay(id_element)
@@ -1558,7 +1621,7 @@ mod tests {
             id: "http://example.com/1".to_string(),
             title: "First!".to_string(),
             updated: "2016-09-17T19:18:32Z".to_string(),
-            content: Some("Content of the first post.".to_string()),
+            content: Some(Content::Text("Content of the first post.".to_string())),
             ..Default::default()
         }));
     }
@@ -1785,7 +1848,7 @@ mod tests {
                 },
             ],
             summary: Some("Summary of the first post.".to_string()),
-            content: Some("Content of the first post.".to_string()),
+            content: Some(Content::Text("Content of the first post.".to_string())),
         }));
     }
 
@@ -2012,7 +2075,7 @@ mod tests {
                 },
             ],
             summary: Some("Summary of the first post.".to_string()),
-            content: Some("Content of the first post.".to_string()),
+            content: Some(Content::Text("Content of the first post.".to_string())),
         }));
     }
 }

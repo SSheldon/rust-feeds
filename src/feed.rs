@@ -181,6 +181,7 @@ mod tests {
     use xml::Element;
 
     use {Category, Entry, Feed, Generator, Link, NS, Person, Source};
+    use entry::Content;
     use utils::{FromXml, ToXml};
 
     #[test]
@@ -733,7 +734,7 @@ mod tests {
                         },
                     ],
                     summary: Some("Summary of the first post.".to_string()),
-                    content: Some("Content of the first post.".to_string()),
+                    content: Some(Content::Text("Content of the first post.".to_string())),
                 },
             ],
             ..Default::default()
@@ -776,7 +777,7 @@ mod tests {
                     <name>Corey Farwell</name>\
                 </contributor>\
                 <summary>Summary of the first post.</summary>\
-                <content>Content of the first post.</content>\
+                <content type='text'>Content of the first post.</content>\
             </entry>\
         </feed>");
     }
@@ -1058,7 +1059,7 @@ mod tests {
                         },
                     ],
                     summary: Some("Summary of the first post.".to_string()),
-                    content: Some("Content of the first post.".to_string()),
+                    content: Some(Content::Text("Content of the first post.".to_string())),
                 },
                 Entry {
                     id: "http://example.com/2".to_string(),
@@ -1614,7 +1615,11 @@ mod tests {
                 .tag_stay(contributor3_name_element);
             let mut summary_element = Element::new("summary".to_string(), Some(NS.to_string()), vec![]);
             summary_element.text("Summary of the first post.".to_string());
-            let mut content_element = Element::new("content".to_string(), Some(NS.to_string()), vec![]);
+            let mut content_element = Element::new(
+                "content".to_string(),
+                Some(NS.to_string()),
+                vec![("type".to_string(), None, "text".to_string())]
+            );
             content_element.text("Content of the first post.".to_string());
             entry1_element
                 .tag_stay(id_element)
@@ -2230,7 +2235,7 @@ mod tests {
                         },
                     ],
                     summary: Some("Summary of the first post.".to_string()),
-                    content: Some("Content of the first post.".to_string()),
+                    content: Some(Content::Text("Content of the first post.".to_string())),
                 },
             ],
             ..Default::default()
@@ -2634,7 +2639,7 @@ mod tests {
                         },
                     ],
                     summary: Some("Summary of the first post.".to_string()),
-                    content: Some("Content of the first post.".to_string()),
+                    content: Some(Content::Text("Content of the first post.".to_string())),
                 },
                 Entry {
                     id: "http://example.com/2".to_string(),
@@ -2999,7 +3004,7 @@ mod tests {
                         },
                     ],
                     summary: Some("Summary of the first post.".to_string()),
-                    content: Some("Content of the first post.".to_string()),
+                    content: Some(Content::Text("Content of the first post.".to_string())),
                 },
                 Entry {
                     id: "http://example.com/2".to_string(),
