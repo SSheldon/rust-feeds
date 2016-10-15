@@ -76,6 +76,7 @@ mod utils;
 
 pub use category::Category;
 pub use entry::Entry;
+pub use entry::Content;
 pub use feed::Feed;
 pub use generator::Generator;
 pub use link::Link;

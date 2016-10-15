@@ -180,8 +180,7 @@ mod tests {
 
     use xml::Element;
 
-    use {Category, Entry, Feed, Generator, Link, NS, Person, Source};
-    use entry::Content;
+    use {Content, Category, Entry, Feed, Generator, Link, NS, Person, Source};
     use utils::{FromXml, ToXml};
 
     #[test]

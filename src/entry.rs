@@ -190,8 +190,7 @@ impl FromXml for Entry {
 mod tests {
     use xml::{Element, Xml};
 
-    use {Category, Entry, Generator, Link, NS, Person, Source, XHTML_NS};
-    use entry::Content;
+    use {Category, Content, Entry, Generator, Link, NS, Person, Source, XHTML_NS};
     use utils::{FromXml, ToXml};
 
     #[test]
