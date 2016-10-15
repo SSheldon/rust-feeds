@@ -23,7 +23,7 @@ use utils::{ElementUtils, Flip, FromXml, ToXml};
 ///     ..Default::default()
 /// };
 /// ```
-#[derive(Clone, Default, Debug, PartialEq, Eq)]
+#[derive(Clone, Default, Debug, PartialEq)]
 pub struct Feed {
     pub id: String,
     pub title: String,

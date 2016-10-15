@@ -84,3 +84,4 @@ pub use source::Source;
 
 
 const NS: &'static str = "http://www.w3.org/2005/Atom";
+const XHTML_NS: &'static str = "http://www.w3.org/1999/xhtml";

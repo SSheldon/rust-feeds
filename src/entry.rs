@@ -1,14 +1,15 @@
-use xml::Element;
+use xml::{Xml, Element};
 
-use {Category, Link, NS, Person, Source};
+use {Category, Link, NS, Person, Source, XHTML_NS};
 use author::Author;
 use contributor::Contributor;
 use utils::{ElementUtils, Flip, FromXml, ToXml};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Content {
     Text(String),
     Html(String),
+    Xhtml(Element),
 }
 
 impl Content {
@@ -16,12 +17,7 @@ impl Content {
         match *self {
             Content::Text(_) => "text".to_string(),
             Content::Html(_) => "html".to_string(),
-        }
-    }
-
-    fn text(&self) -> String {
-        match *self {
-            Content::Text(ref text) | Content::Html(ref text) => text.clone(),
+            Content::Xhtml(_) => "xhtml".to_string(),
         }
     }
 }
@@ -30,7 +26,11 @@ impl ToXml for Content {
     fn to_xml(&self) -> Element {
         let type_attr = ("type".to_string(), None, self.type_string());
         let mut content = Element::new("content".to_string(), Some(NS.to_string()), vec![type_attr]);
-        content.text(self.text());
+        match *self {
+            Content::Text(ref text) | Content::Html(ref text) => { content.text(text.clone()); },
+            Content::Xhtml(ref element) => { content.children.push(Xml::ElementNode(element.clone())); },
+        };
+
         content
     }
 }
@@ -41,6 +41,16 @@ impl FromXml for Content {
         match elem.get_attribute("type", None) {
             Some("text") | None => Ok(Content::Text(text)),
             Some("html") => Ok(Content::Html(text)),
+            Some("xhtml") => {
+                // https://tools.ietf.org/html/rfc4287#section-4.1.3.3
+                // 4.1.3.3.3 If the value of "type" is "xhtml", the content of atom:content MUST be
+                // a single XHTML div element
+                if let Some(div) = elem.get_child("div", Some(XHTML_NS)) {
+                    return Ok(Content::Xhtml(div.clone()));
+                }
+
+                Err("expected to find child element <div> of <content> but found none")
+            },
             Some(_) => Err("<content> has unknown type")
         }
     }
@@ -61,7 +71,7 @@ impl FromXml for Content {
 ///     ..Default::default()
 /// };
 /// ```
-#[derive(Clone, Default, Debug, PartialEq, Eq)]
+#[derive(Clone, Default, Debug, PartialEq)]
 pub struct Entry {
     pub id: String,
     pub title: String,
@@ -178,9 +188,9 @@ impl FromXml for Entry {
 
 #[cfg(test)]
 mod tests {
-    use xml::Element;
+    use xml::{Element, Xml};
 
-    use {Category, Entry, Generator, Link, NS, Person, Source};
+    use {Category, Entry, Generator, Link, NS, Person, Source, XHTML_NS};
     use entry::Content;
     use utils::{FromXml, ToXml};
 
@@ -655,6 +665,25 @@ mod tests {
 
         let xml = format!("{}", entry.to_xml());
         assert_eq!(xml, "<entry xmlns='http://www.w3.org/2005/Atom'><id>http://example.com/1</id><title>First!</title><updated>2016-09-17T19:18:32Z</updated><content type='html'>&lt;p&gt;Content of the first post.&lt;/p&gt;</content></entry>");
+    }
+
+    #[test]
+    fn to_xml_with_xhtml_content() {
+        let mut div = Element::new("div".to_string(), Some(XHTML_NS.to_string()), vec![]);
+        let mut p = Element::new("p".to_string(), Some(XHTML_NS.to_string()), vec![]);
+        p.text("Content of the first post.".to_string());
+        div.children.push(Xml::ElementNode(p));
+
+        let entry = Entry {
+            id: "http://example.com/1".to_string(),
+            title: "First!".to_string(),
+            updated: "2016-09-17T19:18:32Z".to_string(),
+            content: Some(Content::Xhtml(div)),
+            ..Default::default()
+        };
+
+        let xml = format!("{}", entry.to_xml());
+        assert_eq!(xml, "<entry xmlns='http://www.w3.org/2005/Atom'><id>http://example.com/1</id><title>First!</title><updated>2016-09-17T19:18:32Z</updated><content type='xhtml'><div xmlns='http://www.w3.org/1999/xhtml'><p>Content of the first post.</p></div></content></entry>");
     }
 
     #[test]
@@ -1636,6 +1665,36 @@ mod tests {
             content: Some(Content::Html("<p>Content of the first post.</p>".to_string())),
             ..Default::default()
         }));
+    }
+
+    #[test]
+    fn from_xml_with_xhtml_content() {
+        let entry = Entry::from_xml(&str::parse("<entry xmlns='http://www.w3.org/2005/Atom'><id>http://example.com/1</id><title>First!</title><updated>2016-09-17T19:18:32Z</updated><content type='xhtml'><div xmlns='http://www.w3.org/1999/xhtml'><p>Content of the first post.</p></div></content></entry>").unwrap());
+        let namespace_attr = ("xmlns".to_string(), None, "http://www.w3.org/1999/xhtml".to_string());
+        let mut div = Element::new("div".to_string(), Some(XHTML_NS.to_string()), vec![namespace_attr]);
+        let mut p = Element::new("p".to_string(), Some(XHTML_NS.to_string()), vec![]);
+        p.text("Content of the first post.".to_string());
+        div.children.push(Xml::ElementNode(p));
+
+        assert_eq!(entry, Ok(Entry {
+            id: "http://example.com/1".to_string(),
+            title: "First!".to_string(),
+            updated: "2016-09-17T19:18:32Z".to_string(),
+            content: Some(Content::Xhtml(div)),
+            ..Default::default()
+        }));
+    }
+
+    #[test]
+    fn from_xml_with_xhtml_content_no_div() {
+        let entry = Entry::from_xml(&str::parse("<entry xmlns='http://www.w3.org/2005/Atom'><id>http://example.com/1</id><title>First!</title><updated>2016-09-17T19:18:32Z</updated><content type='xhtml'><p>Content of the first post.</p></content></entry>").unwrap());
+        assert_eq!(entry, Err("expected to find child element <div> of <content> but found none"));
+    }
+
+    #[test]
+    fn from_xml_with_invalid_content_type() {
+        let entry = Entry::from_xml(&str::parse("<entry xmlns='http://www.w3.org/2005/Atom'><id>http://example.com/1</id><title>First!</title><updated>2016-09-17T19:18:32Z</updated><content type='invalid'>Content of the first post.</content></entry>").unwrap());
+        assert_eq!(entry, Err("<content> has unknown type"));
     }
 
     #[test]
