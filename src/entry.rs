@@ -38,7 +38,7 @@ impl ToXml for Content {
 impl FromXml for Content {
     fn from_xml(elem: &Element) -> Result<Self, &'static str> {
         let text = elem.content_str();
-        match elem.get_attribute("type", Some(NS)) {
+        match elem.get_attribute("type", None) {
             Some("text") | None => Ok(Content::Text(text)),
             Some("html") => Ok(Content::Html(text)),
             Some(_) => Err("<content> has unknown type")
@@ -1622,6 +1622,18 @@ mod tests {
             title: "First!".to_string(),
             updated: "2016-09-17T19:18:32Z".to_string(),
             content: Some(Content::Text("Content of the first post.".to_string())),
+            ..Default::default()
+        }));
+    }
+
+    #[test]
+    fn from_xml_with_html_content() {
+        let entry = Entry::from_xml(&str::parse("<entry xmlns='http://www.w3.org/2005/Atom'><id>http://example.com/1</id><title>First!</title><updated>2016-09-17T19:18:32Z</updated><content type='html'>&lt;p&gt;Content of the first post.&lt;/p&gt;</content></entry>").unwrap());
+        assert_eq!(entry, Ok(Entry {
+            id: "http://example.com/1".to_string(),
+            title: "First!".to_string(),
+            updated: "2016-09-17T19:18:32Z".to_string(),
+            content: Some(Content::Html("<p>Content of the first post.</p>".to_string())),
             ..Default::default()
         }));
     }
