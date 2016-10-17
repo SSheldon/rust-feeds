@@ -7,8 +7,11 @@ use utils::{FromXml, ToXml};
 /// (https://tools.ietf.org/html/rfc4287#section-4.1.3)
 #[derive(Clone, Debug, PartialEq)]
 pub enum Content {
+    /// Plain text only, no markup
     Text(String),
+    /// String containing escaped HTML markup
     Html(String),
+    /// XHTML div element embedded in the feed
     Xhtml(Element),
 }
 
