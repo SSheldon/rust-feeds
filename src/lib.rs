@@ -65,6 +65,7 @@ extern crate xml;
 
 mod author;
 mod category;
+mod content;
 mod contributor;
 mod entry;
 mod feed;
@@ -75,8 +76,8 @@ mod source;
 mod utils;
 
 pub use category::Category;
+pub use content::Content;
 pub use entry::Entry;
-pub use entry::Content;
 pub use feed::Feed;
 pub use generator::Generator;
 pub use link::Link;
