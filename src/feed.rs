@@ -3022,13 +3022,6 @@ mod tests {
     }
 
     #[test]
-    fn from_str() {
-        let atom_string = include_str!("../test-data/xkcd.xml");
-        let feed = Feed::from_str(atom_string).unwrap();
-        assert!(feed.to_string().len() > 0);
-    }
-
-    #[test]
     fn from_str_no_feeds() {
         let atom_str = "";
         assert!(Feed::from_str(atom_str).is_err());
