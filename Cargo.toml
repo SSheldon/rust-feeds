@@ -1,7 +1,7 @@
 [package]
 
 name = "atom_syndication"
-version = "0.2.0"
+version = "0.3.0"
 authors = [
   "Francis Gagné <fragag1@gmail.com>",
   "Duncan <duncan@vtllf.org>",
