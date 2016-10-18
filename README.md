@@ -1,10 +1,24 @@
 # rust-atom
 
-[![atom_syndication on Crates.io](https://meritbadge.herokuapp.com/atom_syndication)](https://crates.io/crates/atom_syndication)
+Rust library for serializing the Atom web content syndication format.
 
-[Documentation](https://vtduncan.github.io/rust-atom/)
+ - [Documentation](https://docs.rs/atom_syndication)
+ - [Crate](https://crates.io/crates/atom_syndication)
 
-Library for serializing the Atom web content syndication format
+## Usage
+
+Add this to your `Cargo.toml`:
+
+```toml
+[dependencies]
+atom_syndication = "0.3"
+```
+
+and this to your crate root:
+
+```rust
+extern crate atom_syndication;
+```
 
 ## Examples
 
@@ -57,17 +71,17 @@ let feed = atom_str.parse::<Feed>().unwrap();
 
 Thanks to:
 
- * Francis Gagné for contributing many improvements to the quality of
+ - Francis Gagné for contributing many improvements to the quality of
    this library, including writing an extensive test suite.
- * Corey Farwell for writing [rust-rss](https://github.com/frewsxcv/rust-rss).
+ - Corey Farwell for writing [rust-rss](https://github.com/frewsxcv/rust-rss).
    This library is a fairly direct port of it to Atom.
 
 ## License
 
 Licensed under either of
 
- * Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
- * MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+ - Apache License, Version 2.0, ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+ - MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
 at your option.
 

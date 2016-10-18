@@ -9,7 +9,7 @@ authors = [
 ]
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/vtduncan/rust-atom"
-documentation = "https://vtduncan.github.io/rust-atom/atom_syndication/index.html"
+documentation = "https://docs.rs/atom_syndication"
 description = "Library for serializing the Atom web content syndication format"
 keywords = ["rss", "atom", "feed", "blog"]
 
