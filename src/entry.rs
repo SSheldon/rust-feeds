@@ -137,9 +137,9 @@ impl FromXml for Entry {
 
 #[cfg(test)]
 mod tests {
-    use xml::{Element, Xml};
+    use xml::Element;
 
-    use {Category, Content, Entry, Generator, Link, NS, Person, Source, XHTML_NS};
+    use {Category, Content, Entry, Generator, Link, NS, Person, Source};
     use utils::{FromXml, ToXml};
 
     #[test]
@@ -599,39 +599,6 @@ mod tests {
 
         let xml = format!("{}", entry.to_xml());
         assert_eq!(xml, "<entry xmlns='http://www.w3.org/2005/Atom'><id>http://example.com/1</id><title>First!</title><updated>2016-09-17T19:18:32Z</updated><content type='text'>Content of the first post.</content></entry>");
-    }
-
-    #[test]
-    fn to_xml_with_html_content() {
-        let entry = Entry {
-            id: "http://example.com/1".to_string(),
-            title: "First!".to_string(),
-            updated: "2016-09-17T19:18:32Z".to_string(),
-            content: Some(Content::Html("<p>Content of the first post.</p>".to_string())),
-            ..Default::default()
-        };
-
-        let xml = format!("{}", entry.to_xml());
-        assert_eq!(xml, "<entry xmlns='http://www.w3.org/2005/Atom'><id>http://example.com/1</id><title>First!</title><updated>2016-09-17T19:18:32Z</updated><content type='html'>&lt;p&gt;Content of the first post.&lt;/p&gt;</content></entry>");
-    }
-
-    #[test]
-    fn to_xml_with_xhtml_content() {
-        let mut div = Element::new("div".to_string(), Some(XHTML_NS.to_string()), vec![]);
-        let mut p = Element::new("p".to_string(), Some(XHTML_NS.to_string()), vec![]);
-        p.text("Content of the first post.".to_string());
-        div.children.push(Xml::ElementNode(p));
-
-        let entry = Entry {
-            id: "http://example.com/1".to_string(),
-            title: "First!".to_string(),
-            updated: "2016-09-17T19:18:32Z".to_string(),
-            content: Some(Content::Xhtml(div)),
-            ..Default::default()
-        };
-
-        let xml = format!("{}", entry.to_xml());
-        assert_eq!(xml, "<entry xmlns='http://www.w3.org/2005/Atom'><id>http://example.com/1</id><title>First!</title><updated>2016-09-17T19:18:32Z</updated><content type='xhtml'><div xmlns='http://www.w3.org/1999/xhtml'><p>Content of the first post.</p></div></content></entry>");
     }
 
     #[test]
@@ -1601,48 +1568,6 @@ mod tests {
             content: Some(Content::Text("Content of the first post.".to_string())),
             ..Default::default()
         }));
-    }
-
-    #[test]
-    fn from_xml_with_html_content() {
-        let entry = Entry::from_xml(&str::parse("<entry xmlns='http://www.w3.org/2005/Atom'><id>http://example.com/1</id><title>First!</title><updated>2016-09-17T19:18:32Z</updated><content type='html'>&lt;p&gt;Content of the first post.&lt;/p&gt;</content></entry>").unwrap());
-        assert_eq!(entry, Ok(Entry {
-            id: "http://example.com/1".to_string(),
-            title: "First!".to_string(),
-            updated: "2016-09-17T19:18:32Z".to_string(),
-            content: Some(Content::Html("<p>Content of the first post.</p>".to_string())),
-            ..Default::default()
-        }));
-    }
-
-    #[test]
-    fn from_xml_with_xhtml_content() {
-        let entry = Entry::from_xml(&str::parse("<entry xmlns='http://www.w3.org/2005/Atom'><id>http://example.com/1</id><title>First!</title><updated>2016-09-17T19:18:32Z</updated><content type='xhtml'><div xmlns='http://www.w3.org/1999/xhtml'><p>Content of the first post.</p></div></content></entry>").unwrap());
-        let namespace_attr = ("xmlns".to_string(), None, "http://www.w3.org/1999/xhtml".to_string());
-        let mut div = Element::new("div".to_string(), Some(XHTML_NS.to_string()), vec![namespace_attr]);
-        let mut p = Element::new("p".to_string(), Some(XHTML_NS.to_string()), vec![]);
-        p.text("Content of the first post.".to_string());
-        div.children.push(Xml::ElementNode(p));
-
-        assert_eq!(entry, Ok(Entry {
-            id: "http://example.com/1".to_string(),
-            title: "First!".to_string(),
-            updated: "2016-09-17T19:18:32Z".to_string(),
-            content: Some(Content::Xhtml(div)),
-            ..Default::default()
-        }));
-    }
-
-    #[test]
-    fn from_xml_with_xhtml_content_no_div() {
-        let entry = Entry::from_xml(&str::parse("<entry xmlns='http://www.w3.org/2005/Atom'><id>http://example.com/1</id><title>First!</title><updated>2016-09-17T19:18:32Z</updated><content type='xhtml'><p>Content of the first post.</p></content></entry>").unwrap());
-        assert_eq!(entry, Err("expected to find child element <div> of <content> but found none"));
-    }
-
-    #[test]
-    fn from_xml_with_invalid_content_type() {
-        let entry = Entry::from_xml(&str::parse("<entry xmlns='http://www.w3.org/2005/Atom'><id>http://example.com/1</id><title>First!</title><updated>2016-09-17T19:18:32Z</updated><content type='invalid'>Content of the first post.</content></entry>").unwrap());
-        assert_eq!(entry, Err("<content> has unknown type"));
     }
 
     #[test]
