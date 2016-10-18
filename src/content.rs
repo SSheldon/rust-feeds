@@ -63,7 +63,7 @@ impl FromXml for Content {
 mod tests {
     use xml::{Xml, Element};
 
-    use {Content, XHTML_NS};
+    use {Content, Feed, XHTML_NS};
     use utils::{FromXml, ToXml};
 
     #[test]
@@ -127,5 +127,27 @@ mod tests {
     fn from_xml_with_invalid_content_type() {
         let content = Content::from_xml(&str::parse("<content xmlns='http://www.w3.org/2005/Atom' type='invalid'>Content of the first post.</content>").unwrap());
         assert_eq!(content, Err("<content> has unknown type"));
+    }
+
+    #[test]
+    fn from_xml_with_top_level_xhtml_namespace() {
+        let feed = Feed::from_xml(&str::parse("<feed xmlns='http://www.w3.org/2005/Atom' xmlns:xhtml='http://www.w3.org/1999/xhtml'>
+            <id>http://example.com/feed.atom</id>
+            <title>Examplar Feed</title>
+            <updated>2016-09-18T18:53:16Z</updated>
+            <entry>
+                <id>http://example.com/1</id>
+                <title>First!</title>
+                <updated>2016-09-17T19:18:32Z</updated>
+                <content type='xhtml'>
+                    <xhtml:div>Content of the first post.</xhtml:div>
+                </content>
+            </entry>
+        </feed>").unwrap()).unwrap();
+
+        match feed.entries[0].content {
+            Some(Content::Xhtml(ref div)) => { assert_eq!(div.ns, Some(XHTML_NS.to_string())); },
+            _ => panic!("expected <content> type to be xhtml"),
+        }
     }
 }
