@@ -1,5 +1,3 @@
-#![feature(rustc_macro)]
-
 extern crate chrono;
 extern crate serde;
 #[macro_use]
