@@ -69,3 +69,35 @@ impl<R: Read> Iterator for RssParser<R> {
         None
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::RssParser;
+
+    static RSS_STR: &'static str = r#"
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>TechCrunch</title>
+    <link>http://techcrunch.com</link>
+    <description>The latest technology news and information on startups</description>
+    <item>
+      <title>Ford hires Elon Musk as CEO</title>
+      <pubDate>01 Apr 2019 07:30:00 GMT</pubDate>
+      <description>In an unprecedented move, Ford hires Elon Musk.</description>
+    </item>
+  </channel>
+</rss>
+"#;
+
+    #[test]
+    fn test_rss_stream() {
+        let mut parser = RssParser::new(RSS_STR.as_bytes()).unwrap();
+
+        let elem = parser.next().unwrap();
+        assert_eq!(elem.name, "item");
+        assert_eq!(elem.get_child("title", None).unwrap().content_str(), "Ford hires Elon Musk as CEO");
+
+        assert!(parser.next().is_none());
+    }
+}
