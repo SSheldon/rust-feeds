@@ -83,6 +83,7 @@ pub use generator::Generator;
 pub use link::Link;
 pub use person::Person;
 pub use source::Source;
+pub use utils::FromXml;
 
 
 const NS: &'static str = "http://www.w3.org/2005/Atom";

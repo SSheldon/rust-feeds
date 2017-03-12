@@ -116,7 +116,7 @@ fn elem_with_text(tag_name: &'static str, chars: String) -> Element {
 }
 
 
-trait ViaXml : Sized {
+pub trait ViaXml : Sized {
     fn to_xml(&self) -> Element;
     fn from_xml(elem: Element) -> Result<Self, ReadError>;
 }
