@@ -5,3 +5,5 @@ authors = ["Steven Sheldon"]
 
 [dependencies]
 RustyXML = "0.1"
+atom_syndication = { path = "../atom" }
+rss = { path = "../rss" }
