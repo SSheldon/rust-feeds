@@ -1,6 +1,7 @@
 use std::ascii::AsciiExt;
+use std::borrow::Cow;
 
-use atom_syndication::Entry as AtomEntry;
+use atom_syndication::{Content, Entry as AtomEntry};
 use atom_syndication::FromXml;
 use rss::Item as RssItem;
 use rss::ViaXml;
@@ -20,6 +21,23 @@ impl Entry {
         match self.kind {
             EntryKind::Rss(ref item) => item.title.as_ref().map_or("", |s| &**s),
             EntryKind::Atom(ref entry) => &entry.title,
+        }
+    }
+
+    pub fn content(&self) -> Option<Cow<str>> {
+        fn cow_from_content(content: &Content) -> Cow<str> {
+            match content {
+                &Content::Text(ref s) => Cow::from(&**s),
+                &Content::Html(ref s) => Cow::from(&**s),
+                &Content::Xhtml(ref e) => Cow::from(e.to_string()),
+            }
+        }
+
+        match self.kind {
+            EntryKind::Rss(ref item) =>
+                item.description.as_ref().map(|s| Cow::from(&**s)),
+            EntryKind::Atom(ref entry) =>
+                entry.content.as_ref().map(cow_from_content),
         }
     }
 }

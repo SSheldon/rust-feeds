@@ -136,6 +136,7 @@ mod tests {
 
         let entry = parser.next().unwrap();
         assert_eq!(entry.title(), "Ford hires Elon Musk as CEO");
+        assert_eq!(entry.content().unwrap(), "In an unprecedented move, Ford hires Elon Musk.");
 
         assert!(parser.next().is_none());
     }
