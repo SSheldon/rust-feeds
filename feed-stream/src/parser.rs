@@ -1,8 +1,9 @@
 use std::ascii::AsciiExt;
 use std::io::Read;
 
-use xml::{Element, ElementBuilder, EndTag, Event, Parser, ParserError, StartTag};
+use xml::{ElementBuilder, EndTag, Event, Parser, ParserError, StartTag};
 
+use entry::{Entry, self};
 use str_buf_reader::StrBufReader;
 
 #[derive(Clone, Copy)]
@@ -84,9 +85,9 @@ impl<R: Read> RssParser<R> {
 }
 
 impl<R: Read> Iterator for RssParser<R> {
-    type Item = Element;
+    type Item = Entry;
 
-    fn next(&mut self) -> Option<Element> {
+    fn next(&mut self) -> Option<Entry> {
         while let Some(event) = self.next_event() {
             // println!("{:?}", event);
 
@@ -96,8 +97,8 @@ impl<R: Read> Iterator for RssParser<R> {
 
             match self.builder.handle_event(event) {
                 Some(Ok(elem)) => {
-                    if elem.name.eq_ignore_ascii_case("item") {
-                        return Some(elem)
+                    if let Some(entry) = entry::from_xml(elem) {
+                        return Some(entry)
                     }
                 }
                 Some(Err(_)) => return None,
@@ -133,9 +134,8 @@ mod tests {
     fn test_rss_stream() {
         let mut parser = RssParser::new(RSS_STR.as_bytes());
 
-        let elem = parser.next().unwrap();
-        assert_eq!(elem.name, "item");
-        assert_eq!(elem.get_child("title", None).unwrap().content_str(), "Ford hires Elon Musk as CEO");
+        let entry = parser.next().unwrap();
+        assert_eq!(entry.title(), "Ford hires Elon Musk as CEO");
 
         assert!(parser.next().is_none());
     }
