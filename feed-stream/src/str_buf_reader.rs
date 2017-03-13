@@ -18,36 +18,35 @@ impl<R: Read> StrBufReader<R> {
         }
     }
 
-    pub fn next_str(&mut self) -> Option<io::Result<&str>> {
+    pub fn next_str(&mut self) -> io::Result<Option<&str>> {
         // copy extra bytes to the front
         for i in 0..self.extra {
             self.buffer[i] = self.buffer[self.len + i];
         }
         self.len = 0;
 
-        let new_bytes = self.reader.read(&mut self.buffer[self.extra..]);
+        let new_bytes = self.reader.read(&mut self.buffer[self.extra..])?;
         // find a character boundary
         let (len, extra) = match new_bytes {
             // If there are no more bytes coming, don't save any extra bytes
-            Ok(0) => (self.extra, 0),
-            Ok(i) => {
+            0 => (self.extra, 0),
+            i => {
                 let full_len = self.extra + i;
                 let last = (&self.buffer[..full_len]).iter()
                     .rposition(|&b| b < 128 || b >= 192)
                     .unwrap_or(0);
                 (last, full_len - last)
             },
-            Err(e) => return Some(Err(e)),
         };
         self.len = len;
         self.extra = extra;
 
         if len == 0 && extra == 0 {
-            None
+            Ok(None)
         } else {
-            Some(str::from_utf8(&self.buffer[..len]).map_err(|e| {
-                io::Error::new(ErrorKind::InvalidData, e)
-            }))
+            str::from_utf8(&self.buffer[..len])
+                .map(|s| Some(s))
+                .map_err(|e| io::Error::new(ErrorKind::InvalidData, e))
         }
     }
 }
@@ -60,8 +59,8 @@ mod tests {
     fn read_to_end<R: io::Read>(mut reader: StrBufReader<R>)
             -> io::Result<String> {
         let mut result = String::new();
-        while let Some(s) = reader.next_str() {
-            result.push_str(try!(s));
+        while let Some(s) = reader.next_str()? {
+            result.push_str(s);
         }
         Ok(result)
     }
@@ -106,7 +105,7 @@ mod tests {
         let data = b"fo\xF0\x9F\x92\x96ooo\x00\x9F\x92\x96o";
         let mut reader = StrBufReader::with_capacity(8, data.as_ref());
         assert_eq!(reader.next_str().unwrap().unwrap(), "fo💖o");
-        let err = reader.next_str().unwrap().unwrap_err();
+        let err = reader.next_str().unwrap_err();
         assert_eq!(err.kind(), io::ErrorKind::InvalidData);
     }
 }

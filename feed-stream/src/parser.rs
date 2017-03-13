@@ -76,7 +76,7 @@ impl<R: Read> FeedParser<R> {
                 return Some(event);
             }
             match self.reader.next_str() {
-                Some(Ok(s)) => {
+                Ok(Some(s)) => {
                     self.parser.feed_str(s);
                 }
                 _ => return None,
