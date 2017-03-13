@@ -1,7 +1,7 @@
 use std::ascii::AsciiExt;
 use std::io::Read;
 
-use xml::{ElementBuilder, EndTag, Event, Parser, ParserError, StartTag};
+use xml::{Element, ElementBuilder, EndTag, Event, Parser, ParserError, StartTag};
 
 use entry::{Entry, self};
 use str_buf_reader::StrBufReader;
@@ -80,6 +80,16 @@ impl<R: Read> FeedParser<R> {
                 }
                 _ => return None,
             }
+        }
+    }
+
+    fn entry_from_element(&self, elem: Element) -> Option<Entry> {
+        match self.state {
+            ParserState::InChannel if elem.name.eq_ignore_ascii_case("item") =>
+                entry::from_rss_item(elem).ok(),
+            ParserState::InFeed if elem.name.eq_ignore_ascii_case("entry") =>
+                entry::from_atom_entry(elem).ok(),
+            _ => None,
         }
     }
 }

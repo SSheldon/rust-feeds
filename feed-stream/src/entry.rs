@@ -1,10 +1,9 @@
-use std::ascii::AsciiExt;
 use std::borrow::Cow;
 
 use atom_syndication::{Content, Entry as AtomEntry, Link, Person};
 use atom_syndication::FromXml;
 use chrono::{DateTime, FixedOffset};
-use rss::{Guid, Item as RssItem};
+use rss::{Guid, Item as RssItem, ReadError};
 use rss::ViaXml;
 use xml::Element;
 
@@ -105,16 +104,14 @@ fn maybe_cow_from_str(s: &Option<String>) -> Option<Cow<str>> {
     s.as_ref().map(|s| Cow::from(&**s))
 }
 
-pub fn from_xml(elem: Element) -> Option<Entry> {
-    if elem.name.eq_ignore_ascii_case("item") {
-        RssItem::from_xml(elem).ok().map(|item| {
-            Entry { kind: EntryKind::Rss(item) }
-        })
-    } else if elem.name.eq_ignore_ascii_case("entry") {
-        AtomEntry::from_xml(&elem).ok().map(|entry| {
-            Entry { kind: EntryKind::Atom(entry) }
-        })
-    } else {
-        None
-    }
+pub fn from_rss_item(elem: Element) -> Result<Entry, ReadError> {
+    RssItem::from_xml(elem).map(|item| {
+        Entry { kind: EntryKind::Rss(item) }
+    })
+}
+
+pub fn from_atom_entry(elem: Element) -> Result<Entry, &'static str> {
+    AtomEntry::from_xml(&elem).map(|entry| {
+        Entry { kind: EntryKind::Atom(entry) }
+    })
 }
