@@ -1,6 +1,7 @@
 use std::ascii::AsciiExt;
 use std::io::Read;
 
+use rss::ReadError;
 use xml::{Element, ElementBuilder, EndTag, Event, Parser, ParserError, StartTag};
 
 use entry::{Entry, self};
@@ -107,7 +108,7 @@ impl<R: Read> Iterator for FeedParser<R> {
 
             match self.builder.handle_event(event) {
                 Some(Ok(elem)) => {
-                    if let Some(entry) = entry::from_xml(elem) {
+                    if let Some(entry) = self.entry_from_element(elem) {
                         return Some(entry)
                     }
                 }
@@ -118,6 +119,11 @@ impl<R: Read> Iterator for FeedParser<R> {
 
         None
     }
+}
+
+pub enum FeedParseError {
+    Rss(ReadError),
+    Atom(&'static str),
 }
 
 #[cfg(test)]

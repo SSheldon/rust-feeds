@@ -8,4 +8,4 @@ mod parser;
 mod str_buf_reader;
 
 pub use entry::Entry;
-pub use parser::FeedParser;
+pub use parser::{FeedParser, FeedParseError};

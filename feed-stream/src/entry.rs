@@ -3,9 +3,11 @@ use std::borrow::Cow;
 use atom_syndication::{Content, Entry as AtomEntry, Link, Person};
 use atom_syndication::FromXml;
 use chrono::{DateTime, FixedOffset};
-use rss::{Guid, Item as RssItem, ReadError};
+use rss::{Guid, Item as RssItem};
 use rss::ViaXml;
 use xml::Element;
+
+use parser::FeedParseError;
 
 enum EntryKind {
     Rss(RssItem),
@@ -104,14 +106,14 @@ fn maybe_cow_from_str(s: &Option<String>) -> Option<Cow<str>> {
     s.as_ref().map(|s| Cow::from(&**s))
 }
 
-pub fn from_rss_item(elem: Element) -> Result<Entry, ReadError> {
-    RssItem::from_xml(elem).map(|item| {
-        Entry { kind: EntryKind::Rss(item) }
-    })
+pub fn from_rss_item(elem: Element) -> Result<Entry, FeedParseError> {
+    RssItem::from_xml(elem)
+        .map(|item| Entry { kind: EntryKind::Rss(item) })
+        .map_err(|e| FeedParseError::Rss(e))
 }
 
-pub fn from_atom_entry(elem: Element) -> Result<Entry, &'static str> {
-    AtomEntry::from_xml(&elem).map(|entry| {
-        Entry { kind: EntryKind::Atom(entry) }
-    })
+pub fn from_atom_entry(elem: Element) -> Result<Entry, FeedParseError> {
+    AtomEntry::from_xml(&elem)
+        .map(|entry| Entry { kind: EntryKind::Atom(entry) })
+        .map_err(|e| FeedParseError::Atom(e))
 }
