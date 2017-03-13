@@ -131,6 +131,20 @@ mod tests {
 </rss>
 "#;
 
+    static ATOM_STR: &'static str = r#"
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <id>urn:uuid:b3420f84-6bdf-4f46-a225-f1b9a14703b6</id>
+  <title>TechCrunch</title>
+  <updated>2019-04-01T07:30:00Z</updated>
+  <entry>
+    <id>urn:uuid:4ae8550b-2987-49fa-9f8c-54c180c418ac</id>
+    <title>Ford hires Elon Musk as CEO</title>
+    <updated>2019-04-01T07:30:00Z</updated>
+  </entry>
+</feed>
+"#;
+
     #[test]
     fn test_rss_stream() {
         let mut parser = FeedParser::new(RSS_STR.as_bytes());
@@ -138,6 +152,19 @@ mod tests {
         let entry = parser.next().unwrap();
         assert_eq!(entry.title(), "Ford hires Elon Musk as CEO");
         assert_eq!(entry.content().unwrap(), "In an unprecedented move, Ford hires Elon Musk.");
+        let expected_date = UTC.ymd(2019, 4, 1).and_hms(7, 30, 0);
+        assert_eq!(entry.published().unwrap(), expected_date);
+
+        assert!(parser.next().is_none());
+    }
+
+    #[test]
+    fn test_atom_stream() {
+        let mut parser = FeedParser::new(ATOM_STR.as_bytes());
+
+        let entry = parser.next().unwrap();
+        assert_eq!(entry.title(), "Ford hires Elon Musk as CEO");
+        assert_eq!(entry.id().unwrap(), "urn:uuid:4ae8550b-2987-49fa-9f8c-54c180c418ac");
         let expected_date = UTC.ymd(2019, 4, 1).and_hms(7, 30, 0);
         assert_eq!(entry.published().unwrap(), expected_date);
 
