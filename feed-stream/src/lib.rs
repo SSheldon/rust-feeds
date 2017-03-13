@@ -1,3 +1,4 @@
+extern crate chrono;
 extern crate xml;
 extern crate atom_syndication;
 extern crate rss;

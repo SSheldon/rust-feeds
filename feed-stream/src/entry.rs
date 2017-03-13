@@ -3,6 +3,7 @@ use std::borrow::Cow;
 
 use atom_syndication::{Content, Entry as AtomEntry, Link};
 use atom_syndication::FromXml;
+use chrono::{DateTime, FixedOffset};
 use rss::Item as RssItem;
 use rss::ViaXml;
 use xml::Element;
@@ -56,6 +57,18 @@ impl Entry {
                 entry.links.iter().find(|&link| is_alt_link(link))
                     .or_else(|| entry.links.first())
                     .map(|link| &*link.href),
+        }
+    }
+
+    pub fn published(&self) -> Option<DateTime<FixedOffset>> {
+        match self.kind {
+            EntryKind::Rss(ref item) =>
+                item.pub_date.as_ref()
+                    .and_then(|s| DateTime::parse_from_rfc2822(s).ok()),
+            EntryKind::Atom(ref entry) =>
+                entry.published.as_ref()
+                    .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
+                    .or_else(|| DateTime::parse_from_rfc3339(&entry.updated).ok()),
         }
     }
 }

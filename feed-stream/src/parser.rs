@@ -112,6 +112,7 @@ impl<R: Read> Iterator for RssParser<R> {
 
 #[cfg(test)]
 mod tests {
+    use chrono::{TimeZone, UTC};
     use super::RssParser;
 
     static RSS_STR: &'static str = r#"
@@ -137,6 +138,8 @@ mod tests {
         let entry = parser.next().unwrap();
         assert_eq!(entry.title(), "Ford hires Elon Musk as CEO");
         assert_eq!(entry.content().unwrap(), "In an unprecedented move, Ford hires Elon Musk.");
+        let expected_date = UTC.ymd(2019, 4, 1).and_hms(7, 30, 0);
+        assert_eq!(entry.published().unwrap(), expected_date);
 
         assert!(parser.next().is_none());
     }
