@@ -14,16 +14,16 @@ enum ParserState {
     InFeed,
 }
 
-pub struct RssParser<R> {
+pub struct FeedParser<R> {
     reader: StrBufReader<R>,
     parser: Parser,
     builder: ElementBuilder,
     state: ParserState,
 }
 
-impl<R: Read> RssParser<R> {
-    pub fn new(source: R) -> RssParser<R> {
-        RssParser {
+impl<R: Read> FeedParser<R> {
+    pub fn new(source: R) -> FeedParser<R> {
+        FeedParser {
             reader: StrBufReader::with_capacity(4096, source),
             parser: Parser::new(),
             builder: ElementBuilder::new(),
@@ -84,7 +84,7 @@ impl<R: Read> RssParser<R> {
     }
 }
 
-impl<R: Read> Iterator for RssParser<R> {
+impl<R: Read> Iterator for FeedParser<R> {
     type Item = Entry;
 
     fn next(&mut self) -> Option<Entry> {
@@ -113,7 +113,7 @@ impl<R: Read> Iterator for RssParser<R> {
 #[cfg(test)]
 mod tests {
     use chrono::{TimeZone, UTC};
-    use super::RssParser;
+    use super::FeedParser;
 
     static RSS_STR: &'static str = r#"
 <?xml version="1.0" encoding="UTF-8"?>
@@ -133,7 +133,7 @@ mod tests {
 
     #[test]
     fn test_rss_stream() {
-        let mut parser = RssParser::new(RSS_STR.as_bytes());
+        let mut parser = FeedParser::new(RSS_STR.as_bytes());
 
         let entry = parser.next().unwrap();
         assert_eq!(entry.title(), "Ford hires Elon Musk as CEO");
