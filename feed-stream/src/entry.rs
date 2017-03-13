@@ -1,7 +1,7 @@
 use std::ascii::AsciiExt;
 use std::borrow::Cow;
 
-use atom_syndication::{Content, Entry as AtomEntry};
+use atom_syndication::{Content, Entry as AtomEntry, Link};
 use atom_syndication::FromXml;
 use rss::Item as RssItem;
 use rss::ViaXml;
@@ -42,6 +42,20 @@ impl Entry {
             EntryKind::Atom(ref entry) =>
                 entry.content.as_ref().map(cow_from_content)
                     .or_else(|| cow_from_maybe_str(&entry.summary)),
+        }
+    }
+
+    pub fn link(&self) -> Option<&str> {
+        fn is_alt_link(link: &Link) -> bool {
+            link.rel.as_ref().map_or(true, |rel| rel == "alternate")
+        }
+
+        match self.kind {
+            EntryKind::Rss(ref item) => item.link.as_ref().map(|s| &**s),
+            EntryKind::Atom(ref entry) =>
+                entry.links.iter().find(|&link| is_alt_link(link))
+                    .or_else(|| entry.links.first())
+                    .map(|link| &*link.href),
         }
     }
 }
