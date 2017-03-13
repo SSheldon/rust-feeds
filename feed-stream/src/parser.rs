@@ -1,8 +1,11 @@
 use std::ascii::AsciiExt;
-use std::io::Read;
+use std::io::{Read, self};
 
 use rss::ReadError;
-use xml::{Element, ElementBuilder, EndTag, Event, Parser, ParserError, StartTag};
+use xml::{
+    BuilderError, Element, ElementBuilder,
+    EndTag, Event, Parser, ParserError, StartTag
+};
 
 use entry::{Entry, self};
 use str_buf_reader::StrBufReader;
@@ -70,60 +73,73 @@ impl<R: Read> FeedParser<R> {
         }
     }
 
-    fn next_event(&mut self) -> Option<Result<Event, ParserError>> {
+    fn next_event(&mut self) -> Result<Option<Event>, FeedParseError> {
         loop {
             if let Some(event) = self.parser.next() {
-                return Some(event);
-            }
-            match self.reader.next_str() {
-                Ok(Some(s)) => {
-                    self.parser.feed_str(s);
-                }
-                _ => return None,
+                return event
+                    .map(|event| Some(event))
+                    .map_err(|err| FeedParseError::Xml(err));
+            } else if let Some(s) = self.reader.next_str()? {
+                self.parser.feed_str(s);
+            } else {
+                return Ok(None);
             }
         }
     }
 
-    fn entry_from_element(&self, elem: Element) -> Option<Entry> {
-        match self.state {
-            ParserState::InChannel if elem.name.eq_ignore_ascii_case("item") =>
-                entry::from_rss_item(elem).ok(),
-            ParserState::InFeed if elem.name.eq_ignore_ascii_case("entry") =>
-                entry::from_atom_entry(elem).ok(),
-            _ => None,
+    fn next_element(&mut self) -> Result<Option<Element>, FeedParseError> {
+        while let Some(event) = self.next_event()? {
+            if self.intercept_event(&event) { continue }
+
+            if let Some(elem) = self.builder.handle_event(Ok(event)) {
+                return elem
+                    .map(|elem| Some(elem))
+                    .map_err(|err| FeedParseError::Dom(err));
+            }
         }
+        Ok(None)
+    }
+
+    fn next_entry(&mut self) -> Result<Option<Entry>, FeedParseError> {
+        while let Some(elem) = self.next_element()? {
+            let entry = match self.state {
+                ParserState::InChannel if elem.name.eq_ignore_ascii_case("item") =>
+                    entry::from_rss_item(elem)?,
+                ParserState::InFeed if elem.name.eq_ignore_ascii_case("entry") =>
+                    entry::from_atom_entry(elem)?,
+                _ => continue,
+            };
+            return Ok(Some(entry));
+        }
+        Ok(None)
     }
 }
 
 impl<R: Read> Iterator for FeedParser<R> {
-    type Item = Entry;
+    type Item = Result<Entry, FeedParseError>;
 
-    fn next(&mut self) -> Option<Entry> {
-        while let Some(event) = self.next_event() {
-            // println!("{:?}", event);
-
-            if let Ok(ref event) = event {
-                if self.intercept_event(event) { continue }
-            }
-
-            match self.builder.handle_event(event) {
-                Some(Ok(elem)) => {
-                    if let Some(entry) = self.entry_from_element(elem) {
-                        return Some(entry)
-                    }
-                }
-                Some(Err(_)) => return None,
-                None => (),
-            }
+    fn next(&mut self) -> Option<Result<Entry, FeedParseError>> {
+        match self.next_entry() {
+            Ok(Some(elem)) => Some(Ok(elem)),
+            Ok(None) => None,
+            Err(err) => Some(Err(err)),
         }
-
-        None
     }
 }
 
+#[derive(Debug)]
 pub enum FeedParseError {
+    Io(io::Error),
+    Xml(ParserError),
+    Dom(BuilderError),
     Rss(ReadError),
     Atom(&'static str),
+}
+
+impl From<io::Error> for FeedParseError {
+    fn from(err: io::Error) -> FeedParseError {
+        FeedParseError::Io(err)
+    }
 }
 
 #[cfg(test)]
@@ -165,7 +181,7 @@ mod tests {
     fn test_rss_stream() {
         let mut parser = FeedParser::new(RSS_STR.as_bytes());
 
-        let entry = parser.next().unwrap();
+        let entry = parser.next().unwrap().unwrap();
         assert_eq!(entry.title(), "Ford hires Elon Musk as CEO");
         assert_eq!(entry.content().unwrap(), "In an unprecedented move, Ford hires Elon Musk.");
         let expected_date = UTC.ymd(2019, 4, 1).and_hms(7, 30, 0);
@@ -178,7 +194,7 @@ mod tests {
     fn test_atom_stream() {
         let mut parser = FeedParser::new(ATOM_STR.as_bytes());
 
-        let entry = parser.next().unwrap();
+        let entry = parser.next().unwrap().unwrap();
         assert_eq!(entry.title(), "Ford hires Elon Musk as CEO");
         assert_eq!(entry.id().unwrap(), "urn:uuid:4ae8550b-2987-49fa-9f8c-54c180c418ac");
         let expected_date = UTC.ymd(2019, 4, 1).and_hms(7, 30, 0);
