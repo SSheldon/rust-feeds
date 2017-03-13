@@ -85,6 +85,13 @@ impl Entry {
                 entry.authors.iter().map(author_str).collect(),
         }
     }
+
+    pub fn id(&self) -> Option<&str> {
+        match self.kind {
+            EntryKind::Rss(ref item) => item.guid.as_ref().map(|id| &*id.value),
+            EntryKind::Atom(ref entry) => Some(&entry.id),
+        }
+    }
 }
 
 
