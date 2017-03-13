@@ -25,6 +25,10 @@ impl Entry {
     }
 
     pub fn content(&self) -> Option<Cow<str>> {
+        fn cow_from_maybe_str(s: &Option<String>) -> Option<Cow<str>> {
+            s.as_ref().map(|s| Cow::from(&**s))
+        }
+
         fn cow_from_content(content: &Content) -> Cow<str> {
             match content {
                 &Content::Text(ref s) => Cow::from(&**s),
@@ -34,10 +38,10 @@ impl Entry {
         }
 
         match self.kind {
-            EntryKind::Rss(ref item) =>
-                item.description.as_ref().map(|s| Cow::from(&**s)),
+            EntryKind::Rss(ref item) => cow_from_maybe_str(&item.description),
             EntryKind::Atom(ref entry) =>
-                entry.content.as_ref().map(cow_from_content),
+                entry.content.as_ref().map(cow_from_content)
+                    .or_else(|| cow_from_maybe_str(&entry.summary)),
         }
     }
 }
