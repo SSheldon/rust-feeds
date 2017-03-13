@@ -4,7 +4,7 @@ use std::borrow::Cow;
 use atom_syndication::{Content, Entry as AtomEntry, Link, Person};
 use atom_syndication::FromXml;
 use chrono::{DateTime, FixedOffset};
-use rss::Item as RssItem;
+use rss::{Guid, Item as RssItem};
 use rss::ViaXml;
 use xml::Element;
 
@@ -43,12 +43,18 @@ impl Entry {
     }
 
     pub fn link(&self) -> Option<&str> {
+        fn maybe_guid_link(id: &Guid) -> Option<&str> {
+            if id.is_perma_link { Some(&id.value) } else { None }
+        }
+
         fn is_alt_link(link: &Link) -> bool {
             link.rel.as_ref().map_or(true, |rel| rel == "alternate")
         }
 
         match self.kind {
-            EntryKind::Rss(ref item) => item.link.as_ref().map(|s| &**s),
+            EntryKind::Rss(ref item) =>
+                item.link.as_ref().map(|s| &**s)
+                    .or_else(|| item.guid.as_ref().and_then(maybe_guid_link)),
             EntryKind::Atom(ref entry) =>
                 entry.links.iter().find(|&link| is_alt_link(link))
                     .or_else(|| entry.links.first())
