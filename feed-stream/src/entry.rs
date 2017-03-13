@@ -1,7 +1,7 @@
 use std::ascii::AsciiExt;
 use std::borrow::Cow;
 
-use atom_syndication::{Content, Entry as AtomEntry, Link};
+use atom_syndication::{Content, Entry as AtomEntry, Link, Person};
 use atom_syndication::FromXml;
 use chrono::{DateTime, FixedOffset};
 use rss::Item as RssItem;
@@ -26,10 +26,6 @@ impl Entry {
     }
 
     pub fn content(&self) -> Option<Cow<str>> {
-        fn cow_from_maybe_str(s: &Option<String>) -> Option<Cow<str>> {
-            s.as_ref().map(|s| Cow::from(&**s))
-        }
-
         fn cow_from_content(content: &Content) -> Cow<str> {
             match content {
                 &Content::Text(ref s) => Cow::from(&**s),
@@ -39,10 +35,10 @@ impl Entry {
         }
 
         match self.kind {
-            EntryKind::Rss(ref item) => cow_from_maybe_str(&item.description),
+            EntryKind::Rss(ref item) => maybe_cow_from_str(&item.description),
             EntryKind::Atom(ref entry) =>
                 entry.content.as_ref().map(cow_from_content)
-                    .or_else(|| cow_from_maybe_str(&entry.summary)),
+                    .or_else(|| maybe_cow_from_str(&entry.summary)),
         }
     }
 
@@ -71,6 +67,29 @@ impl Entry {
                     .or_else(|| DateTime::parse_from_rfc3339(&entry.updated).ok()),
         }
     }
+
+    pub fn authors(&self) -> Vec<Cow<str>> {
+        fn author_str(author: &Person) -> Cow<str> {
+            match author.email {
+                Some(ref email) =>
+                    Cow::from(format!("{} ({})", email, author.name)),
+                None => Cow::from(&*author.name),
+            }
+        }
+
+        match self.kind {
+            EntryKind::Rss(ref item) =>
+                maybe_cow_from_str(&item.author)
+                    .map_or(Vec::new(), |s| vec![s]),
+            EntryKind::Atom(ref entry) =>
+                entry.authors.iter().map(author_str).collect(),
+        }
+    }
+}
+
+
+fn maybe_cow_from_str(s: &Option<String>) -> Option<Cow<str>> {
+    s.as_ref().map(|s| Cow::from(&**s))
 }
 
 pub fn from_xml(elem: Element) -> Option<Entry> {
