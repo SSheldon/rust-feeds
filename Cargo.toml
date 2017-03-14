@@ -7,7 +7,7 @@ authors = ["Steven Sheldon"]
 chrono = "0.3"
 feed-stream = { path = "feed-stream" }
 fever-api = { path = "fever-api" }
-iron = "0.4"
+iron = "0.5"
 serde = "0.8"
 serde_json = "0.8"
 url = "1.2"

@@ -30,7 +30,7 @@ fn handle_request(request: &mut Request) -> IronResult<Response> {
         _ => return Ok(Response::with(status::MethodNotAllowed)),
     }
 
-    let url = request.url.clone().into_generic_url();
+    let url = request.url.as_ref();
     let query_pairs: Vec<_> = url.query_pairs().into_owned().collect();
 
     let mut body = Vec::new();
