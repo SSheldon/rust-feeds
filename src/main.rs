@@ -3,6 +3,7 @@ extern crate feed_stream;
 extern crate fever_api;
 #[macro_use]
 extern crate iron;
+extern crate reqwest;
 extern crate serde;
 extern crate serde_json;
 extern crate url;
@@ -16,6 +17,7 @@ use iron::method;
 use iron::status;
 use url::form_urlencoded;
 
+use feed_stream::{Entry, FeedParser};
 use fever_api::{ApiRequest, ApiResponse, ApiResponsePayload, Feed, Item};
 
 /// Converts a reference to a pair of Strings into a pair of str references.
@@ -50,24 +52,42 @@ fn handle_request(request: &mut Request) -> IronResult<Response> {
     Ok(Response::with((status::Ok, response)))
 }
 
+fn item_from_entry(entry: Entry, id: u32, feed: &Feed) -> Item {
+    Item {
+        id: id,
+        feed_id: feed.id,
+        title: entry.title().to_owned(),
+        url: entry.link().unwrap().to_owned(),
+        html: entry.content().unwrap().into_owned(),
+        is_saved: false,
+        is_read: false,
+        created_on_time: entry.published().unwrap().naive_utc(),
+    }
+}
+
+fn fetch_items(feed: &Feed) -> ApiResponsePayload {
+    let response = reqwest::get("https://xkcd.com/atom.xml").unwrap();
+    let parser = FeedParser::new(response);
+    let items: Vec<_> = parser
+        .map(|entry| entry.unwrap())
+        .enumerate()
+        .map(|(i, entry)| item_from_entry(entry, 100 - (i as u32), feed))
+        .collect();
+    let total_items = items.len() as u32;
+
+    ApiResponsePayload::Items {
+        items: items,
+        total_items: total_items,
+    }
+}
+
 fn handle_api_request(req_type: ApiRequest) -> ApiResponse {
     let feed = Feed {
         id: 1,
-        title: "Hello feed".to_owned(),
-        url: "example.com".to_owned(),
+        title: "xkcd.com".to_owned(),
+        url: "https://xkcd.com/".to_owned(),
         is_spark: false,
         last_updated_on_time: NaiveDateTime::from_timestamp(1472799906, 0),
-    };
-
-    let item = Item {
-        id: 1,
-        feed_id: 1,
-        title: "Hello item".to_owned(),
-        url: "example.com".to_owned(),
-        html: "Hello world!".to_owned(),
-        is_saved: false,
-        is_read: false,
-        created_on_time: NaiveDateTime::from_timestamp(1472799806, 0),
     };
 
     let payload = match req_type {
@@ -76,10 +96,7 @@ fn handle_api_request(req_type: ApiRequest) -> ApiResponse {
             feeds_groups: vec![],
         },
         ApiRequest::LatestItems |
-        ApiRequest::ItemsSince(_) => ApiResponsePayload::Items {
-            items: vec![item],
-            total_items: 1,
-        },
+        ApiRequest::ItemsSince(_) => fetch_items(&feed),
         ApiRequest::UnreadItems => ApiResponsePayload::UnreadItems {
             unread_item_ids: vec![1],
         },
