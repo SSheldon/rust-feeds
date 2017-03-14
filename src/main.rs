@@ -43,6 +43,14 @@ fn handle_request(request: &mut Request) -> IronResult<Response> {
     let req_type = iexpect!(ApiRequest::parse(query_pairs, &body_params));
     println!("{:?}", req_type);
 
+    let response = handle_api_request(req_type);
+    let response = serde_json::to_string(&response).unwrap();
+    println!("{}", response);
+
+    Ok(Response::with((status::Ok, response)))
+}
+
+fn handle_api_request(req_type: ApiRequest) -> ApiResponse {
     let feed = Feed {
         id: 1,
         title: "Hello feed".to_owned(),
@@ -77,16 +85,12 @@ fn handle_request(request: &mut Request) -> IronResult<Response> {
         },
         _ => ApiResponsePayload::None,
     };
-    let response = ApiResponse {
+    ApiResponse {
         api_version: 1,
         auth: true,
         last_refreshed_on_time: None,
         payload: payload,
-    };
-    let response = serde_json::to_string(&response).unwrap();
-    println!("{}", response);
-
-    Ok(Response::with((status::Ok, response)))
+    }
 }
 
 fn main() {
