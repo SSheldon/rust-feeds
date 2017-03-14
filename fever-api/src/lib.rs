@@ -128,22 +128,22 @@ impl ApiRequest {
     }
 }
 
-fn serialize_bool_as_number<S>(value: &bool, serializer: &mut S)
-        -> Result<(), S::Error>
+fn serialize_bool_as_number<S>(value: &bool, serializer: S)
+        -> Result<S::Ok, S::Error>
         where S: serde::Serializer {
     let i = if *value {1} else {0};
     i.serialize(serializer)
 }
 
-fn serialize_datetime_as_timestamp<S>(value: &NaiveDateTime, serializer: &mut S)
-        -> Result<(), S::Error>
+fn serialize_datetime_as_timestamp<S>(value: &NaiveDateTime, serializer: S)
+        -> Result<S::Ok, S::Error>
         where S: serde::Serializer {
     let t = value.timestamp();
     t.serialize(serializer)
 }
 
-fn serialize_ids_as_comma_string<S>(value: &[u32], serializer: &mut S)
-        -> Result<(), S::Error>
+fn serialize_ids_as_comma_string<S>(value: &[u32], serializer: S)
+        -> Result<S::Ok, S::Error>
         where S: serde::Serializer {
     let mut s = String::new();
     join_ids(value, &mut s);
@@ -225,33 +225,32 @@ impl ApiResponsePayload {
         }
     }
 
-    fn serialize_fields<S>(&self, state: &mut S::StructState, serializer: &mut S)
-            -> Result<(), S::Error>
-            where S: serde::Serializer {
+    fn serialize_fields<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+            where S: serde::ser::SerializeStruct {
         use self::ApiResponsePayload::*;
 
         match *self {
             Groups { ref groups, ref feeds_groups } => {
-                try!(serializer.serialize_struct_elt(state, "groups", groups));
-                serializer.serialize_struct_elt(state, "feeds_groups", feeds_groups)
+                serializer.serialize_field("groups", groups)?;
+                serializer.serialize_field("feeds_groups", feeds_groups)
             },
             Feeds { ref feeds, ref feeds_groups } => {
-                try!(serializer.serialize_struct_elt(state, "feeds", feeds));
-                serializer.serialize_struct_elt(state, "feeds_groups", feeds_groups)
+                serializer.serialize_field("feeds", feeds)?;
+                serializer.serialize_field("feeds_groups", feeds_groups)
             },
             Items { ref items, total_items } => {
-                try!(serializer.serialize_struct_elt(state, "items", items));
-                serializer.serialize_struct_elt(state, "total_items", total_items)
+                serializer.serialize_field("items", items)?;
+                serializer.serialize_field("total_items", &total_items)
             },
             UnreadItems { ref unread_item_ids } => {
                 let mut s = String::new();
                 join_ids(unread_item_ids, &mut s);
-                serializer.serialize_struct_elt(state, "unread_item_ids", s)
+                serializer.serialize_field("unread_item_ids", &s)
             },
             SavedItems { ref saved_item_ids } => {
                 let mut s = String::new();
                 join_ids(saved_item_ids, &mut s);
-                serializer.serialize_struct_elt(state, "saved_item_ids", s)
+                serializer.serialize_field("saved_item_ids", &s)
             },
             None => Ok(())
         }
@@ -266,23 +265,25 @@ pub struct ApiResponse {
 }
 
 impl Serialize for ApiResponse {
-    fn serialize<S>(&self, serializer: &mut S) -> Result<(), S::Error>
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where S: serde::Serializer
     {
+        use serde::ser::SerializeStruct;
+
         let num_fields = 2 + self.payload.num_fields() +
             if self.last_refreshed_on_time.is_some() {1} else {0};
-        let mut state = try!(serializer.serialize_struct("ApiResponse", num_fields));
+        let mut s = serializer.serialize_struct("ApiResponse", num_fields)?;
 
-        try!(serializer.serialize_struct_elt(&mut state, "api_version", self.api_version));
+        s.serialize_field("api_version", &self.api_version)?;
         let auth_num = if self.auth {1} else {0};
-        try!(serializer.serialize_struct_elt(&mut state, "auth", auth_num));
+        s.serialize_field("auth", &auth_num)?;
         if let Some(refresh_time) = self.last_refreshed_on_time {
             let timestamp = refresh_time.timestamp();
-            try!(serializer.serialize_struct_elt(&mut state, "last_refreshed_on_time", timestamp));
+            s.serialize_field("last_refreshed_on_time", &timestamp)?;
         }
-        try!(self.payload.serialize_fields(&mut state, serializer));
+        self.payload.serialize_fields(&mut s)?;
 
-        serializer.serialize_struct_end(state)
+        s.end()
     }
 }
 

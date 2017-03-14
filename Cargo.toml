@@ -8,8 +8,8 @@ chrono = "0.3"
 feed-stream = { path = "feed-stream" }
 fever-api = { path = "fever-api" }
 iron = "0.5"
-serde = "0.8"
-serde_json = "0.8"
+serde = "0.9"
+serde_json = "0.9"
 url = "1.2"
 
 [workspace]
