@@ -96,8 +96,9 @@ fn handle_api_request(req_type: &ApiRequest) -> ApiResponse {
             feeds: vec![feed],
             feeds_groups: vec![],
         },
-        ApiRequest::LatestItems |
-        ApiRequest::ItemsSince(_) => fetch_items(&feed),
+        ApiRequest::Items(_) |
+        ApiRequest::ItemsSince(_) |
+        ApiRequest::LatestItems => fetch_items(&feed),
         ApiRequest::UnreadItems => ApiResponsePayload::UnreadItems {
             unread_item_ids: vec![1],
         },
