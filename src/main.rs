@@ -9,6 +9,7 @@ extern crate serde_json;
 extern crate url;
 
 use std::collections::HashMap;
+use std::env;
 use std::io::Read;
 
 use chrono::NaiveDateTime;
@@ -111,5 +112,9 @@ fn handle_api_request(req_type: ApiRequest) -> ApiResponse {
 }
 
 fn main() {
-    Iron::new(handle_request).http("localhost:3000").unwrap();
+    let port = env::var("PORT").ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(3000);
+
+    Iron::new(handle_request).http(("0.0.0.0", port)).unwrap();
 }
