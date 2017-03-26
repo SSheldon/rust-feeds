@@ -13,4 +13,19 @@ serde = "0.9"
 serde_json = "0.9"
 url = "1.2"
 
+[dependencies.diesel]
+version = "0.12"
+default-features = false
+features = [
+  "postgres",
+  "chrono",
+]
+
+[dependencies.diesel_codegen]
+version = "0.12"
+default-features = false
+features = [
+  "postgres",
+]
+
 [workspace]
