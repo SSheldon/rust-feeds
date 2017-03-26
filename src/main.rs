@@ -40,15 +40,15 @@ fn handle_request(request: &mut Request) -> IronResult<Response> {
     itry!(request.body.read_to_end(&mut body));
     let body_params: HashMap<_, _> =
         form_urlencoded::parse(&body).into_owned().collect();
-    println!("{:?}", body_params);
 
     let query_pairs = query_pairs.iter().map(deref_str_pair);
     let req_type = iexpect!(ApiRequest::parse(query_pairs, &body_params));
-    println!("{:?}", req_type);
 
-    let response = handle_api_request(req_type);
-    let response = serde_json::to_string(&response).unwrap();
-    println!("{}", response);
+    let response = handle_api_request(&req_type);
+    let response = itry!(serde_json::to_string(&response));
+
+    println!("url: {}\nparams: {:?}\nparsed type: {:?}\nresponse: {}",
+        url, body_params, req_type, response);
 
     Ok(Response::with((status::Ok, response)))
 }
@@ -82,7 +82,7 @@ fn fetch_items(feed: &Feed) -> ApiResponsePayload {
     }
 }
 
-fn handle_api_request(req_type: ApiRequest) -> ApiResponse {
+fn handle_api_request(req_type: &ApiRequest) -> ApiResponse {
     let feed = Feed {
         id: 1,
         title: "xkcd.com".to_owned(),
@@ -91,7 +91,7 @@ fn handle_api_request(req_type: ApiRequest) -> ApiResponse {
         last_updated_on_time: NaiveDateTime::from_timestamp(1472799906, 0),
     };
 
-    let payload = match req_type {
+    let payload = match *req_type {
         ApiRequest::Feeds => ApiResponsePayload::Feeds {
             feeds: vec![feed],
             feeds_groups: vec![],
