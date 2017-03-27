@@ -1,8 +1,30 @@
+use std::env;
+
 use chrono::NaiveDateTime;
+use diesel::prelude::*;
+use diesel::pg::PgConnection;
 use reqwest;
 
 use feed_stream::{Entry, FeedParser};
 use fever_api::{ApiRequest, ApiResponse, ApiResponsePayload, Feed, Item as ApiItem};
+
+use models::item::Item as DbItem;
+
+fn establish_connection() -> PgConnection {
+    let database_url = env::var("DATABASE_URL")
+        .expect("DATABASE_URL must be set");
+    PgConnection::establish(&database_url)
+        .expect(&format!("Error connecting to {}", database_url))
+}
+
+fn query_items() -> Vec<DbItem> {
+    use schema::item::dsl::*;
+
+    let connection = establish_connection();
+    item.limit(5)
+        .load::<DbItem>(&connection)
+        .expect("Error loading items")
+}
 
 fn item_from_entry(entry: Entry, id: u32, feed: &Feed) -> ApiItem {
     ApiItem {
