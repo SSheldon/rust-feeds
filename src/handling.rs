@@ -2,10 +2,10 @@ use chrono::NaiveDateTime;
 use reqwest;
 
 use feed_stream::{Entry, FeedParser};
-use fever_api::{ApiRequest, ApiResponse, ApiResponsePayload, Feed, Item};
+use fever_api::{ApiRequest, ApiResponse, ApiResponsePayload, Feed, Item as ApiItem};
 
-fn item_from_entry(entry: Entry, id: u32, feed: &Feed) -> Item {
-    Item {
+fn item_from_entry(entry: Entry, id: u32, feed: &Feed) -> ApiItem {
+    ApiItem {
         id: id,
         feed_id: feed.id,
         title: entry.title().to_owned(),
