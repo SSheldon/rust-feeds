@@ -73,6 +73,12 @@ fn fetch_and_insert_items() {
         .expect("Error saving new post");
 }
 
+pub fn fetch_items_if_needed() {
+    if query_items().is_empty() {
+        fetch_and_insert_items();
+    }
+}
+
 pub fn handle_api_request(req_type: &ApiRequest) -> ApiResponse {
     let feed = Feed {
         id: 1,

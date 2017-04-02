@@ -60,6 +60,8 @@ fn handle_request(request: &mut Request) -> IronResult<Response> {
 }
 
 fn main() {
+    handling::fetch_items_if_needed();
+
     let port = env::var("PORT").ok()
         .and_then(|s| s.parse().ok())
         .unwrap_or(3000);
