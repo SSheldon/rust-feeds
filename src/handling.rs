@@ -28,7 +28,7 @@ fn query_items() -> Vec<DbItem> {
         .expect("Error loading items")
 }
 
-fn fetch_items(feed: &Feed) -> ApiResponsePayload {
+fn load_items(feed: &Feed) -> ApiResponsePayload {
     let items: Vec<_> = query_items().into_iter()
         .map(|i| i.into_api_item(feed.id))
         .collect();
@@ -95,7 +95,7 @@ pub fn handle_api_request(req_type: &ApiRequest) -> ApiResponse {
         },
         ApiRequest::Items(_) |
         ApiRequest::ItemsSince(_) |
-        ApiRequest::LatestItems => fetch_items(&feed),
+        ApiRequest::LatestItems => load_items(&feed),
         ApiRequest::UnreadItems => ApiResponsePayload::UnreadItems {
             unread_item_ids: vec![1],
         },
