@@ -3,10 +3,8 @@ use std::env;
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
-use reqwest;
 
-use feed_stream::{Entry, FeedParser};
-use fever_api::{ApiRequest, ApiResponse, ApiResponsePayload, Feed, Item as ApiItem};
+use fever_api::{ApiRequest, ApiResponse, ApiResponsePayload, Feed};
 
 use models::item::Item as DbItem;
 
@@ -26,26 +24,9 @@ fn query_items() -> Vec<DbItem> {
         .expect("Error loading items")
 }
 
-fn item_from_entry(entry: Entry, id: u32, feed: &Feed) -> ApiItem {
-    ApiItem {
-        id: id,
-        feed_id: feed.id,
-        title: entry.title().to_owned(),
-        url: entry.link().unwrap().to_owned(),
-        html: entry.content().unwrap().into_owned(),
-        is_saved: false,
-        is_read: false,
-        created_on_time: entry.published().unwrap().naive_utc(),
-    }
-}
-
 fn fetch_items(feed: &Feed) -> ApiResponsePayload {
-    let response = reqwest::get("https://xkcd.com/atom.xml").unwrap();
-    let parser = FeedParser::new(response);
-    let items: Vec<_> = parser
-        .map(|entry| entry.unwrap())
-        .enumerate()
-        .map(|(i, entry)| item_from_entry(entry, 100 - (i as u32), feed))
+    let items: Vec<_> = query_items().into_iter()
+        .map(|i| i.into_api_item(feed.id))
         .collect();
     let total_items = items.len() as u32;
 
