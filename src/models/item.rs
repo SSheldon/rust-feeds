@@ -2,6 +2,8 @@ use chrono::NaiveDateTime;
 
 use fever_api::Item as ApiItem;
 
+use schema::item;
+
 #[derive(Queryable)]
 pub struct Item {
     pub id: i32,
@@ -24,4 +26,13 @@ impl Item {
             created_on_time: self.published,
         }
     }
+}
+
+#[derive(Insertable)]
+#[table_name="item"]
+pub struct NewItem<'a> {
+    pub url: &'a str,
+    pub title: &'a str,
+    pub content: &'a str,
+    pub published: Option<NaiveDateTime>,
 }
