@@ -16,11 +16,24 @@ pub struct Item {
 }
 
 impl Item {
-    pub fn query(conn: &PgConnection) -> QueryResult<Vec<Item>> {
+    pub fn query(conn: &PgConnection,
+            after_id: Option<i32>,
+            before_id: Option<i32>)
+            -> QueryResult<Vec<Item>> {
         use schema::item::dsl::*;
 
-        item.limit(5)
-            .load::<Item>(conn)
+        let mut query = item.order(id.desc())
+            .limit(5)
+            .into_boxed();
+
+        if let Some(after_id) = after_id {
+            query = query.filter(id.gt(after_id));
+        }
+        if let Some(before_id) = before_id {
+            query = query.filter(id.lt(before_id));
+        }
+
+        query.load::<Item>(conn)
     }
 
     pub fn into_api_item(self, feed_id: u32) -> ApiItem {

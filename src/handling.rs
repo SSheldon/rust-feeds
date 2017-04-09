@@ -21,7 +21,7 @@ fn establish_connection() -> PgConnection {
 
 fn query_items() -> Vec<DbItem> {
     let connection = establish_connection();
-    DbItem::query(&connection).expect("Error loading items")
+    DbItem::query(&connection, None, None).expect("Error loading items")
 }
 
 fn load_items(feed: &Feed) -> ApiResponsePayload {
