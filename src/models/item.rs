@@ -1,4 +1,6 @@
 use chrono::NaiveDateTime;
+use diesel::prelude::*;
+use diesel::pg::PgConnection;
 
 use fever_api::Item as ApiItem;
 
@@ -14,6 +16,13 @@ pub struct Item {
 }
 
 impl Item {
+    pub fn query(conn: &PgConnection) -> QueryResult<Vec<Item>> {
+        use schema::item::dsl::*;
+
+        item.limit(5)
+            .load::<Item>(conn)
+    }
+
     pub fn into_api_item(self, feed_id: u32) -> ApiItem {
         ApiItem {
             id: self.id as u32,
