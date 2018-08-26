@@ -1,8 +1,6 @@
 extern crate chrono;
 #[macro_use]
 extern crate diesel;
-#[macro_use]
-extern crate diesel_codegen;
 extern crate feed_stream;
 extern crate fever_api;
 #[macro_use]

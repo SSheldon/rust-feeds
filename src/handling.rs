@@ -64,7 +64,8 @@ fn fetch_and_insert_items() {
         .collect();
 
     let connection = establish_connection();
-    diesel::insert(&new_items).into(item::table)
+    diesel::insert_into(item::table)
+        .values(&new_items)
         .execute(&connection)
         .expect("Error saving new post");
 }
