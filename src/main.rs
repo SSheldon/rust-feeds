@@ -3,12 +3,11 @@ extern crate chrono;
 extern crate diesel;
 extern crate feed_stream;
 extern crate fever_api;
-#[macro_use]
-extern crate iron;
 extern crate reqwest;
 extern crate serde;
 extern crate serde_json;
 extern crate url;
+extern crate warp;
 
 mod handling;
 mod models;
@@ -16,12 +15,8 @@ mod schema;
 
 use std::collections::HashMap;
 use std::env;
-use std::io::Read;
 
-use iron::prelude::*;
-use iron::method;
-use iron::status;
-use url::form_urlencoded;
+use warp::Filter;
 
 use fever_api::ApiRequest;
 
@@ -31,30 +26,19 @@ fn deref_str_pair<'a>(&(ref a, ref b): &'a (String, String))
     (a, b)
 }
 
-fn handle_request(request: &mut Request) -> IronResult<Response> {
-    match request.method {
-        method::Post => (),
-        _ => return Ok(Response::with(status::MethodNotAllowed)),
-    }
+fn parse_request(
+    query_pairs: Vec<(String, String)>,
+    body_params: HashMap<String, String>,
+) -> Result<ApiRequest, warp::Rejection> {
+    let req_type = {
+        let query_pairs = query_pairs.iter().map(deref_str_pair);
+        ApiRequest::parse(query_pairs, &body_params)
+    };
 
-    let url = request.url.as_ref();
-    let query_pairs: Vec<_> = url.query_pairs().into_owned().collect();
+    println!("query: {:?}\nparams: {:?}\nparsed type: {:?}",
+        query_pairs, body_params, req_type);
 
-    let mut body = Vec::new();
-    itry!(request.body.read_to_end(&mut body));
-    let body_params: HashMap<_, _> =
-        form_urlencoded::parse(&body).into_owned().collect();
-
-    let query_pairs = query_pairs.iter().map(deref_str_pair);
-    let req_type = iexpect!(ApiRequest::parse(query_pairs, &body_params));
-
-    let response = handling::handle_api_request(&req_type);
-    let response = itry!(serde_json::to_string(&response));
-
-    println!("url: {}\nparams: {:?}\nparsed type: {:?}\nresponse: {}",
-        url, body_params, req_type, response);
-
-    Ok(Response::with((status::Ok, response)))
+    req_type.ok_or(warp::reject())
 }
 
 fn main() {
@@ -64,5 +48,12 @@ fn main() {
         .and_then(|s| s.parse().ok())
         .unwrap_or(3000);
 
-    Iron::new(handle_request).http(("0.0.0.0", port)).unwrap();
+    let route = warp::post2()
+        .and(warp::query::<Vec<(String, String)>>())
+        .and(warp::body::form::<HashMap<String, String>>())
+        .and_then(parse_request)
+        .map(|req_type| handling::handle_api_request(&req_type))
+        .map(|response| warp::reply::json(&response));
+
+    warp::serve(route).run(([0, 0, 0, 0], port));
 }
