@@ -48,10 +48,13 @@ fn main() {
         .and_then(|s| s.parse().ok())
         .unwrap_or(3000);
 
-    let route = warp::post2()
+
+    let api = warp::post2()
         .and(warp::query::<Vec<(String, String)>>())
         .and(warp::body::form::<HashMap<String, String>>())
-        .and_then(parse_request)
+        .and_then(parse_request);
+
+    let route = api
         .map(|req_type| handling::handle_api_request(&req_type))
         .map(|response| warp::reply::json(&response));
 
