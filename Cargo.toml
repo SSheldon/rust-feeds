@@ -18,6 +18,7 @@ version = "1.0"
 default-features = false
 features = [
   "postgres",
+  "r2d2",
   "chrono",
 ]
 
