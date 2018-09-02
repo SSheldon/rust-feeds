@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::env;
 
 use chrono::NaiveDateTime;
 use diesel;
@@ -12,20 +11,13 @@ use fever_api::{ApiRequest, ApiResponse, ApiResponsePayload, Feed};
 
 use models::item::{Item as DbItem, NewItem};
 
-fn establish_connection() -> PgConnection {
-    let database_url = env::var("DATABASE_URL")
-        .expect("DATABASE_URL must be set");
-    PgConnection::establish(&database_url)
-        .expect(&format!("Error connecting to {}", database_url))
+fn query_items(connection: &PgConnection) -> Vec<DbItem> {
+    DbItem::query(connection, None, None).expect("Error loading items")
 }
 
-fn query_items() -> Vec<DbItem> {
-    let connection = establish_connection();
-    DbItem::query(&connection, None, None).expect("Error loading items")
-}
-
-fn load_items(feed: &Feed) -> ApiResponsePayload {
-    let items: Vec<_> = query_items().into_iter()
+fn load_items(feed: &Feed, connection: &PgConnection) -> ApiResponsePayload {
+    let items: Vec<_> = query_items(connection)
+        .into_iter()
         .map(|i| i.into_api_item(feed.id))
         .collect();
     let total_items = items.len() as u32;
@@ -50,7 +42,7 @@ fn item_to_insert_for_entry(entry: &Entry) -> NewItem {
     }
 }
 
-fn fetch_and_insert_items() {
+fn fetch_and_insert_items(connection: &PgConnection) {
     use schema::item;
 
     let response = reqwest::get("https://xkcd.com/atom.xml").unwrap();
@@ -63,20 +55,20 @@ fn fetch_and_insert_items() {
         .map(item_to_insert_for_entry)
         .collect();
 
-    let connection = establish_connection();
     diesel::insert_into(item::table)
         .values(&new_items)
-        .execute(&connection)
+        .execute(connection)
         .expect("Error saving new post");
 }
 
-pub fn fetch_items_if_needed() {
-    if query_items().is_empty() {
-        fetch_and_insert_items();
+pub fn fetch_items_if_needed(connection: &PgConnection) {
+    if query_items(connection).is_empty() {
+        fetch_and_insert_items(connection);
     }
 }
 
-pub fn handle_api_request(req_type: &ApiRequest) -> ApiResponse {
+pub fn handle_api_request(req_type: &ApiRequest, connection: &PgConnection)
+-> ApiResponse {
     let feed = Feed {
         id: 1,
         title: "xkcd.com".to_owned(),
@@ -92,7 +84,7 @@ pub fn handle_api_request(req_type: &ApiRequest) -> ApiResponse {
         },
         ApiRequest::Items(_) |
         ApiRequest::ItemsSince(_) |
-        ApiRequest::LatestItems => load_items(&feed),
+        ApiRequest::LatestItems => load_items(&feed, connection),
         ApiRequest::UnreadItems => ApiResponsePayload::UnreadItems {
             unread_item_ids: vec![1],
         },

@@ -17,14 +17,24 @@ use std::collections::HashMap;
 use std::env;
 
 use diesel::pg::PgConnection;
-use diesel::r2d2::{ConnectionManager, Pool};
 use warp::Filter;
 
-use fever_api::ApiRequest;
+use fever_api::{ApiRequest, ApiResponse};
+
+type PgConnectionManager = diesel::r2d2::ConnectionManager<PgConnection>;
+type PgConnectionPool = diesel::r2d2::Pool<PgConnectionManager>;
+type PooledPgConnection = diesel::r2d2::PooledConnection<PgConnectionManager>;
+
+fn connect_db(pool: PgConnectionPool)
+-> impl Filter<Extract=(PooledPgConnection,), Error=warp::Rejection> + Clone {
+    warp::any().and_then(move || {
+        pool.get().map_err(|_| warp::reject::server_error())
+    })
+}
 
 /// Converts a reference to a pair of Strings into a pair of str references.
 fn deref_str_pair<'a>(&(ref a, ref b): &'a (String, String))
-        -> (&'a str, &'a str) {
+-> (&'a str, &'a str) {
     (a, b)
 }
 
@@ -40,17 +50,22 @@ fn parse_request(
     println!("query: {:?}\nparams: {:?}\nparsed type: {:?}",
         query_pairs, body_params, req_type);
 
-    req_type.ok_or(warp::reject())
+    req_type.ok_or_else(warp::reject)
+}
+
+fn handle_request(req_type: ApiRequest, connection: PooledPgConnection)
+-> ApiResponse {
+    handling::handle_api_request(&req_type, &connection)
 }
 
 fn main() {
     let database_url = env::var("DATABASE_URL")
         .expect("DATABASE_URL must be set");
-    let pool = Pool::builder()
-        .build(ConnectionManager::<PgConnection>::new(database_url))
+    let pool = PgConnectionPool::new(PgConnectionManager::new(database_url))
         .expect("Failed to create pool.");
 
-    handling::fetch_items_if_needed();
+    let connection = pool.get().expect("Failed to retrieve connection.");
+    handling::fetch_items_if_needed(&connection);
 
     let port = env::var("PORT").ok()
         .and_then(|s| s.parse().ok())
@@ -61,13 +76,9 @@ fn main() {
         .and(warp::body::form::<HashMap<String, String>>())
         .and_then(parse_request);
 
-    let db = warp::any().and_then(move || {
-        pool.get().map_err(|_| warp::reject::server_error())
-    });
-
     let route = api
-        .and(db)
-        .map(|req_type, connection| handling::handle_api_request(&req_type))
+        .and(connect_db(pool))
+        .map(handle_request)
         .map(|response| warp::reply::json(&response));
 
     warp::serve(route).run(([0, 0, 0, 0], port));
