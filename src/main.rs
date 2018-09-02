@@ -1,6 +1,7 @@
 extern crate chrono;
 #[macro_use]
 extern crate diesel;
+extern crate env_logger;
 extern crate feed_stream;
 extern crate fever_api;
 extern crate reqwest;
@@ -59,6 +60,8 @@ fn handle_request(req_type: ApiRequest, connection: PooledPgConnection)
 }
 
 fn main() {
+    env_logger::init();
+
     let database_url = env::var("DATABASE_URL")
         .expect("DATABASE_URL must be set");
     let pool = PgConnectionPool::new(PgConnectionManager::new(database_url))
