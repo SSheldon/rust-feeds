@@ -5,14 +5,18 @@ use diesel::pg::PgConnection;
 use fever_api::Item as ApiItem;
 
 use schema::item;
+use super::feed::Feed;
 
-#[derive(Queryable)]
+#[derive(Identifiable, Queryable, Associations)]
+#[belongs_to(Feed)]
+#[table_name = "item"]
 pub struct Item {
     pub id: i32,
     pub url: String,
     pub title: String,
     pub content: String,
     pub published: NaiveDateTime,
+    pub feed_id: i32,
 }
 
 impl Item {
