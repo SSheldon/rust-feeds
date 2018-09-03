@@ -11,14 +11,29 @@ use fever_api::{ApiRequest, ApiResponse, ApiResponsePayload, Feed};
 
 use models::item::{Item as DbItem, NewItem};
 
+fn load_feeds() -> ApiResponsePayload {
+    let feed = Feed {
+        id: 1,
+        title: "xkcd.com".to_owned(),
+        url: "https://xkcd.com/".to_owned(),
+        is_spark: false,
+        last_updated_on_time: NaiveDateTime::from_timestamp(1472799906, 0),
+    };
+
+    ApiResponsePayload::Feeds {
+        feeds: vec![feed],
+        feeds_groups: vec![],
+    }
+}
+
 fn query_items(connection: &PgConnection) -> Vec<DbItem> {
     DbItem::query(connection, None, None).expect("Error loading items")
 }
 
-fn load_items(feed: &Feed, connection: &PgConnection) -> ApiResponsePayload {
+fn load_items(connection: &PgConnection) -> ApiResponsePayload {
     let items: Vec<_> = query_items(connection)
         .into_iter()
-        .map(|i| i.into_api_item(feed.id))
+        .map(DbItem::into_api_item)
         .collect();
     let total_items = items.len() as u32;
 
@@ -69,22 +84,11 @@ pub fn fetch_items_if_needed(connection: &PgConnection) {
 
 pub fn handle_api_request(req_type: &ApiRequest, connection: &PgConnection)
 -> ApiResponse {
-    let feed = Feed {
-        id: 1,
-        title: "xkcd.com".to_owned(),
-        url: "https://xkcd.com/".to_owned(),
-        is_spark: false,
-        last_updated_on_time: NaiveDateTime::from_timestamp(1472799906, 0),
-    };
-
     let payload = match *req_type {
-        ApiRequest::Feeds => ApiResponsePayload::Feeds {
-            feeds: vec![feed],
-            feeds_groups: vec![],
-        },
+        ApiRequest::Feeds => load_feeds(),
         ApiRequest::Items(_) |
         ApiRequest::ItemsSince(_) |
-        ApiRequest::LatestItems => load_items(&feed, connection),
+        ApiRequest::LatestItems => load_items(connection),
         ApiRequest::UnreadItems => ApiResponsePayload::UnreadItems {
             unread_item_ids: vec![1],
         },

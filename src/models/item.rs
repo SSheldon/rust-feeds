@@ -40,10 +40,10 @@ impl Item {
         query.load::<Item>(conn)
     }
 
-    pub fn into_api_item(self, feed_id: u32) -> ApiItem {
+    pub fn into_api_item(self) -> ApiItem {
         ApiItem {
             id: self.id as u32,
-            feed_id: feed_id,
+            feed_id: self.feed_id as u32,
             title: self.title,
             url: self.url,
             html: self.content,
