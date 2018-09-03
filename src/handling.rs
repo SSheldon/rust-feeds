@@ -1,27 +1,25 @@
 use std::borrow::Cow;
 
-use chrono::NaiveDateTime;
 use diesel;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
 use reqwest;
 
 use feed_stream::{Entry, FeedParser};
-use fever_api::{ApiRequest, ApiResponse, ApiResponsePayload, Feed};
+use fever_api::{ApiRequest, ApiResponse, ApiResponsePayload};
 
+use models::feed::{Feed as DbFeed, NewFeed};
 use models::item::{Item as DbItem, NewItem};
 
-fn load_feeds() -> ApiResponsePayload {
-    let feed = Feed {
-        id: 1,
-        title: "xkcd.com".to_owned(),
-        url: "https://xkcd.com/".to_owned(),
-        is_spark: false,
-        last_updated_on_time: NaiveDateTime::from_timestamp(1472799906, 0),
-    };
+fn load_feeds(conn: &PgConnection) -> ApiResponsePayload {
+    let feeds = DbFeed::load(conn)
+        .expect("Error loading feeds")
+        .into_iter()
+        .map(DbFeed::into_api_feed)
+        .collect();
 
     ApiResponsePayload::Feeds {
-        feeds: vec![feed],
+        feeds: feeds,
         feeds_groups: vec![],
     }
 }
@@ -43,7 +41,21 @@ fn load_items(connection: &PgConnection) -> ApiResponsePayload {
     }
 }
 
-fn item_to_insert_for_entry(entry: &Entry) -> NewItem {
+fn insert_feed(conn: &PgConnection) -> DbFeed {
+    use schema::feed;
+
+    let new_feed = NewFeed {
+        url: "https://xkcd.com/atom.xml",
+        title: "xkcd",
+    };
+
+    diesel::insert_into(feed::table)
+        .values(&new_feed)
+        .get_result(conn)
+        .expect("Error saving new feed")
+}
+
+fn item_to_insert_for_entry<'a>(entry: &'a Entry, feed: &DbFeed) -> NewItem<'a> {
     let content = match entry.content() {
         Some(Cow::Borrowed(content)) => content,
         _ => panic!("too lazy to handle this case"),
@@ -54,20 +66,21 @@ fn item_to_insert_for_entry(entry: &Entry) -> NewItem {
         title: entry.title(),
         content: content,
         published: entry.published().map(|d| d.naive_utc()),
+        feed_id: feed.id,
     }
 }
 
-fn fetch_and_insert_items(connection: &PgConnection) {
+fn fetch_and_insert_items(feed: &DbFeed, connection: &PgConnection) {
     use schema::item;
 
-    let response = reqwest::get("https://xkcd.com/atom.xml").unwrap();
+    let response = reqwest::get(&feed.url).unwrap();
     let parser = FeedParser::new(response);
     let entries: Vec<_> = parser
         .map(|entry| entry.unwrap())
         .collect();
 
     let new_items: Vec<_> = entries.iter()
-        .map(item_to_insert_for_entry)
+        .map(|entry| item_to_insert_for_entry(entry, feed))
         .collect();
 
     diesel::insert_into(item::table)
@@ -78,14 +91,15 @@ fn fetch_and_insert_items(connection: &PgConnection) {
 
 pub fn fetch_items_if_needed(connection: &PgConnection) {
     if query_items(connection).is_empty() {
-        fetch_and_insert_items(connection);
+        let feed = insert_feed(connection);
+        fetch_and_insert_items(&feed, connection);
     }
 }
 
 pub fn handle_api_request(req_type: &ApiRequest, connection: &PgConnection)
 -> ApiResponse {
     let payload = match *req_type {
-        ApiRequest::Feeds => load_feeds(),
+        ApiRequest::Feeds => load_feeds(connection),
         ApiRequest::Items(_) |
         ApiRequest::ItemsSince(_) |
         ApiRequest::LatestItems => load_items(connection),

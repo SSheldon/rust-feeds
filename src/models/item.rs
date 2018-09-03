@@ -61,4 +61,5 @@ pub struct NewItem<'a> {
     pub title: &'a str,
     pub content: &'a str,
     pub published: Option<NaiveDateTime>,
+    pub feed_id: i32,
 }
