@@ -20,21 +20,35 @@ pub struct Item {
 }
 
 impl Item {
-    pub fn query(conn: &PgConnection,
-            after_id: Option<i32>,
-            before_id: Option<i32>)
-            -> QueryResult<Vec<Item>> {
+    pub fn load_before(
+        conn: &PgConnection,
+        before_id: Option<i32>,
+    ) -> QueryResult<Vec<Item>> {
         use schema::item::dsl::*;
 
         let mut query = item.order(id.desc())
             .limit(5)
             .into_boxed();
 
-        if let Some(after_id) = after_id {
-            query = query.filter(id.gt(after_id));
-        }
         if let Some(before_id) = before_id {
             query = query.filter(id.lt(before_id));
+        }
+
+        query.load::<Item>(conn)
+    }
+
+    pub fn load_after(
+        conn: &PgConnection,
+        after_id: Option<i32>,
+    ) -> QueryResult<Vec<Item>> {
+        use schema::item::dsl::*;
+
+        let mut query = item.order(id.asc())
+            .limit(5)
+            .into_boxed();
+
+        if let Some(after_id) = after_id {
+            query = query.filter(id.gt(after_id));
         }
 
         query.load::<Item>(conn)

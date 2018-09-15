@@ -23,7 +23,7 @@ fn load_feeds(conn: &PgConnection) -> ApiResponsePayload {
 }
 
 fn query_items(connection: &PgConnection) -> Vec<DbItem> {
-    DbItem::query(connection, None, None).expect("Error loading items")
+    DbItem::load_before(connection, None).expect("Error loading items")
 }
 
 fn load_items(connection: &PgConnection) -> ApiResponsePayload {
