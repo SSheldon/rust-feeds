@@ -9,7 +9,7 @@ use parser::FeedParseError;
 
 pub struct Entry {
     pub title: String,
-    pub content: Option<String>,
+    pub content: String,
     pub link: Option<String>,
     pub published: Option<DateTime<FixedOffset>>,
     pub authors: Vec<String>,
@@ -24,15 +24,14 @@ impl Entry {
 
         let RssItem { title, link, description, author, guid, pub_date, .. } = item;
 
-        let title = title.unwrap_or(String::new());
         let link = link.or_else(|| guid.as_ref().and_then(maybe_guid_link));
         let published = pub_date.and_then(|s| DateTime::parse_from_rfc2822(&s).ok());
         let authors = author.map_or(Vec::new(), |s| vec![s]);
         let id = guid.map(|id| id.value);
 
         Entry {
-            title: title,
-            content: description,
+            title: title.unwrap_or(String::new()),
+            content: description.unwrap_or(String::new()),
             link: link,
             published: published,
             authors: authors,
@@ -61,7 +60,7 @@ impl Entry {
             Content::Text(s) => s,
             Content::Html(s) => s,
             Content::Xhtml(e) => e.to_string(),
-        }).or(summary);
+        }).or(summary).unwrap_or(String::new());
 
         let alt_link_pos = links.iter().position(is_alt_link);
         let link = if let Some(pos) = alt_link_pos {

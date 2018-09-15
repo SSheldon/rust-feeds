@@ -143,7 +143,7 @@ impl From<io::Error> for FeedParseError {
 
 #[cfg(test)]
 mod tests {
-    use chrono::{TimeZone, UTC};
+    use chrono::{TimeZone, Utc};
     use super::FeedParser;
 
     static RSS_STR: &'static str = r#"
@@ -181,10 +181,10 @@ mod tests {
         let mut parser = FeedParser::new(RSS_STR.as_bytes());
 
         let entry = parser.next().unwrap().unwrap();
-        assert_eq!(entry.title(), "Ford hires Elon Musk as CEO");
-        assert_eq!(entry.content().unwrap(), "In an unprecedented move, Ford hires Elon Musk.");
-        let expected_date = UTC.ymd(2019, 4, 1).and_hms(7, 30, 0);
-        assert_eq!(entry.published().unwrap(), expected_date);
+        assert_eq!(entry.title, "Ford hires Elon Musk as CEO");
+        assert_eq!(entry.content, "In an unprecedented move, Ford hires Elon Musk.");
+        let expected_date = Utc.ymd(2019, 4, 1).and_hms(7, 30, 0);
+        assert_eq!(entry.published.unwrap(), expected_date);
 
         assert!(parser.next().is_none());
     }
@@ -194,10 +194,10 @@ mod tests {
         let mut parser = FeedParser::new(ATOM_STR.as_bytes());
 
         let entry = parser.next().unwrap().unwrap();
-        assert_eq!(entry.title(), "Ford hires Elon Musk as CEO");
-        assert_eq!(entry.id().unwrap(), "urn:uuid:4ae8550b-2987-49fa-9f8c-54c180c418ac");
-        let expected_date = UTC.ymd(2019, 4, 1).and_hms(7, 30, 0);
-        assert_eq!(entry.published().unwrap(), expected_date);
+        assert_eq!(entry.title, "Ford hires Elon Musk as CEO");
+        assert_eq!(entry.id.unwrap(), "urn:uuid:4ae8550b-2987-49fa-9f8c-54c180c418ac");
+        let expected_date = Utc.ymd(2019, 4, 1).and_hms(7, 30, 0);
+        assert_eq!(entry.published.unwrap(), expected_date);
 
         assert!(parser.next().is_none());
     }
