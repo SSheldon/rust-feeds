@@ -26,9 +26,8 @@ fn query_items(connection: &PgConnection) -> Vec<DbItem> {
     DbItem::load_before(connection, None).expect("Error loading items")
 }
 
-fn load_items(connection: &PgConnection) -> ApiResponsePayload {
-    let items: Vec<_> = query_items(connection)
-        .into_iter()
+fn format_items(items: Vec<DbItem>) -> ApiResponsePayload {
+    let items: Vec<_> = items.into_iter()
         .map(DbItem::into_api_item)
         .collect();
     let total_items = items.len() as u32;
@@ -93,9 +92,20 @@ pub fn handle_api_request(req_type: &ApiRequest, connection: &PgConnection)
 -> ApiResponse {
     let payload = match *req_type {
         ApiRequest::Feeds => load_feeds(connection),
-        ApiRequest::Items(_) |
-        ApiRequest::ItemsSince(_) |
-        ApiRequest::LatestItems => load_items(connection),
+        ApiRequest::LatestItems => {
+            let items = query_items(connection);
+            format_items(items)
+        },
+        ApiRequest::ItemsBefore(id) => {
+            let items = DbItem::load_before(connection, Some(id as i32))
+                .expect("Error loading items");
+            format_items(items)
+        },
+        ApiRequest::ItemsSince(id) => {
+            let items = DbItem::load_after(connection, Some(id as i32))
+                .expect("Error loading items");
+            format_items(items)
+        },
         ApiRequest::UnreadItems => ApiResponsePayload::UnreadItems {
             unread_item_ids: vec![1],
         },
