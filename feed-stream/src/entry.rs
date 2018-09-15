@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use atom_syndication::{Content, Entry as AtomEntry, Link, Person};
 use atom_syndication::FromXml;
 use chrono::{DateTime, FixedOffset};
@@ -9,111 +7,97 @@ use xml::Element;
 
 use parser::FeedParseError;
 
-enum EntryKind {
-    Rss(RssItem),
-    Atom(AtomEntry),
-}
-
 pub struct Entry {
-    kind: EntryKind,
+    pub title: String,
+    pub content: Option<String>,
+    pub link: Option<String>,
+    pub published: Option<DateTime<FixedOffset>>,
+    pub authors: Vec<String>,
+    pub id: Option<String>,
 }
 
 impl Entry {
-    pub fn title(&self) -> &str {
-        match self.kind {
-            EntryKind::Rss(ref item) => item.title.as_ref().map_or("", |s| &**s),
-            EntryKind::Atom(ref entry) => &entry.title,
+    fn from_rss(item: RssItem) -> Entry {
+        fn maybe_guid_link(id: &Guid) -> Option<String> {
+            if id.is_perma_link { Some(id.value.clone()) } else { None }
+        }
+
+        let RssItem { title, link, description, author, guid, pub_date, .. } = item;
+
+        let title = title.unwrap_or(String::new());
+        let link = link.or_else(|| guid.as_ref().and_then(maybe_guid_link));
+        let published = pub_date.and_then(|s| DateTime::parse_from_rfc2822(&s).ok());
+        let authors = author.map_or(Vec::new(), |s| vec![s]);
+        let id = guid.map(|id| id.value);
+
+        Entry {
+            title: title,
+            content: description,
+            link: link,
+            published: published,
+            authors: authors,
+            id: id,
         }
     }
 
-    pub fn content(&self) -> Option<Cow<str>> {
-        fn cow_from_content(content: &Content) -> Cow<str> {
-            match content {
-                &Content::Text(ref s) => Cow::from(&**s),
-                &Content::Html(ref s) => Cow::from(&**s),
-                &Content::Xhtml(ref e) => Cow::from(e.to_string()),
-            }
-        }
-
-        match self.kind {
-            EntryKind::Rss(ref item) => maybe_cow_from_str(&item.description),
-            EntryKind::Atom(ref entry) =>
-                entry.content.as_ref().map(cow_from_content)
-                    .or_else(|| maybe_cow_from_str(&entry.summary)),
-        }
-    }
-
-    pub fn link(&self) -> Option<&str> {
-        fn maybe_guid_link(id: &Guid) -> Option<&str> {
-            if id.is_perma_link { Some(&id.value) } else { None }
-        }
-
+    fn from_atom(entry: AtomEntry) -> Entry {
         fn is_alt_link(link: &Link) -> bool {
             link.rel.as_ref().map_or(true, |rel| rel == "alternate")
         }
 
-        match self.kind {
-            EntryKind::Rss(ref item) =>
-                item.link.as_ref().map(|s| &**s)
-                    .or_else(|| item.guid.as_ref().and_then(maybe_guid_link)),
-            EntryKind::Atom(ref entry) =>
-                entry.links.iter().find(|&link| is_alt_link(link))
-                    .or_else(|| entry.links.first())
-                    .map(|link| &*link.href),
-        }
-    }
+        fn author_string_from_person(author: Person) -> String {
+            use std::fmt::Write;
 
-    pub fn published(&self) -> Option<DateTime<FixedOffset>> {
-        match self.kind {
-            EntryKind::Rss(ref item) =>
-                item.pub_date.as_ref()
-                    .and_then(|s| DateTime::parse_from_rfc2822(s).ok()),
-            EntryKind::Atom(ref entry) =>
-                entry.published.as_ref()
-                    .and_then(|s| DateTime::parse_from_rfc3339(s).ok())
-                    .or_else(|| DateTime::parse_from_rfc3339(&entry.updated).ok()),
-        }
-    }
-
-    pub fn authors(&self) -> Vec<Cow<str>> {
-        fn author_str(author: &Person) -> Cow<str> {
-            match author.email {
-                Some(ref email) =>
-                    Cow::from(format!("{} ({})", email, author.name)),
-                None => Cow::from(&*author.name),
+            let Person { mut name, email, .. } = author;
+            if let Some(email) = email {
+                write!(&mut name, " ({})", email).unwrap();
             }
+            name
         }
 
-        match self.kind {
-            EntryKind::Rss(ref item) =>
-                maybe_cow_from_str(&item.author)
-                    .map_or(Vec::new(), |s| vec![s]),
-            EntryKind::Atom(ref entry) =>
-                entry.authors.iter().map(author_str).collect(),
+        let AtomEntry { id, title, updated, published, links, authors, summary, content, ..} = entry;
+
+        let content = content.map(|content| match content {
+            Content::Text(s) => s,
+            Content::Html(s) => s,
+            Content::Xhtml(e) => e.to_string(),
+        }).or(summary);
+
+        let alt_link_pos = links.iter().position(is_alt_link);
+        let link = if let Some(pos) = alt_link_pos {
+            let mut links = links;
+            Some(links.swap_remove(pos))
+        } else {
+            links.into_iter().next()
+        };
+
+        let published = published
+            .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
+            .or_else(|| DateTime::parse_from_rfc3339(&updated).ok());
+
+        let authors = authors.into_iter()
+            .map(author_string_from_person)
+            .collect();
+
+        Entry {
+            title: title,
+            content: content,
+            link: link.map(|link| link.href),
+            published: published,
+            authors: authors,
+            id: Some(id),
         }
     }
-
-    pub fn id(&self) -> Option<&str> {
-        match self.kind {
-            EntryKind::Rss(ref item) => item.guid.as_ref().map(|id| &*id.value),
-            EntryKind::Atom(ref entry) => Some(&entry.id),
-        }
-    }
-}
-
-
-fn maybe_cow_from_str(s: &Option<String>) -> Option<Cow<str>> {
-    s.as_ref().map(|s| Cow::from(&**s))
 }
 
 pub fn from_rss_item(elem: Element) -> Result<Entry, FeedParseError> {
     RssItem::from_xml(elem)
-        .map(|item| Entry { kind: EntryKind::Rss(item) })
+        .map(Entry::from_rss)
         .map_err(|e| FeedParseError::Rss(e))
 }
 
 pub fn from_atom_entry(elem: Element) -> Result<Entry, FeedParseError> {
     AtomEntry::from_xml(&elem)
-        .map(|entry| Entry { kind: EntryKind::Atom(entry) })
+        .map(Entry::from_atom)
         .map_err(|e| FeedParseError::Atom(e))
 }

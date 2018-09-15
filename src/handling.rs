@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use diesel;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
@@ -56,16 +54,11 @@ fn insert_feed(conn: &PgConnection) -> DbFeed {
 }
 
 fn item_to_insert_for_entry<'a>(entry: &'a Entry, feed: &DbFeed) -> NewItem<'a> {
-    let content = match entry.content() {
-        Some(Cow::Borrowed(content)) => content,
-        _ => panic!("too lazy to handle this case"),
-    };
-
     NewItem {
-        url: entry.link().unwrap(),
-        title: entry.title(),
-        content: content,
-        published: entry.published().map(|d| d.naive_utc()),
+        url: entry.link.as_ref().unwrap(),
+        title: &entry.title,
+        content: entry.content.as_ref().unwrap(),
+        published: entry.published.as_ref().map(|d| d.naive_utc()),
         feed_id: feed.id,
     }
 }

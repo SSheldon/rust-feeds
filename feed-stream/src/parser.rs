@@ -1,4 +1,3 @@
-use std::ascii::AsciiExt;
 use std::io::{Read, self};
 
 use rss::ReadError;
