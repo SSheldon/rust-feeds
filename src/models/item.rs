@@ -54,6 +54,13 @@ impl Item {
         query.load::<Item>(conn)
     }
 
+    pub fn count(conn: &PgConnection) -> QueryResult<u32> {
+        use schema::item::dsl::*;
+
+        let query = item.count();
+        query.get_result::<i64>(conn).map(|i| i as u32)
+    }
+
     pub fn into_api_item(self) -> ApiItem {
         ApiItem {
             id: self.id as u32,
