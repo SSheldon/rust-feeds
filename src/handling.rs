@@ -25,7 +25,7 @@ fn load_feeds(conn: &PgConnection) -> ApiResponsePayload {
 
 fn load_items<Q>(query: Q, conn: &PgConnection) -> ApiResponsePayload
 where Q: RunQueryDsl<PgConnection> + LoadQuery<PgConnection, DbItem> {
-    let items: Vec<_> = query.load::<DbItem>(conn)
+    let items = query.load::<DbItem>(conn)
         .expect("Error loading items")
         .into_iter()
         .map(DbItem::into_api_item)
@@ -35,6 +35,25 @@ where Q: RunQueryDsl<PgConnection> + LoadQuery<PgConnection, DbItem> {
     ApiResponsePayload::Items {
         items: items,
         total_items: total_items,
+    }
+}
+
+fn load_unread_item_ids(conn: &PgConnection) -> ApiResponsePayload {
+    let ids = {
+        use schema::item::dsl::*;
+
+        // TODO: filter out read items
+        item.select(id)
+            .load::<i32>(conn)
+            .expect("Error loading unread item ids")
+    };
+
+    let ids = ids.into_iter()
+        .map(|i| i as u32)
+        .collect();
+
+    ApiResponsePayload::UnreadItems {
+        unread_item_ids: ids,
     }
 }
 
@@ -103,9 +122,7 @@ pub fn handle_api_request(req_type: &ApiRequest, connection: &PgConnection)
         ApiRequest::ItemsSince(id) => {
             load_items(DbItem::after_query(id as i32), connection)
         },
-        ApiRequest::UnreadItems => ApiResponsePayload::UnreadItems {
-            unread_item_ids: vec![1],
-        },
+        ApiRequest::UnreadItems => load_unread_item_ids(connection),
         _ => ApiResponsePayload::None,
     };
     ApiResponse {
