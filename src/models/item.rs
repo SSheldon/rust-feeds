@@ -58,28 +58,6 @@ impl Item {
             .filter(id.gt(after_id))
     }
 
-    pub fn load_before(
-        conn: &PgConnection,
-        before_id: Option<i32>,
-    ) -> QueryResult<Vec<Item>> {
-        if let Some(before_id) = before_id {
-            Item::before_query(before_id).load::<Item>(conn)
-        } else {
-            Item::latest_query().load::<Item>(conn)
-        }
-    }
-
-    pub fn load_after(
-        conn: &PgConnection,
-        after_id: Option<i32>,
-    ) -> QueryResult<Vec<Item>> {
-        if let Some(after_id) = after_id {
-            Item::after_query(after_id).load::<Item>(conn)
-        } else {
-            Item::earliest_query().load::<Item>(conn)
-        }
-    }
-
     pub fn count(conn: &PgConnection) -> QueryResult<u32> {
         use schema::item::dsl::*;
 
