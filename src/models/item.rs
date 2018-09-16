@@ -7,6 +7,16 @@ use fever_api::Item as ApiItem;
 use schema::item;
 use super::feed::Feed;
 
+mod queries {
+    use diesel::helper_types::*;
+    use schema::item;
+
+    pub type DescendingItems = Limit<Order<item::table, Desc<item::columns::id>>>;
+    pub type BeforeItems = Filter<DescendingItems, Lt<item::columns::id, i32>>;
+    pub type AscendingItems = Limit<Order<item::table, Asc<item::columns::id>>>;
+    pub type AfterItems = Filter<AscendingItems, Gt<item::columns::id, i32>>;
+}
+
 #[derive(Identifiable, Queryable, Associations)]
 #[belongs_to(Feed)]
 #[table_name = "item"]
@@ -20,38 +30,54 @@ pub struct Item {
 }
 
 impl Item {
+    pub fn latest_query() -> queries::DescendingItems {
+        use schema::item::dsl::*;
+
+        item.order(id.desc())
+            .limit(5)
+    }
+
+    pub fn earliest_query() -> queries::AscendingItems {
+        use schema::item::dsl::*;
+
+        item.order(id.asc())
+            .limit(5)
+    }
+
+    pub fn before_query(before_id: i32) -> queries::BeforeItems {
+        use schema::item::dsl::*;
+
+        Item::latest_query()
+            .filter(id.lt(before_id))
+    }
+
+    pub fn after_query(after_id: i32) -> queries::AfterItems {
+        use schema::item::dsl::*;
+
+        Item::earliest_query()
+            .filter(id.gt(after_id))
+    }
+
     pub fn load_before(
         conn: &PgConnection,
         before_id: Option<i32>,
     ) -> QueryResult<Vec<Item>> {
-        use schema::item::dsl::*;
-
-        let mut query = item.order(id.desc())
-            .limit(5)
-            .into_boxed();
-
         if let Some(before_id) = before_id {
-            query = query.filter(id.lt(before_id));
+            Item::before_query(before_id).load::<Item>(conn)
+        } else {
+            Item::latest_query().load::<Item>(conn)
         }
-
-        query.load::<Item>(conn)
     }
 
     pub fn load_after(
         conn: &PgConnection,
         after_id: Option<i32>,
     ) -> QueryResult<Vec<Item>> {
-        use schema::item::dsl::*;
-
-        let mut query = item.order(id.asc())
-            .limit(5)
-            .into_boxed();
-
         if let Some(after_id) = after_id {
-            query = query.filter(id.gt(after_id));
+            Item::after_query(after_id).load::<Item>(conn)
+        } else {
+            Item::earliest_query().load::<Item>(conn)
         }
-
-        query.load::<Item>(conn)
     }
 
     pub fn count(conn: &PgConnection) -> QueryResult<u32> {
