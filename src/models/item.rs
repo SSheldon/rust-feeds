@@ -30,18 +30,20 @@ pub struct Item {
 }
 
 impl Item {
+    const LIMIT: i64 = 5;
+
     pub fn latest_query() -> queries::DescendingItems {
         use schema::item::dsl::*;
 
         item.order(id.desc())
-            .limit(5)
+            .limit(Item::LIMIT)
     }
 
     pub fn earliest_query() -> queries::AscendingItems {
         use schema::item::dsl::*;
 
         item.order(id.asc())
-            .limit(5)
+            .limit(Item::LIMIT)
     }
 
     pub fn before_query(before_id: i32) -> queries::BeforeItems {
