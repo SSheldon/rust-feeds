@@ -117,12 +117,18 @@ fn fetch_and_insert_items(feed: &DbFeed, connection: &PgConnection) {
         .expect("Error saving new post");
 }
 
-pub fn fetch_items_if_needed(connection: &PgConnection) {
-    let count = DbItem::count(connection)
-        .expect("Error counting items");
-    if count == 0 {
-        let feed = insert_feed(connection);
-        fetch_and_insert_items(&feed, connection);
+pub fn fetch_items_if_needed(conn: &PgConnection) {
+    let feeds = DbFeed::load(conn)
+        .expect("Error loading feeds");
+
+    let feeds = if feeds.is_empty() {
+        vec![insert_feed(conn)]
+    } else {
+        feeds
+    };
+
+    for feed in feeds {
+        fetch_and_insert_items(&feed, conn);
     }
 }
 
