@@ -31,7 +31,7 @@ pub struct Item {
 }
 
 impl Item {
-    const LIMIT: i64 = 5;
+    const LIMIT: i64 = 50;
 
     pub fn latest_query() -> queries::DescendingItems {
         use schema::item::dsl::*;
