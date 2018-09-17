@@ -71,6 +71,17 @@ fn insert_feed(conn: &PgConnection) -> DbFeed {
         .expect("Error saving new feed")
 }
 
+fn item_already_exists(entry: &Entry, feed: &DbFeed, conn: &PgConnection) -> bool {
+    use diesel::dsl::{exists, select};
+    use schema::item::dsl::*;
+
+    let link = entry.link.as_ref().unwrap();
+    let query = item.filter(feed_id.eq(feed.id).and(url.eq(link)));
+    select(exists(query))
+        .get_result(conn)
+        .expect("error")
+}
+
 fn item_to_insert_for_entry<'a>(entry: &'a Entry, feed: &DbFeed) -> NewItem<'a> {
     NewItem {
         url: entry.link.as_ref().unwrap(),
@@ -84,13 +95,19 @@ fn item_to_insert_for_entry<'a>(entry: &'a Entry, feed: &DbFeed) -> NewItem<'a> 
 fn fetch_and_insert_items(feed: &DbFeed, connection: &PgConnection) {
     use schema::item;
 
+    println!("Fetching items from {}...", feed.url);
+
     let response = reqwest::get(&feed.url).unwrap();
     let parser = FeedParser::new(response);
     let entries: Vec<_> = parser
         .map(|entry| entry.unwrap())
+        .take_while(|entry| !item_already_exists(entry, feed, connection))
         .collect();
 
+    println!("Found {} new items", entries.len());
+
     let new_items: Vec<_> = entries.iter()
+        .rev()
         .map(|entry| item_to_insert_for_entry(entry, feed))
         .collect();
 
