@@ -122,6 +122,10 @@ pub fn handle_api_request(req_type: &ApiRequest, connection: &PgConnection)
         ApiRequest::ItemsSince(id) => {
             load_items(DbItem::after_query(id as i32), connection)
         },
+        ApiRequest::Items(ref ids) => {
+            let ids: Vec<_> = ids.iter().map(|&i| i as i32).collect();
+            load_items(DbItem::for_ids_query(&ids), connection)
+        }
         ApiRequest::UnreadItems => load_unread_item_ids(connection),
         _ => ApiResponsePayload::None,
     };

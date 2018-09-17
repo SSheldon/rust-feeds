@@ -15,6 +15,7 @@ mod queries {
     pub type BeforeItems = Filter<DescendingItems, Lt<item::columns::id, i32>>;
     pub type AscendingItems = Limit<Order<item::table, Asc<item::columns::id>>>;
     pub type AfterItems = Filter<AscendingItems, Gt<item::columns::id, i32>>;
+    pub type ForIds<'a> = Limit<Filter<item::table, EqAny<item::columns::id, &'a [i32]>>>;
 }
 
 #[derive(Identifiable, Queryable, Associations)]
@@ -58,6 +59,13 @@ impl Item {
 
         Item::earliest_query()
             .filter(id.gt(after_id))
+    }
+
+    pub fn for_ids_query(ids: &[i32]) -> queries::ForIds {
+        use schema::item::dsl::*;
+
+        item.filter(id.eq_any(ids))
+            .limit(Item::LIMIT)
     }
 
     pub fn count(conn: &PgConnection) -> QueryResult<u32> {
