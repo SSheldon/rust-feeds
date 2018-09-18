@@ -96,8 +96,13 @@ fn fetch_and_insert_items(feed: &DbFeed, connection: &PgConnection) {
     use schema::item;
 
     println!("Fetching items from {}...", feed.url);
+    let response = if let Ok(response) = reqwest::get(&feed.url) {
+        response
+    } else {
+        println!("Error fetching from {}", feed.url);
+        return;
+    };
 
-    let response = reqwest::get(&feed.url).unwrap();
     let parser = FeedParser::new(response);
     let entries: Vec<_> = parser
         .map(|entry| entry.unwrap())
