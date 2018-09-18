@@ -103,7 +103,7 @@ fn main() {
         .and(connect_db(pool.clone()))
         .map(|_, conn| handle_refresh(conn));
 
-    let route = api.or(refresh);
+    let route = api.or(refresh).with(warp::log("feeds"));
 
     warp::serve(route).run(([0, 0, 0, 0], port));
 }
