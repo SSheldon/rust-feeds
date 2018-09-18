@@ -20,7 +20,7 @@ use std::env;
 use diesel::pg::PgConnection;
 use warp::Filter;
 
-use fever_api::{ApiRequest, ApiResponse};
+use fever_api::ApiRequest;
 
 type PgConnectionManager = diesel::r2d2::ConnectionManager<PgConnection>;
 type PgConnectionPool = diesel::r2d2::Pool<PgConnectionManager>;
@@ -54,9 +54,22 @@ fn parse_request(
     req_type.ok_or_else(warp::reject)
 }
 
+fn is_refresh_request(query_pairs: Vec<(String, String)>) -> bool {
+    match query_pairs.first() {
+        Some(&(ref action, _)) if action == "refresh" => true,
+        _ => false,
+    }
+}
+
 fn handle_request(req_type: ApiRequest, connection: PooledPgConnection)
--> ApiResponse {
-    handling::handle_api_request(&req_type, &connection)
+-> impl warp::Reply {
+    let response = handling::handle_api_request(&req_type, &connection);
+    warp::reply::json(&response)
+}
+
+fn handle_refresh(conn: PooledPgConnection) -> impl warp::Reply {
+    handling::fetch_items_if_needed(&conn);
+    warp::reply()
 }
 
 fn main() {
@@ -77,12 +90,20 @@ fn main() {
     let api = warp::post2()
         .and(warp::query::<Vec<(String, String)>>())
         .and(warp::body::form::<HashMap<String, String>>())
-        .and_then(parse_request);
+        .and_then(parse_request)
+        .and(connect_db(pool.clone()))
+        .map(handle_request);
 
-    let route = api
-        .and(connect_db(pool))
-        .map(handle_request)
-        .map(|response| warp::reply::json(&response));
+    let refresh = warp::get2()
+        .and(warp::query::<Vec<(String, String)>>())
+        .and_then(|query| {
+            if is_refresh_request(query) { Ok(()) }
+            else { Err(warp::reject()) }
+        })
+        .and(connect_db(pool.clone()))
+        .map(|_, conn| handle_refresh(conn));
+
+    let route = api.or(refresh);
 
     warp::serve(route).run(([0, 0, 0, 0], port));
 }
