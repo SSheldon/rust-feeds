@@ -128,6 +128,29 @@ impl ApiRequest {
     }
 }
 
+#[derive(Debug, PartialEq)]
+pub struct ApiRequestThing {
+    pub req_type: ApiRequest,
+    pub api_key: u128,
+}
+
+impl ApiRequestThing {
+    pub fn parse<'a, I>(
+        query_params: I,
+        body_params: &HashMap<String, String>
+    ) -> Option<ApiRequestThing>
+    where I: Iterator<Item=(&'a str, &'a str)> {
+        let api_key = body_params.get("api_key")
+            .and_then(|s| u128::from_str_radix(s, 16).ok());
+
+        api_key.and_then(|api_key| {
+            ApiRequest::parse(query_params, body_params).map(|req_type| {
+                ApiRequestThing { req_type, api_key }
+            })
+        })
+    }
+}
+
 fn serialize_bool_as_number<S>(value: &bool, serializer: S)
         -> Result<S::Ok, S::Error>
         where S: serde::Serializer {

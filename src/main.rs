@@ -20,7 +20,7 @@ use std::env;
 use diesel::pg::PgConnection;
 use warp::Filter;
 
-use fever_api::ApiRequest;
+use fever_api::ApiRequestThing;
 
 type PgConnectionManager = diesel::r2d2::ConnectionManager<PgConnection>;
 type PgConnectionPool = diesel::r2d2::Pool<PgConnectionManager>;
@@ -42,16 +42,16 @@ fn deref_str_pair<'a>(&(ref a, ref b): &'a (String, String))
 fn parse_request(
     query_pairs: Vec<(String, String)>,
     body_params: HashMap<String, String>,
-) -> Result<ApiRequest, warp::Rejection> {
-    let req_type = {
+) -> Result<ApiRequestThing, warp::Rejection> {
+    let request = {
         let query_pairs = query_pairs.iter().map(deref_str_pair);
-        ApiRequest::parse(query_pairs, &body_params)
+        ApiRequestThing::parse(query_pairs, &body_params)
     };
 
-    println!("query: {:?}\nparams: {:?}\nparsed type: {:?}",
-        query_pairs, body_params, req_type);
+    println!("query: {:?}\nparams: {:?}\nparsed: {:?}",
+        query_pairs, body_params, request);
 
-    req_type.ok_or_else(warp::reject)
+    request.ok_or_else(warp::reject)
 }
 
 fn is_refresh_request(query_pairs: Vec<(String, String)>) -> bool {
@@ -61,9 +61,11 @@ fn is_refresh_request(query_pairs: Vec<(String, String)>) -> bool {
     }
 }
 
-fn handle_request(req_type: ApiRequest, connection: PooledPgConnection)
--> impl warp::Reply {
-    let response = handling::handle_api_request(&req_type, &connection);
+fn handle_request(
+    request: ApiRequestThing,
+    conn: PooledPgConnection,
+) -> impl warp::Reply {
+    let response = handling::handle_api_request(&request.req_type, &conn);
     warp::reply::json(&response)
 }
 
