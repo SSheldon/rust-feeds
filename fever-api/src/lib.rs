@@ -12,6 +12,8 @@ use serde::Serialize;
 
 mod key;
 
+pub use key::ApiKey;
+
 fn join_ids(ids: &[u32], out: &mut String) {
     use std::fmt::Write;
 
@@ -134,7 +136,7 @@ impl ApiRequest {
 #[derive(Debug, PartialEq)]
 pub struct ApiRequestThing {
     pub req_type: ApiRequest,
-    pub api_key: u128,
+    pub api_key: ApiKey,
 }
 
 impl ApiRequestThing {
@@ -144,7 +146,7 @@ impl ApiRequestThing {
     ) -> Option<ApiRequestThing>
     where I: Iterator<Item=(&'a str, &'a str)> {
         let api_key = body_params.get("api_key")
-            .and_then(|s| u128::from_str_radix(s, 16).ok());
+            .and_then(|s| s.parse().ok());
 
         api_key.and_then(|api_key| {
             ApiRequest::parse(query_params, body_params).map(|req_type| {
