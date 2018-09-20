@@ -316,15 +316,19 @@ impl Serialize for ApiResponse {
 mod tests {
     use super::ApiRequest;
 
+    fn parse_query(query: &str) -> Option<ApiRequest> {
+        None
+    }
+
     #[test]
     fn test_request_type() {
-        assert_eq!(ApiRequest::parse("api"), Some(ApiRequest::None));
-        assert_eq!(ApiRequest::parse("api&feeds"), Some(ApiRequest::Feeds));
-        assert_eq!(ApiRequest::parse("api&unread_item_ids"),
+        assert_eq!(parse_query("api"), Some(ApiRequest::None));
+        assert_eq!(parse_query("api&feeds"), Some(ApiRequest::Feeds));
+        assert_eq!(parse_query("api&unread_item_ids"),
                    Some(ApiRequest::UnreadItems));
-        assert_eq!(ApiRequest::parse("api&items&since_id=0"),
+        assert_eq!(parse_query("api&items&since_id=0"),
                    Some(ApiRequest::ItemsSince(0)));
-        assert_eq!(ApiRequest::parse("api&items&with_ids=0,1,2"),
+        assert_eq!(parse_query("api&items&with_ids=0,1,2"),
                    Some(ApiRequest::Items(vec![0, 1, 2])));
     }
 }
