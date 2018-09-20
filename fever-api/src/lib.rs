@@ -9,6 +9,8 @@ use std::collections::HashMap;
 use chrono::NaiveDateTime;
 use serde::Serialize;
 
+mod key;
+
 fn join_ids(ids: &[u32], out: &mut String) {
     use std::fmt::Write;
 
