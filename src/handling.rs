@@ -5,7 +5,7 @@ use diesel::query_dsl::LoadQuery;
 use reqwest;
 
 use feed_stream::{Entry, FeedParser};
-use fever_api::{ApiRequestType, ApiResponse, ApiResponsePayload};
+use fever_api::{ApiRequest, ApiRequestType, ApiResponse, ApiResponsePayload};
 
 use models::feed::{Feed as DbFeed, NewFeed};
 use models::item::{Item as DbItem, NewItem};
@@ -137,9 +137,9 @@ pub fn fetch_items_if_needed(conn: &PgConnection) {
     }
 }
 
-pub fn handle_api_request(req_type: &ApiRequestType, connection: &PgConnection)
+pub fn handle_api_request(request: &ApiRequest, connection: &PgConnection)
 -> ApiResponse {
-    let payload = match *req_type {
+    let payload = match request.req_type {
         ApiRequestType::Feeds => load_feeds(connection),
         ApiRequestType::LatestItems => {
             load_items(DbItem::latest_query(), connection)

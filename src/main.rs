@@ -65,7 +65,7 @@ fn handle_request(
     request: ApiRequest,
     conn: PooledPgConnection,
 ) -> impl warp::Reply {
-    let response = handling::handle_api_request(&request.req_type, &conn);
+    let response = handling::handle_api_request(&request, &conn);
     warp::reply::json(&response)
 }
 
