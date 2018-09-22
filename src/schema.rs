@@ -17,9 +17,18 @@ table! {
     }
 }
 
+table! {
+    profile (id) {
+        id -> Int4,
+        name -> Varchar,
+        key -> Varchar,
+    }
+}
+
 joinable!(item -> feed (feed_id));
 
 allow_tables_to_appear_in_same_query!(
     feed,
     item,
+    profile,
 );
