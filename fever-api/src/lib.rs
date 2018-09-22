@@ -134,23 +134,23 @@ impl ApiRequestType {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct ApiRequestThing {
+pub struct ApiRequest {
     pub req_type: ApiRequestType,
     pub api_key: ApiKey,
 }
 
-impl ApiRequestThing {
+impl ApiRequest {
     pub fn parse<'a, I>(
         query_params: I,
         body_params: &HashMap<String, String>
-    ) -> Option<ApiRequestThing>
+    ) -> Option<ApiRequest>
     where I: Iterator<Item=(&'a str, &'a str)> {
         let api_key = body_params.get("api_key")
             .and_then(|s| s.parse().ok());
 
         api_key.and_then(|api_key| {
             ApiRequestType::parse(query_params, body_params).map(|req_type| {
-                ApiRequestThing { req_type, api_key }
+                ApiRequest { req_type, api_key }
             })
         })
     }

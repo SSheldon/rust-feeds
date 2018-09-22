@@ -20,7 +20,7 @@ use std::env;
 use diesel::pg::PgConnection;
 use warp::Filter;
 
-use fever_api::ApiRequestThing;
+use fever_api::ApiRequest;
 
 type PgConnectionManager = diesel::r2d2::ConnectionManager<PgConnection>;
 type PgConnectionPool = diesel::r2d2::Pool<PgConnectionManager>;
@@ -42,10 +42,10 @@ fn deref_str_pair<'a>(&(ref a, ref b): &'a (String, String))
 fn parse_request(
     query_pairs: Vec<(String, String)>,
     body_params: HashMap<String, String>,
-) -> Result<ApiRequestThing, warp::Rejection> {
+) -> Result<ApiRequest, warp::Rejection> {
     let request = {
         let query_pairs = query_pairs.iter().map(deref_str_pair);
-        ApiRequestThing::parse(query_pairs, &body_params)
+        ApiRequest::parse(query_pairs, &body_params)
     };
 
     println!("query: {:?}\nparams: {:?}\nparsed: {:?}",
@@ -62,7 +62,7 @@ fn is_refresh_request(query_pairs: Vec<(String, String)>) -> bool {
 }
 
 fn handle_request(
-    request: ApiRequestThing,
+    request: ApiRequest,
     conn: PooledPgConnection,
 ) -> impl warp::Reply {
     let response = handling::handle_api_request(&request.req_type, &conn);
