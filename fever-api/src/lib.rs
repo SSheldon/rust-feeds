@@ -26,7 +26,7 @@ fn join_ids(ids: &[u32], out: &mut String) {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum ApiRequest {
+pub enum ApiRequestType {
     None,
     Groups,
     Feeds,
@@ -44,10 +44,10 @@ pub enum ApiRequest {
     MarkGroupRead(u32, NaiveDateTime),
 }
 
-impl ApiRequest {
+impl ApiRequestType {
     pub fn parse<'a, I>(mut query_params: I,
                         body_params: &HashMap<String, String>)
-            -> Option<ApiRequest>
+            -> Option<ApiRequestType>
             where I: Iterator<Item=(&'a str, &'a str)> {
         match query_params.next() {
             Some(("api", "")) => (),
@@ -64,48 +64,48 @@ impl ApiRequest {
                     .and_then(|v| v.parse().ok())
                     .map(|t| NaiveDateTime::from_timestamp(t, 0));
                 match (mark, mark_as) {
-                    (None, None) => Some(ApiRequest::None),
+                    (None, None) => Some(ApiRequestType::None),
                     (Some("item"), Some("read")) =>
-                        id.map(ApiRequest::MarkItemRead),
+                        id.map(ApiRequestType::MarkItemRead),
                     (Some("item"), Some("unread")) =>
-                        id.map(ApiRequest::MarkItemUnread),
+                        id.map(ApiRequestType::MarkItemUnread),
                     (Some("item"), Some("saved")) =>
-                        id.map(ApiRequest::MarkItemSaved),
+                        id.map(ApiRequestType::MarkItemSaved),
                     (Some("item"), Some("unsaved")) =>
-                        id.map(ApiRequest::MarkItemUnsaved),
+                        id.map(ApiRequestType::MarkItemUnsaved),
                     (Some("feed"), Some("read")) =>
                         id.and_then(|i| before.map(|b| (i, b)))
-                          .map(|(i, b)| ApiRequest::MarkFeedRead(i, b)),
+                          .map(|(i, b)| ApiRequestType::MarkFeedRead(i, b)),
                     (Some("group"), Some("read")) =>
                         id.and_then(|i| before.map(|b| (i, b)))
-                          .map(|(i, b)| ApiRequest::MarkGroupRead(i, b)),
+                          .map(|(i, b)| ApiRequestType::MarkGroupRead(i, b)),
                     _ => None,
                 }
             },
-            Some("groups") => Some(ApiRequest::Groups),
-            Some("feeds") => Some(ApiRequest::Feeds),
+            Some("groups") => Some(ApiRequestType::Groups),
+            Some("feeds") => Some(ApiRequestType::Feeds),
             Some("favicons") => unimplemented!(),
             Some("items") => match query_params.next() {
                 Some(("since_id", val)) =>
-                    val.parse().ok().map(|v| ApiRequest::ItemsSince(v)),
+                    val.parse().ok().map(|v| ApiRequestType::ItemsSince(v)),
                 Some(("max_id", val)) =>
-                    val.parse().ok().map(|v| ApiRequest::ItemsBefore(v)),
+                    val.parse().ok().map(|v| ApiRequestType::ItemsBefore(v)),
                 Some(("with_ids", val)) => {
                     let ids: Result<_, _> = val.split(',').map(|v| v.parse()).collect();
-                    ids.map(|v| ApiRequest::Items(v)).ok()
+                    ids.map(|v| ApiRequestType::Items(v)).ok()
                 },
-                None => Some(ApiRequest::LatestItems),
+                None => Some(ApiRequestType::LatestItems),
                 _ => None,
             },
             Some("links") => unimplemented!(),
-            Some("unread_item_ids") => Some(ApiRequest::UnreadItems),
-            Some("saved_item_ids") => Some(ApiRequest::SavedItems),
+            Some("unread_item_ids") => Some(ApiRequestType::UnreadItems),
+            Some("saved_item_ids") => Some(ApiRequestType::SavedItems),
             _ => None,
         }
     }
 
     pub fn query(&self) -> String {
-        use self::ApiRequest::*;
+        use self::ApiRequestType::*;
 
         match *self {
             None |
@@ -135,7 +135,7 @@ impl ApiRequest {
 
 #[derive(Debug, PartialEq)]
 pub struct ApiRequestThing {
-    pub req_type: ApiRequest,
+    pub req_type: ApiRequestType,
     pub api_key: ApiKey,
 }
 
@@ -149,7 +149,7 @@ impl ApiRequestThing {
             .and_then(|s| s.parse().ok());
 
         api_key.and_then(|api_key| {
-            ApiRequest::parse(query_params, body_params).map(|req_type| {
+            ApiRequestType::parse(query_params, body_params).map(|req_type| {
                 ApiRequestThing { req_type, api_key }
             })
         })
@@ -317,21 +317,21 @@ impl Serialize for ApiResponse {
 
 #[cfg(test)]
 mod tests {
-    use super::ApiRequest;
+    use super::ApiRequestType;
 
-    fn parse_query(query: &str) -> Option<ApiRequest> {
+    fn parse_query(query: &str) -> Option<ApiRequestType> {
         None
     }
 
     #[test]
     fn test_request_type() {
-        assert_eq!(parse_query("api"), Some(ApiRequest::None));
-        assert_eq!(parse_query("api&feeds"), Some(ApiRequest::Feeds));
+        assert_eq!(parse_query("api"), Some(ApiRequestType::None));
+        assert_eq!(parse_query("api&feeds"), Some(ApiRequestType::Feeds));
         assert_eq!(parse_query("api&unread_item_ids"),
-                   Some(ApiRequest::UnreadItems));
+                   Some(ApiRequestType::UnreadItems));
         assert_eq!(parse_query("api&items&since_id=0"),
-                   Some(ApiRequest::ItemsSince(0)));
+                   Some(ApiRequestType::ItemsSince(0)));
         assert_eq!(parse_query("api&items&with_ids=0,1,2"),
-                   Some(ApiRequest::Items(vec![0, 1, 2])));
+                   Some(ApiRequestType::Items(vec![0, 1, 2])));
     }
 }

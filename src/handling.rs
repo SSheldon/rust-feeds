@@ -5,7 +5,7 @@ use diesel::query_dsl::LoadQuery;
 use reqwest;
 
 use feed_stream::{Entry, FeedParser};
-use fever_api::{ApiRequest, ApiResponse, ApiResponsePayload};
+use fever_api::{ApiRequestType, ApiResponse, ApiResponsePayload};
 
 use models::feed::{Feed as DbFeed, NewFeed};
 use models::item::{Item as DbItem, NewItem};
@@ -137,24 +137,24 @@ pub fn fetch_items_if_needed(conn: &PgConnection) {
     }
 }
 
-pub fn handle_api_request(req_type: &ApiRequest, connection: &PgConnection)
+pub fn handle_api_request(req_type: &ApiRequestType, connection: &PgConnection)
 -> ApiResponse {
     let payload = match *req_type {
-        ApiRequest::Feeds => load_feeds(connection),
-        ApiRequest::LatestItems => {
+        ApiRequestType::Feeds => load_feeds(connection),
+        ApiRequestType::LatestItems => {
             load_items(DbItem::latest_query(), connection)
         },
-        ApiRequest::ItemsBefore(id) => {
+        ApiRequestType::ItemsBefore(id) => {
             load_items(DbItem::before_query(id as i32), connection)
         },
-        ApiRequest::ItemsSince(id) => {
+        ApiRequestType::ItemsSince(id) => {
             load_items(DbItem::after_query(id as i32), connection)
         },
-        ApiRequest::Items(ref ids) => {
+        ApiRequestType::Items(ref ids) => {
             let ids: Vec<_> = ids.iter().map(|&i| i as i32).collect();
             load_items(DbItem::for_ids_query(&ids), connection)
         }
-        ApiRequest::UnreadItems => load_unread_item_ids(connection),
+        ApiRequestType::UnreadItems => load_unread_item_ids(connection),
         _ => ApiResponsePayload::None,
     };
     ApiResponse {
