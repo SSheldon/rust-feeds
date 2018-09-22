@@ -4,6 +4,16 @@ use diesel::pg::PgConnection;
 use models::feed::Feed;
 use models::item::Item;
 
+pub fn get_profile_id(api_key: &str, conn: &PgConnection)
+-> QueryResult<Option<i32>> {
+    use schema::profile::dsl::*;
+
+    profile.filter(key.eq(api_key))
+        .select(id)
+        .get_result(conn)
+        .optional()
+}
+
 pub fn load_feeds(conn: &PgConnection) -> QueryResult<Vec<Feed>> {
     use schema::feed::dsl::*;
     feed.load(conn)

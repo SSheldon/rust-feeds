@@ -150,6 +150,9 @@ pub fn fetch_items_if_needed(conn: &PgConnection) {
 
 pub fn handle_api_request(request: &ApiRequest, connection: &PgConnection)
 -> ApiResponse {
+    let profile_id = data::get_profile_id(&request.api_key.to_string(), connection)
+        .expect("Error getting profile");
+
     let payload = match request.req_type {
         ApiRequestType::Feeds => load_feeds(connection),
         ApiRequestType::LatestItems => {
@@ -170,7 +173,7 @@ pub fn handle_api_request(request: &ApiRequest, connection: &PgConnection)
     };
     ApiResponse {
         api_version: 1,
-        auth: true,
+        auth: profile_id.is_some(),
         last_refreshed_on_time: None,
         payload: payload,
     }
