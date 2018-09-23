@@ -11,6 +11,7 @@ use fever_api::{
     Feed as ApiFeed, Item as ApiItem,
 };
 
+use data;
 use models::feed::{Feed as DbFeed, NewFeed};
 use models::item::{Item as DbItem, NewItem};
 
@@ -38,7 +39,7 @@ fn format_item(item: DbItem) -> ApiItem {
 }
 
 fn load_feeds(conn: &PgConnection) -> ApiResponsePayload {
-    let feeds = DbFeed::load(conn)
+    let feeds = data::load_feeds(conn)
         .expect("Error loading feeds")
         .into_iter()
         .map(format_feed)
@@ -66,16 +67,9 @@ where Q: RunQueryDsl<PgConnection> + LoadQuery<PgConnection, DbItem> {
 }
 
 fn load_unread_item_ids(conn: &PgConnection) -> ApiResponsePayload {
-    let ids = {
-        use schema::item::dsl::*;
-
-        // TODO: filter out read items
-        item.select(id)
-            .load::<i32>(conn)
-            .expect("Error loading unread item ids")
-    };
-
-    let ids = ids.into_iter()
+    let ids = data::load_unread_item_ids(conn)
+        .expect("Error loading unread item ids")
+        .into_iter()
         .map(|i| i as u32)
         .collect();
 
@@ -96,17 +90,6 @@ fn insert_feed(conn: &PgConnection) -> DbFeed {
         .values(&new_feed)
         .get_result(conn)
         .expect("Error saving new feed")
-}
-
-fn item_already_exists(entry: &Entry, feed: &DbFeed, conn: &PgConnection) -> bool {
-    use diesel::dsl::{exists, select};
-    use schema::item::dsl::*;
-
-    let link = entry.link.as_ref().unwrap();
-    let query = item.filter(feed_id.eq(feed.id).and(url.eq(link)));
-    select(exists(query))
-        .get_result(conn)
-        .expect("error")
 }
 
 fn item_to_insert_for_entry<'a>(entry: &'a Entry, feed: &DbFeed) -> NewItem<'a> {
@@ -133,7 +116,10 @@ fn fetch_and_insert_items(feed: &DbFeed, connection: &PgConnection) {
     let parser = FeedParser::new(response);
     let entries: Vec<_> = parser
         .map(|entry| entry.unwrap())
-        .take_while(|entry| !item_already_exists(entry, feed, connection))
+        .take_while(|entry| {
+            let link = entry.link.as_ref().unwrap();
+            !data::item_already_exists(link, feed, connection).expect("error")
+        })
         .collect();
 
     println!("Found {} new items", entries.len());
@@ -150,7 +136,7 @@ fn fetch_and_insert_items(feed: &DbFeed, connection: &PgConnection) {
 }
 
 pub fn fetch_items_if_needed(conn: &PgConnection) {
-    let feeds = DbFeed::load(conn)
+    let feeds = data::load_feeds(conn)
         .expect("Error loading feeds");
 
     let feeds = if feeds.is_empty() {

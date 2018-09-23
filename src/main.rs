@@ -10,6 +10,7 @@ extern crate serde_json;
 extern crate url;
 extern crate warp;
 
+mod data;
 mod handling;
 mod models;
 mod schema;
