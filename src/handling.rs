@@ -2,7 +2,6 @@ use chrono::NaiveDateTime;
 use diesel;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
-use diesel::query_dsl::LoadQuery;
 use reqwest;
 
 use feed_stream::{Entry, FeedParser};
@@ -11,7 +10,7 @@ use fever_api::{
     Feed as ApiFeed, Item as ApiItem,
 };
 
-use data;
+use data::{ItemsQuery, self};
 use models::feed::{Feed as DbFeed, NewFeed};
 use models::item::{Item as DbItem, NewItem};
 
@@ -51,9 +50,8 @@ fn load_feeds(conn: &PgConnection) -> ApiResponsePayload {
     }
 }
 
-fn load_items<Q>(query: Q, conn: &PgConnection) -> ApiResponsePayload
-where Q: RunQueryDsl<PgConnection> + LoadQuery<PgConnection, DbItem> {
-    let items = query.load::<DbItem>(conn)
+fn load_items(query: ItemsQuery, conn: &PgConnection) -> ApiResponsePayload {
+    let items = data::load_items(query, conn)
         .expect("Error loading items")
         .into_iter()
         .map(format_item)
@@ -155,17 +153,17 @@ pub fn handle_api_request(request: &ApiRequest, connection: &PgConnection)
     let payload = match request.req_type {
         ApiRequestType::Feeds => load_feeds(connection),
         ApiRequestType::LatestItems => {
-            load_items(DbItem::latest_query(), connection)
+            load_items(ItemsQuery::Latest, connection)
         },
         ApiRequestType::ItemsBefore(id) => {
-            load_items(DbItem::before_query(id as i32), connection)
+            load_items(ItemsQuery::Before(id as i32), connection)
         },
         ApiRequestType::ItemsSince(id) => {
-            load_items(DbItem::after_query(id as i32), connection)
+            load_items(ItemsQuery::After(id as i32), connection)
         },
         ApiRequestType::Items(ref ids) => {
             let ids: Vec<_> = ids.iter().map(|&i| i as i32).collect();
-            load_items(DbItem::for_ids_query(&ids), connection)
+            load_items(ItemsQuery::ForIds(&ids), connection)
         }
         ApiRequestType::UnreadItems => load_unread_item_ids(connection),
         _ => ApiResponsePayload::None,
