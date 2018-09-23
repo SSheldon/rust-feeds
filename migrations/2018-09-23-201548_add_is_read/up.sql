@@ -1,0 +1,2 @@
+ALTER TABLE item ADD is_read BOOLEAN NOT NULL DEFAULT (false);
+ALTER TABLE item ADD is_saved BOOLEAN NOT NULL DEFAULT (false);

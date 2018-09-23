@@ -31,8 +31,8 @@ fn format_item(item: DbItem) -> ApiItem {
         title: item.title,
         url: item.url,
         html: item.content,
-        is_saved: false,
-        is_read: false,
+        is_saved: item.is_saved,
+        is_read: item.is_read,
         created_on_time: item.published,
     }
 }

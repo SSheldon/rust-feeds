@@ -13,6 +13,8 @@ pub struct Item {
     pub content: String,
     pub published: NaiveDateTime,
     pub feed_id: i32,
+    pub is_read: bool,
+    pub is_saved: bool,
 }
 
 #[derive(Insertable)]

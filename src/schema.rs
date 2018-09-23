@@ -14,6 +14,8 @@ table! {
         content -> Text,
         published -> Timestamp,
         feed_id -> Int4,
+        is_read -> Bool,
+        is_saved -> Bool,
     }
 }
 
