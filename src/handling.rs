@@ -1,3 +1,4 @@
+use chrono::NaiveDateTime;
 use diesel;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
@@ -7,11 +8,21 @@ use reqwest;
 use feed_stream::{Entry, FeedParser};
 use fever_api::{
     ApiRequest, ApiRequestType, ApiResponse, ApiResponsePayload,
-    Item as ApiItem,
+    Feed as ApiFeed, Item as ApiItem,
 };
 
 use models::feed::{Feed as DbFeed, NewFeed};
 use models::item::{Item as DbItem, NewItem};
+
+fn format_feed(feed: DbFeed) -> ApiFeed {
+    ApiFeed {
+        id: feed.id as u32,
+        title: feed.title,
+        url: feed.url,
+        is_spark: false,
+        last_updated_on_time: NaiveDateTime::from_timestamp(1472799906, 0),
+    }
+}
 
 fn format_item(item: DbItem) -> ApiItem {
     ApiItem {
@@ -30,7 +41,7 @@ fn load_feeds(conn: &PgConnection) -> ApiResponsePayload {
     let feeds = DbFeed::load(conn)
         .expect("Error loading feeds")
         .into_iter()
-        .map(DbFeed::into_api_feed)
+        .map(format_feed)
         .collect();
 
     ApiResponsePayload::Feeds {
