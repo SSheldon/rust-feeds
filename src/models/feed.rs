@@ -1,6 +1,3 @@
-use diesel::prelude::*;
-use diesel::pg::PgConnection;
-
 use schema::feed;
 
 #[derive(Identifiable, Queryable)]
@@ -9,13 +6,6 @@ pub struct Feed {
     pub id: i32,
     pub url: String,
     pub title: String,
-}
-
-impl Feed {
-    pub fn load(conn: &PgConnection) -> QueryResult<Vec<Feed>> {
-        use schema::feed::dsl::*;
-        feed.load(conn)
-    }
 }
 
 #[derive(Insertable)]

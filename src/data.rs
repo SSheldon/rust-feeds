@@ -4,7 +4,8 @@ use diesel::pg::PgConnection;
 use models::feed::Feed;
 
 pub fn load_feeds(conn: &PgConnection) -> QueryResult<Vec<Feed>> {
-    Feed::load(conn)
+    use schema::feed::dsl::*;
+    feed.load(conn)
 }
 
 pub fn load_unread_item_ids(conn: &PgConnection) -> QueryResult<Vec<i32>> {
