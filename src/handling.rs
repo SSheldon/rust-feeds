@@ -13,6 +13,7 @@ use fever_api::{
 use data::{ItemsQuery, self};
 use models::feed::{Feed as DbFeed, NewFeed};
 use models::item::{Item as DbItem, NewItem};
+use models::read::Read;
 
 fn format_feed(feed: DbFeed) -> ApiFeed {
     ApiFeed {
@@ -24,15 +25,15 @@ fn format_feed(feed: DbFeed) -> ApiFeed {
     }
 }
 
-fn format_item(item: DbItem) -> ApiItem {
+fn format_item(item: DbItem, read: Option<&Read>) -> ApiItem {
     ApiItem {
         id: item.id as u32,
         feed_id: item.feed_id as u32,
         title: item.title,
         url: item.url,
         html: item.content,
-        is_saved: false,
-        is_read: false,
+        is_saved: read.map_or(false, |r| r.is_saved),
+        is_read: read.map_or(false, |r| r.is_read),
         created_on_time: item.published,
     }
 }
@@ -54,7 +55,7 @@ fn load_items(query: ItemsQuery, conn: &PgConnection) -> ApiResponsePayload {
     let items = data::load_items(query, conn)
         .expect("Error loading items")
         .into_iter()
-        .map(format_item)
+        .map(|item| format_item(item, None))
         .collect();
     let total_items = data::count_items(conn).unwrap();
 
