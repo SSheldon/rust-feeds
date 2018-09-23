@@ -3,6 +3,22 @@ use diesel::pg::PgConnection;
 
 use models::feed::Feed;
 use models::item::Item;
+use models::read::Read;
+
+mod queries {
+    use diesel::helper_types::*;
+    use schema::{item, read};
+
+    type ReadProfileExpr = Or<Eq<read::profile_id, i32>, IsNull<read::profile_id>>;
+    pub type ItemReads = Filter<LeftJoin<item::table, read::table>, ReadProfileExpr>;
+}
+
+fn item_reads_query(profile_id: i32) -> queries::ItemReads {
+    use schema::{item, read};
+
+    let expr = read::profile_id.eq(profile_id).or(read::profile_id.is_null());
+    item::table.left_join(read::table).filter(expr)
+}
 
 pub fn get_profile_id(api_key: &str, conn: &PgConnection)
 -> QueryResult<Option<i32>> {
@@ -26,11 +42,11 @@ pub enum ItemsQuery<'a> {
     ForIds(&'a [i32]),
 }
 
-pub fn load_items(query_type: ItemsQuery, conn: &PgConnection)
--> QueryResult<Vec<Item>> {
+pub fn load_items(query_type: ItemsQuery, profile_id: i32, conn: &PgConnection)
+-> QueryResult<Vec<(Item, Option<Read>)>> {
     use schema::item::dsl::*;
 
-    let query = item.limit(50);
+    let query = item_reads_query(profile_id).limit(50);
     match query_type {
         ItemsQuery::Latest => {
             query.order(id.desc())
@@ -53,11 +69,14 @@ pub fn load_items(query_type: ItemsQuery, conn: &PgConnection)
     }
 }
 
-pub fn load_unread_item_ids(conn: &PgConnection) -> QueryResult<Vec<i32>> {
+pub fn load_unread_item_ids(profile_id: i32, conn: &PgConnection) -> QueryResult<Vec<i32>> {
+    use diesel::dsl::not;
     use schema::item::dsl::*;
+    use schema::read;
 
-    // TODO: filter out read items
-    item.select(id)
+    item_reads_query(profile_id)
+        .filter(not(read::is_read).or(read::is_read.is_null()))
+        .select(id)
         .load::<i32>(conn)
 }
 

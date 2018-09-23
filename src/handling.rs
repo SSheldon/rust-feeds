@@ -52,10 +52,10 @@ fn load_feeds(conn: &PgConnection) -> ApiResponsePayload {
 }
 
 fn load_items(query: ItemsQuery, conn: &PgConnection) -> ApiResponsePayload {
-    let items = data::load_items(query, conn)
+    let items = data::load_items(query, 0, conn)
         .expect("Error loading items")
         .into_iter()
-        .map(|item| format_item(item, None))
+        .map(|(item, read)| format_item(item, read.as_ref()))
         .collect();
     let total_items = data::count_items(conn).unwrap();
 
@@ -66,7 +66,7 @@ fn load_items(query: ItemsQuery, conn: &PgConnection) -> ApiResponsePayload {
 }
 
 fn load_unread_item_ids(conn: &PgConnection) -> ApiResponsePayload {
-    let ids = data::load_unread_item_ids(conn)
+    let ids = data::load_unread_item_ids(0, conn)
         .expect("Error loading unread item ids")
         .into_iter()
         .map(|i| i as u32)
