@@ -9,6 +9,7 @@ pub enum ApiRequestType {
     None,
     Groups,
     Feeds,
+    Favicons,
     LatestItems,
     ItemsSince(u32),
     ItemsBefore(u32),
@@ -63,7 +64,7 @@ impl ApiRequestType {
             },
             Some("groups") => Some(ApiRequestType::Groups),
             Some("feeds") => Some(ApiRequestType::Feeds),
-            Some("favicons") => unimplemented!(),
+            Some("favicons") => Some(ApiRequestType::Favicons),
             Some("items") => match query_params.next() {
                 Some(("since_id", val)) =>
                     val.parse().ok().map(|v| ApiRequestType::ItemsSince(v)),
@@ -76,7 +77,10 @@ impl ApiRequestType {
                 None => Some(ApiRequestType::LatestItems),
                 _ => None,
             },
-            Some("links") => unimplemented!(),
+            Some("links") => {
+                // TODO: Implement link support
+                None
+            },
             Some("unread_item_ids") => Some(ApiRequestType::UnreadItems),
             Some("saved_item_ids") => Some(ApiRequestType::SavedItems),
             _ => None,
@@ -96,6 +100,7 @@ impl ApiRequestType {
             MarkGroupRead(_, _) => "api".to_owned(),
             Groups => "api&groups".to_owned(),
             Feeds => "api&feeds".to_owned(),
+            Favicons => "api&favicons".to_owned(),
             LatestItems => "api&items".to_owned(),
             ItemsSince(id) =>
                 format!("api&items&since_id={}", id),
