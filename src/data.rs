@@ -8,11 +8,11 @@ mod queries {
     use diesel::helper_types::*;
     use schema::item;
 
-    pub type DescendingItems = Limit<Order<item::table, Desc<item::columns::id>>>;
-    pub type BeforeItems = Filter<DescendingItems, Lt<item::columns::id, i32>>;
-    pub type AscendingItems = Limit<Order<item::table, Asc<item::columns::id>>>;
-    pub type AfterItems = Filter<AscendingItems, Gt<item::columns::id, i32>>;
-    pub type ForIds<'a> = Limit<Filter<item::table, EqAny<item::columns::id, &'a [i32]>>>;
+    pub type DescendingItems = Limit<Order<item::table, Desc<item::id>>>;
+    pub type BeforeItems = Filter<DescendingItems, Lt<item::id, i32>>;
+    pub type AscendingItems = Limit<Order<item::table, Asc<item::id>>>;
+    pub type AfterItems = Filter<AscendingItems, Gt<item::id, i32>>;
+    pub type ForIds<'a> = Limit<Filter<item::table, EqAny<item::id, &'a [i32]>>>;
 }
 
 const ITEM_LIMIT: i64 = 50;
