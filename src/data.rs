@@ -44,10 +44,11 @@ pub fn load_items(query_type: ItemsQuery, conn: &PgConnection)
 }
 
 pub fn load_unread_item_ids(conn: &PgConnection) -> QueryResult<Vec<i32>> {
+    use diesel::dsl::not;
     use schema::item::dsl::*;
 
-    // TODO: filter out read items
-    item.select(id)
+    item.filter(not(is_read))
+        .select(id)
         .load::<i32>(conn)
 }
 
