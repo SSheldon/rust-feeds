@@ -76,6 +76,18 @@ fn load_unread_item_ids(conn: &PgConnection) -> ApiResponsePayload {
     }
 }
 
+fn update_item_read(id: u32, is_read: bool, conn: &PgConnection)
+-> ApiResponsePayload {
+    use schema::item;
+
+    diesel::update(item::table.find(id as i32))
+        .set(item::is_read.eq(is_read))
+        .execute(conn)
+        .expect("Error updating item is_read");
+
+    load_unread_item_ids(conn)
+}
+
 fn insert_feed(conn: &PgConnection) -> DbFeed {
     use schema::feed;
 
@@ -166,6 +178,8 @@ pub fn handle_api_request(request: &ApiRequest, connection: &PgConnection)
             load_items(ItemsQuery::ForIds(&ids), connection)
         }
         ApiRequestType::UnreadItems => load_unread_item_ids(connection),
+        ApiRequestType::MarkItemRead(id) => update_item_read(id, true, connection),
+        ApiRequestType::MarkItemUnread(id) => update_item_read(id, false, connection),
         _ => ApiResponsePayload::None,
     };
     ApiResponse {
