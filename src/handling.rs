@@ -11,7 +11,7 @@ use fever_api::{
 };
 
 use data::{ItemsQuery, self};
-use models::feed::{Feed as DbFeed, NewFeed};
+use models::feed::Feed as DbFeed;
 use models::item::{Item as DbItem, NewItem};
 
 fn format_feed(feed: DbFeed) -> ApiFeed {
@@ -88,20 +88,6 @@ fn update_item_read(id: u32, is_read: bool, conn: &PgConnection)
     load_unread_item_ids(conn)
 }
 
-fn insert_feed(conn: &PgConnection) -> DbFeed {
-    use schema::feed;
-
-    let new_feed = NewFeed {
-        url: "https://xkcd.com/atom.xml",
-        title: "xkcd",
-    };
-
-    diesel::insert_into(feed::table)
-        .values(&new_feed)
-        .get_result(conn)
-        .expect("Error saving new feed")
-}
-
 fn item_to_insert_for_entry<'a>(entry: &'a Entry, feed: &DbFeed) -> NewItem<'a> {
     NewItem {
         url: entry.link.as_ref().unwrap(),
@@ -148,12 +134,6 @@ fn fetch_and_insert_items(feed: &DbFeed, connection: &PgConnection) {
 pub fn fetch_items_if_needed(conn: &PgConnection) {
     let feeds = data::load_feeds(conn)
         .expect("Error loading feeds");
-
-    let feeds = if feeds.is_empty() {
-        vec![insert_feed(conn)]
-    } else {
-        feeds
-    };
 
     for feed in feeds {
         fetch_and_insert_items(&feed, conn);

@@ -83,9 +83,6 @@ fn main() {
     let pool = PgConnectionPool::new(PgConnectionManager::new(database_url))
         .expect("Failed to create pool.");
 
-    let connection = pool.get().expect("Failed to retrieve connection.");
-    handling::fetch_items_if_needed(&connection);
-
     let port = env::var("PORT").ok()
         .and_then(|s| s.parse().ok())
         .unwrap_or(3000);
