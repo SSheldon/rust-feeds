@@ -76,6 +76,18 @@ fn load_unread_item_ids(conn: &PgConnection) -> ApiResponsePayload {
     }
 }
 
+fn load_saved_item_ids(conn: &PgConnection) -> ApiResponsePayload {
+    let ids = data::load_saved_item_ids(conn)
+        .expect("Error loading saved item ids")
+        .into_iter()
+        .map(|i| i as u32)
+        .collect();
+
+    ApiResponsePayload::SavedItems {
+        saved_item_ids: ids,
+    }
+}
+
 fn update_item_read(id: u32, is_read: bool, conn: &PgConnection)
 -> ApiResponsePayload {
     use schema::item;
@@ -86,6 +98,18 @@ fn update_item_read(id: u32, is_read: bool, conn: &PgConnection)
         .expect("Error updating item is_read");
 
     load_unread_item_ids(conn)
+}
+
+fn update_item_saved(id: u32, is_saved: bool, conn: &PgConnection)
+-> ApiResponsePayload {
+    use schema::item;
+
+    diesel::update(item::table.find(id as i32))
+        .set(item::is_saved.eq(is_saved))
+        .execute(conn)
+        .expect("Error updating item is_saved");
+
+    load_saved_item_ids(conn)
 }
 
 fn item_to_insert_for_entry<'a>(entry: &'a Entry, feed: &DbFeed) -> NewItem<'a> {
@@ -160,6 +184,8 @@ pub fn handle_api_request(request: &ApiRequest, connection: &PgConnection)
         ApiRequestType::UnreadItems => load_unread_item_ids(connection),
         ApiRequestType::MarkItemRead(id) => update_item_read(id, true, connection),
         ApiRequestType::MarkItemUnread(id) => update_item_read(id, false, connection),
+        ApiRequestType::MarkItemSaved(id) => update_item_saved(id, true, connection),
+        ApiRequestType::MarkItemUnsaved(id) => update_item_saved(id, false, connection),
         _ => ApiResponsePayload::None,
     };
     ApiResponse {

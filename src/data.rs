@@ -52,6 +52,14 @@ pub fn load_unread_item_ids(conn: &PgConnection) -> QueryResult<Vec<i32>> {
         .load::<i32>(conn)
 }
 
+pub fn load_saved_item_ids(conn: &PgConnection) -> QueryResult<Vec<i32>> {
+    use schema::item::dsl::*;
+
+    item.filter(is_saved)
+        .select(id)
+        .load::<i32>(conn)
+}
+
 pub fn count_items(conn: &PgConnection) -> QueryResult<u32> {
     use schema::item::dsl::*;
 
