@@ -5,10 +5,26 @@ use diesel::query_dsl::LoadQuery;
 use reqwest;
 
 use feed_stream::{Entry, FeedParser};
-use fever_api::{ApiRequest, ApiRequestType, ApiResponse, ApiResponsePayload};
+use fever_api::{
+    ApiRequest, ApiRequestType, ApiResponse, ApiResponsePayload,
+    Item as ApiItem,
+};
 
 use models::feed::{Feed as DbFeed, NewFeed};
 use models::item::{Item as DbItem, NewItem};
+
+fn format_item(item: DbItem) -> ApiItem {
+    ApiItem {
+        id: item.id as u32,
+        feed_id: item.feed_id as u32,
+        title: item.title,
+        url: item.url,
+        html: item.content,
+        is_saved: false,
+        is_read: false,
+        created_on_time: item.published,
+    }
+}
 
 fn load_feeds(conn: &PgConnection) -> ApiResponsePayload {
     let feeds = DbFeed::load(conn)
@@ -28,7 +44,7 @@ where Q: RunQueryDsl<PgConnection> + LoadQuery<PgConnection, DbItem> {
     let items = query.load::<DbItem>(conn)
         .expect("Error loading items")
         .into_iter()
-        .map(DbItem::into_api_item)
+        .map(format_item)
         .collect();
     let total_items = DbItem::count(conn).unwrap();
 

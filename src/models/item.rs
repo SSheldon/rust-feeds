@@ -2,8 +2,6 @@ use chrono::NaiveDateTime;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
 
-use fever_api::Item as ApiItem;
-
 use schema::item;
 use super::feed::Feed;
 
@@ -73,19 +71,6 @@ impl Item {
 
         let query = item.count();
         query.get_result::<i64>(conn).map(|i| i as u32)
-    }
-
-    pub fn into_api_item(self) -> ApiItem {
-        ApiItem {
-            id: self.id as u32,
-            feed_id: self.feed_id as u32,
-            title: self.title,
-            url: self.url,
-            html: self.content,
-            is_saved: false,
-            is_read: false,
-            created_on_time: self.published,
-        }
     }
 }
 
