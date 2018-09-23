@@ -58,7 +58,7 @@ where Q: RunQueryDsl<PgConnection> + LoadQuery<PgConnection, DbItem> {
         .into_iter()
         .map(format_item)
         .collect();
-    let total_items = DbItem::count(conn).unwrap();
+    let total_items = data::count_items(conn).unwrap();
 
     ApiResponsePayload::Items {
         items: items,

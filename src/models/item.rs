@@ -1,6 +1,5 @@
 use chrono::NaiveDateTime;
 use diesel::prelude::*;
-use diesel::pg::PgConnection;
 
 use schema::item;
 use super::feed::Feed;
@@ -64,13 +63,6 @@ impl Item {
 
         item.filter(id.eq_any(ids))
             .limit(Item::LIMIT)
-    }
-
-    pub fn count(conn: &PgConnection) -> QueryResult<u32> {
-        use schema::item::dsl::*;
-
-        let query = item.count();
-        query.get_result::<i64>(conn).map(|i| i as u32)
     }
 }
 

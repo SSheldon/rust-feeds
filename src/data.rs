@@ -16,6 +16,13 @@ pub fn load_unread_item_ids(conn: &PgConnection) -> QueryResult<Vec<i32>> {
         .load::<i32>(conn)
 }
 
+pub fn count_items(conn: &PgConnection) -> QueryResult<u32> {
+    use schema::item::dsl::*;
+
+    let query = item.count();
+    query.get_result::<i64>(conn).map(|i| i as u32)
+}
+
 pub fn item_already_exists(link: &str, feed: &Feed, conn: &PgConnection)
 -> QueryResult<bool> {
     use diesel::dsl::{exists, select};
