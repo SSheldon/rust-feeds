@@ -4,54 +4,6 @@ use diesel::pg::PgConnection;
 use models::feed::Feed;
 use models::item::Item;
 
-mod queries {
-    use diesel::helper_types::*;
-    use schema::item;
-
-    pub type DescendingItems = Limit<Order<item::table, Desc<item::id>>>;
-    pub type BeforeItems = Filter<DescendingItems, Lt<item::id, i32>>;
-    pub type AscendingItems = Limit<Order<item::table, Asc<item::id>>>;
-    pub type AfterItems = Filter<AscendingItems, Gt<item::id, i32>>;
-    pub type ForIds<'a> = Limit<Filter<item::table, EqAny<item::id, &'a [i32]>>>;
-}
-
-const ITEM_LIMIT: i64 = 50;
-
-fn latest_items_query() -> queries::DescendingItems {
-    use schema::item::dsl::*;
-
-    item.order(id.desc())
-        .limit(ITEM_LIMIT)
-}
-
-fn earliest_items_query() -> queries::AscendingItems {
-    use schema::item::dsl::*;
-
-    item.order(id.asc())
-        .limit(ITEM_LIMIT)
-}
-
-fn items_before_query(before_id: i32) -> queries::BeforeItems {
-    use schema::item::dsl::*;
-
-    latest_items_query()
-        .filter(id.lt(before_id))
-}
-
-fn items_after_query(after_id: i32) -> queries::AfterItems {
-    use schema::item::dsl::*;
-
-    earliest_items_query()
-        .filter(id.gt(after_id))
-}
-
-fn items_for_ids_query(ids: &[i32]) -> queries::ForIds {
-    use schema::item::dsl::*;
-
-    item.filter(id.eq_any(ids))
-        .limit(ITEM_LIMIT)
-}
-
 pub fn load_feeds(conn: &PgConnection) -> QueryResult<Vec<Feed>> {
     use schema::feed::dsl::*;
     feed.load(conn)
@@ -64,13 +16,30 @@ pub enum ItemsQuery<'a> {
     ForIds(&'a [i32]),
 }
 
-pub fn load_items(query: ItemsQuery, conn: &PgConnection)
+pub fn load_items(query_type: ItemsQuery, conn: &PgConnection)
 -> QueryResult<Vec<Item>> {
-    match query {
-        ItemsQuery::Latest => latest_items_query().load(conn),
-        ItemsQuery::Before(id) => items_before_query(id).load(conn),
-        ItemsQuery::After(id) => items_after_query(id).load(conn),
-        ItemsQuery::ForIds(ids) => items_for_ids_query(ids).load(conn),
+    use schema::item::dsl::*;
+
+    let query = item.limit(50);
+    match query_type {
+        ItemsQuery::Latest => {
+            query.order(id.desc())
+                .load(conn)
+        },
+        ItemsQuery::Before(before_id) => {
+            query.order(id.desc())
+                .filter(id.lt(before_id))
+                .load(conn)
+        },
+        ItemsQuery::After(after_id) => {
+            query.order(id.asc())
+                .filter(id.gt(after_id))
+                .load(conn)
+        },
+        ItemsQuery::ForIds(ids) => {
+            query.filter(id.eq_any(ids))
+                .load(conn)
+        },
     }
 }
 
