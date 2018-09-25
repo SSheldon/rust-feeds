@@ -144,29 +144,27 @@ fn fetch_new_items(feed: &DbFeed, connection: &PgConnection) -> Vec<Entry> {
     entries
 }
 
-fn fetch_and_insert_items(feed: &DbFeed, connection: &PgConnection) {
+pub fn fetch_items_if_needed(conn: &PgConnection) {
     use schema::item;
 
-    let entries = fetch_new_items(feed, connection);
-
-    let new_items: Vec<_> = entries.iter()
-        .rev()
-        .map(|entry| item_to_insert_for_entry(entry, feed))
-        .collect();
-
-    diesel::insert_into(item::table)
-        .values(&new_items)
-        .execute(connection)
-        .expect("Error saving new post");
-}
-
-pub fn fetch_items_if_needed(conn: &PgConnection) {
     let feeds = data::load_feeds(conn)
         .expect("Error loading feeds");
 
-    for feed in feeds {
-        fetch_and_insert_items(&feed, conn);
+    let feed_entries: Vec<_> = feeds.iter()
+        .map(|feed| fetch_new_items(feed, conn))
+        .collect();
+
+    let mut new_items = Vec::new();
+    for (feed, entries) in feeds.iter().zip(feed_entries.iter()) {
+        for entry in entries.iter().rev() {
+            new_items.push(item_to_insert_for_entry(entry, feed));
+        }
     }
+
+    diesel::insert_into(item::table)
+        .values(&new_items)
+        .execute(conn)
+        .expect("Error saving new post");
 }
 
 pub fn handle_api_request(request: &ApiRequest, connection: &PgConnection)
