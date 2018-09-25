@@ -2,7 +2,7 @@ use chrono::NaiveDateTime;
 use diesel;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
-use reqwest;
+use reqwest::Client;
 
 use feed_stream::{Entry, FeedParser};
 use fever_api::{
@@ -122,9 +122,10 @@ fn item_to_insert_for_entry<'a>(entry: &'a Entry, feed: &DbFeed) -> NewItem<'a> 
     }
 }
 
-fn fetch_new_items(feed: &DbFeed, connection: &PgConnection) -> Vec<Entry> {
+fn fetch_new_items(feed: &DbFeed, client: &Client, connection: &PgConnection)
+-> Vec<Entry> {
     println!("Fetching items from {}...", feed.url);
-    let response = if let Ok(response) = reqwest::get(&feed.url) {
+    let response = if let Ok(response) = client.get(&feed.url).send() {
         response
     } else {
         println!("Error fetching from {}", feed.url);
@@ -150,8 +151,9 @@ pub fn fetch_items_if_needed(conn: &PgConnection) {
     let feeds = data::load_feeds(conn)
         .expect("Error loading feeds");
 
+    let client = Client::new();
     let feed_entries: Vec<_> = feeds.iter()
-        .map(|feed| fetch_new_items(feed, conn))
+        .map(|feed| fetch_new_items(feed, &client, conn))
         .collect();
 
     let mut new_items = Vec::new();
