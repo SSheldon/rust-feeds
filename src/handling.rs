@@ -122,15 +122,13 @@ fn item_to_insert_for_entry<'a>(entry: &'a Entry, feed: &DbFeed) -> NewItem<'a> 
     }
 }
 
-fn fetch_and_insert_items(feed: &DbFeed, connection: &PgConnection) {
-    use schema::item;
-
+fn fetch_new_items(feed: &DbFeed, connection: &PgConnection) -> Vec<Entry> {
     println!("Fetching items from {}...", feed.url);
     let response = if let Ok(response) = reqwest::get(&feed.url) {
         response
     } else {
         println!("Error fetching from {}", feed.url);
-        return;
+        return Vec::new();
     };
 
     let parser = FeedParser::new(response);
@@ -143,6 +141,13 @@ fn fetch_and_insert_items(feed: &DbFeed, connection: &PgConnection) {
         .collect();
 
     println!("Found {} new items", entries.len());
+    entries
+}
+
+fn fetch_and_insert_items(feed: &DbFeed, connection: &PgConnection) {
+    use schema::item;
+
+    let entries = fetch_new_items(feed, connection);
 
     let new_items: Vec<_> = entries.iter()
         .rev()
