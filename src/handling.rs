@@ -1,3 +1,5 @@
+use std::io;
+
 use chrono::NaiveDateTime;
 use diesel;
 use diesel::prelude::*;
@@ -132,17 +134,21 @@ fn fetch_new_items(feed: &DbFeed, client: &Client, connection: &PgConnection)
         return Vec::new();
     };
 
+    let entries = parse_new_entries(response, feed, connection);
+    println!("Found {} new items", entries.len());
+    entries
+}
+
+fn parse_new_entries<R>(response: R, feed: &DbFeed, connection: &PgConnection)
+-> Vec<Entry> where R: io::Read {
     let parser = FeedParser::new(response);
-    let entries: Vec<_> = parser
+    parser
         .map(|entry| entry.unwrap())
         .take_while(|entry| {
             let link = entry.link.as_ref().unwrap();
             !data::item_already_exists(link, feed, connection).expect("error")
         })
-        .collect();
-
-    println!("Found {} new items", entries.len());
-    entries
+        .collect()
 }
 
 pub fn fetch_items_if_needed(conn: &PgConnection) {
