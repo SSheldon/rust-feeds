@@ -7,6 +7,8 @@ extern crate diesel;
 extern crate env_logger;
 extern crate feed_stream;
 extern crate fever_api;
+extern crate futures;
+extern crate iter_read;
 extern crate reqwest;
 extern crate serde;
 extern crate serde_json;

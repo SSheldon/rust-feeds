@@ -4,7 +4,9 @@ use chrono::NaiveDateTime;
 use diesel;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
-use reqwest::Client;
+use futures::{Future, Stream};
+use iter_read::IterRead;
+use reqwest::async::Client;
 
 use feed_stream::{Entry, FeedParser};
 use fever_api::{
@@ -124,21 +126,6 @@ fn item_to_insert_for_entry<'a>(entry: &'a Entry, feed: &DbFeed) -> NewItem<'a> 
     }
 }
 
-fn fetch_new_items(feed: &DbFeed, client: &Client, connection: &PgConnection)
--> Vec<Entry> {
-    println!("Fetching items from {}...", feed.url);
-    let response = if let Ok(response) = client.get(&feed.url).send() {
-        response
-    } else {
-        println!("Error fetching from {}", feed.url);
-        return Vec::new();
-    };
-
-    let entries = parse_new_entries(response, feed, connection);
-    println!("Found {} new items", entries.len());
-    entries
-}
-
 fn parse_new_entries<R>(response: R, feed: &DbFeed, connection: &PgConnection)
 -> Vec<Entry> where R: io::Read {
     let parser = FeedParser::new(response);
@@ -158,8 +145,29 @@ pub fn fetch_items_if_needed(conn: &PgConnection) {
         .expect("Error loading feeds");
 
     let client = Client::new();
-    let feed_entries: Vec<_> = feeds.iter()
-        .map(|feed| fetch_new_items(feed, &client, conn))
+    let feed_responses: Vec<_> = feeds.iter()
+        .map(|feed| {
+            println!("Fetching items from {}...", feed.url);
+            client.get(&feed.url).send().and_then(|response| {
+                response.into_body().collect()
+            })
+        })
+        .collect();
+
+    let feed_entries: Vec<_> = feeds.iter().zip(feed_responses)
+        .map(|(feed, response)| {
+            if let Ok(response) = response.wait() {
+                let chunks = response.iter().map(|chunk| -> &[u8] { &chunk });
+                let response = IterRead::new(chunks);
+                let entries = parse_new_entries(response, feed, conn);
+
+                println!("Found {} new items", entries.len());
+                entries
+            } else {
+                println!("Error fetching from {}", feed.url);
+                Vec::new()
+            }
+        })
         .collect();
 
     let mut new_items = Vec::new();

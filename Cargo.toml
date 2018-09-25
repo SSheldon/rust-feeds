@@ -8,6 +8,8 @@ chrono = "0.4"
 env_logger = "0.5"
 feed-stream = { path = "feed-stream" }
 fever-api = { path = "fever-api" }
+futures = "0.1"
+iter-read = "0.1"
 reqwest = "0.9"
 serde = "1.0"
 serde_json = "1.0"
