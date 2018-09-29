@@ -1,1 +1,1 @@
-web: RUST_LOG=info ./target/release/feeds
+web: RUST_LOG=info ./target/release/feeds serve
