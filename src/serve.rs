@@ -1,15 +1,15 @@
 use std::collections::HashMap;
 
-use diesel;
+use diesel::r2d2;
 use diesel::pg::PgConnection;
 use warp::{Filter, self};
 
 use fever_api::ApiRequest;
 use handling;
 
-type PgConnectionManager = diesel::r2d2::ConnectionManager<PgConnection>;
-type PgConnectionPool = diesel::r2d2::Pool<PgConnectionManager>;
-type PooledPgConnection = diesel::r2d2::PooledConnection<PgConnectionManager>;
+type PgConnectionManager = r2d2::ConnectionManager<PgConnection>;
+type PgConnectionPool = r2d2::Pool<PgConnectionManager>;
+type PooledPgConnection = r2d2::PooledConnection<PgConnectionManager>;
 
 fn connect_db(pool: PgConnectionPool)
 -> impl Filter<Extract=(PooledPgConnection,), Error=warp::Rejection> + Clone {
