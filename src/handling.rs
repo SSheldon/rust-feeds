@@ -156,30 +156,30 @@ fn fetch_feeds(feeds: &[DbFeed])
     stream::futures_ordered(feed_responses)
 }
 
-pub fn fetch_items_if_needed(conn: &PgConnection) {
+fn insert_new_feed_items<'a>(
+    iter: impl Iterator<Item=(&'a DbFeed, Result<Vec<Chunk>, reqwest::Error>)>,
+    conn: &'a PgConnection,
+) {
     use schema::item;
 
-    let feeds = data::load_feeds(conn)
-        .expect("Error loading feeds");
-
-    let feed_entries: Vec<_> = feeds.iter().zip(fetch_feeds(&feeds).wait())
-        .map(|(feed, response)| {
+    let feed_entries: Vec<_> = iter
+        .filter_map(|(feed, response)| {
             match response {
                 Ok(response) => {
                     let entries = parse_new_entries(&response, feed, conn);
                     println!("Found {} new items for {}", entries.len(), feed.url);
-                    entries
+                    Some((feed, entries))
                 },
                 Err(err) => {
                     println!("Error fetching from {}: {}", feed.url, err);
-                    Vec::new()
+                    None
                 }
             }
         })
         .collect();
 
     let mut new_items = Vec::new();
-    for (feed, entries) in feeds.iter().zip(feed_entries.iter()) {
+    for &(feed, ref entries) in feed_entries.iter() {
         for entry in entries.iter().rev() {
             new_items.push(item_to_insert_for_entry(entry, feed));
         }
@@ -189,6 +189,14 @@ pub fn fetch_items_if_needed(conn: &PgConnection) {
         .values(&new_items)
         .execute(conn)
         .expect("Error saving new post");
+}
+
+pub fn fetch_items_if_needed(conn: &PgConnection) {
+    let feeds = data::load_feeds(conn)
+        .expect("Error loading feeds");
+
+    let feed_responses = fetch_feeds(&feeds);
+    insert_new_feed_items(feeds.iter().zip(feed_responses.wait()), conn);
 }
 
 pub fn handle_api_request(request: &ApiRequest, connection: &PgConnection)
