@@ -1,12 +1,11 @@
-use std::io;
-
 use chrono::NaiveDateTime;
 use diesel;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
-use futures::{Future, Stream};
+use futures::{Future, Stream, stream};
 use iter_read::IterRead;
-use reqwest::async::Client;
+use reqwest;
+use reqwest::async::{Chunk, Client};
 
 use feed_stream::{Entry, FeedParser};
 use fever_api::{
@@ -126,9 +125,13 @@ fn item_to_insert_for_entry<'a>(entry: &'a Entry, feed: &DbFeed) -> NewItem<'a> 
     }
 }
 
-fn parse_new_entries<R>(response: R, feed: &DbFeed, connection: &PgConnection)
--> Vec<Entry> where R: io::Read {
-    let parser = FeedParser::new(response);
+fn parse_new_entries(
+    response: &[Chunk],
+    feed: &DbFeed,
+    connection: &PgConnection,
+) -> Vec<Entry> {
+    let chunks = response.iter().map(|chunk| -> &[u8] { &chunk });
+    let parser = FeedParser::new(IterRead::new(chunks));
     parser
         .map(|entry| entry.unwrap())
         .take_while(|entry| {
@@ -138,15 +141,11 @@ fn parse_new_entries<R>(response: R, feed: &DbFeed, connection: &PgConnection)
         .collect()
 }
 
-pub fn fetch_items_if_needed(conn: &PgConnection) {
-    use schema::item;
-
-    let feeds = data::load_feeds(conn)
-        .expect("Error loading feeds");
-
+fn fetch_feeds(feeds: &[DbFeed])
+-> impl Stream<Item=Vec<Chunk>, Error=reqwest::Error> + 'static {
     let client = Client::new();
     let feed_responses: Vec<_> = feeds.iter()
-        .map(|feed| {
+        .map(move |feed| {
             println!("Fetching items from {}...", feed.url);
             client.get(&feed.url).send().and_then(|response| {
                 response.into_body().collect()
@@ -154,15 +153,21 @@ pub fn fetch_items_if_needed(conn: &PgConnection) {
         })
         .collect();
 
-    let feed_entries: Vec<_> = feeds.iter().zip(feed_responses)
-        .map(|(feed, response)| {
-            match response.wait() {
-                Ok(response) => {
-                    let chunks = response.iter().map(|chunk| -> &[u8] { &chunk });
-                    let response = IterRead::new(chunks);
-                    let entries = parse_new_entries(response, feed, conn);
+    stream::futures_ordered(feed_responses)
+}
 
-                    println!("Found {} new items", entries.len());
+pub fn fetch_items_if_needed(conn: &PgConnection) {
+    use schema::item;
+
+    let feeds = data::load_feeds(conn)
+        .expect("Error loading feeds");
+
+    let feed_entries: Vec<_> = feeds.iter().zip(fetch_feeds(&feeds).wait())
+        .map(|(feed, response)| {
+            match response {
+                Ok(response) => {
+                    let entries = parse_new_entries(&response, feed, conn);
+                    println!("Found {} new items for {}", entries.len(), feed.url);
                     entries
                 },
                 Err(err) => {
