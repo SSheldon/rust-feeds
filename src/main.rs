@@ -13,6 +13,7 @@ extern crate iter_read;
 extern crate reqwest;
 extern crate serde;
 extern crate serde_json;
+extern crate tokio;
 extern crate url;
 extern crate warp;
 
@@ -33,6 +34,7 @@ fn main() {
         .setting(clap::AppSettings::VersionlessSubcommands)
         .setting(clap::AppSettings::SubcommandRequired)
         .subcommand(clap::SubCommand::with_name("serve"))
+        .subcommand(clap::SubCommand::with_name("refresh"))
         .get_matches();
 
     env_logger::init();
@@ -48,6 +50,9 @@ fn main() {
 
             feeds.serve(port);
         },
+        Some("refresh") => {
+            feeds.refresh();
+        }
         _ => unreachable!(),
     }
 
