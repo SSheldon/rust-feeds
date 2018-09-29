@@ -15,6 +15,7 @@ extern crate serde_json;
 extern crate url;
 extern crate warp;
 
+mod config;
 mod data;
 mod handling;
 mod models;
@@ -23,15 +24,17 @@ mod serve;
 
 use std::env;
 
+use config::Feeds;
+
 fn main() {
     env_logger::init();
 
-    let database_url = env::var("DATABASE_URL")
+    let feeds = Feeds::new()
         .expect("DATABASE_URL must be set");
 
     let port = env::var("PORT").ok()
         .and_then(|s| s.parse().ok())
         .unwrap_or(3000);
 
-    serve::serve(port, database_url);
+    feeds.serve(port);
 }
