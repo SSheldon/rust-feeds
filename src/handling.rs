@@ -141,16 +141,19 @@ fn parse_new_entries(
         .collect()
 }
 
+fn fetch_feed(feed: &DbFeed, client: &Client)
+-> impl Future<Item=Vec<Chunk>, Error=reqwest::Error> + 'static {
+    println!("Fetching items from {}...", feed.url);
+    client.get(&feed.url).send().and_then(|response| {
+        response.into_body().collect()
+    })
+}
+
 fn fetch_feeds(feeds: &[DbFeed])
 -> impl Stream<Item=Vec<Chunk>, Error=reqwest::Error> + 'static {
     let client = Client::new();
     let feed_responses: Vec<_> = feeds.iter()
-        .map(move |feed| {
-            println!("Fetching items from {}...", feed.url);
-            client.get(&feed.url).send().and_then(|response| {
-                response.into_body().collect()
-            })
-        })
+        .map(move |feed| fetch_feed(feed, &client))
         .collect();
 
     stream::futures_ordered(feed_responses)
