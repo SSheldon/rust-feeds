@@ -1,32 +1,11 @@
-// Workaround for diesl#1785
-#![allow(proc_macro_derive_resolution_fallback)]
-
-extern crate chrono;
-#[macro_use]
-extern crate diesel;
-extern crate env_logger;
-extern crate feed_stream;
-extern crate fever_api;
-extern crate futures;
-extern crate iter_read;
-extern crate reqwest;
-extern crate serde;
-extern crate serde_json;
-extern crate url;
-extern crate warp;
-
-mod data;
-mod handling;
-mod models;
-mod schema;
-
 use std::collections::HashMap;
-use std::env;
 
+use diesel;
 use diesel::pg::PgConnection;
-use warp::Filter;
+use warp::{Filter, self};
 
 use fever_api::ApiRequest;
+use handling;
 
 type PgConnectionManager = diesel::r2d2::ConnectionManager<PgConnection>;
 type PgConnectionPool = diesel::r2d2::Pool<PgConnectionManager>;
@@ -80,17 +59,9 @@ fn handle_refresh(conn: PooledPgConnection) -> impl warp::Reply {
     warp::reply()
 }
 
-fn main() {
-    env_logger::init();
-
-    let database_url = env::var("DATABASE_URL")
-        .expect("DATABASE_URL must be set");
+pub fn serve(port: u16, database_url: impl Into<String>) {
     let pool = PgConnectionPool::new(PgConnectionManager::new(database_url))
         .expect("Failed to create pool.");
-
-    let port = env::var("PORT").ok()
-        .and_then(|s| s.parse().ok())
-        .unwrap_or(3000);
 
     let api = warp::post2()
         .and(warp::query::<Vec<(String, String)>>())
