@@ -156,16 +156,19 @@ pub fn fetch_items_if_needed(conn: &PgConnection) {
 
     let feed_entries: Vec<_> = feeds.iter().zip(feed_responses)
         .map(|(feed, response)| {
-            if let Ok(response) = response.wait() {
-                let chunks = response.iter().map(|chunk| -> &[u8] { &chunk });
-                let response = IterRead::new(chunks);
-                let entries = parse_new_entries(response, feed, conn);
+            match response.wait() {
+                Ok(response) => {
+                    let chunks = response.iter().map(|chunk| -> &[u8] { &chunk });
+                    let response = IterRead::new(chunks);
+                    let entries = parse_new_entries(response, feed, conn);
 
-                println!("Found {} new items", entries.len());
-                entries
-            } else {
-                println!("Error fetching from {}", feed.url);
-                Vec::new()
+                    println!("Found {} new items", entries.len());
+                    entries
+                },
+                Err(err) => {
+                    println!("Error fetching from {}: {}", feed.url, err);
+                    Vec::new()
+                }
             }
         })
         .collect();
