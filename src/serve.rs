@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use diesel::r2d2;
 use diesel::pg::PgConnection;
+use futures::Future;
 use warp::{Filter, self};
 
 use fever_api::ApiRequest;
@@ -54,11 +55,6 @@ fn handle_request(
     warp::reply::json(&response)
 }
 
-fn handle_refresh(conn: PooledPgConnection) -> impl warp::Reply {
-    handling::fetch_items_if_needed(&conn);
-    warp::reply()
-}
-
 pub fn serve(port: u16, database_url: impl Into<String>) {
     let pool = PgConnectionPool::new(PgConnectionManager::new(database_url))
         .expect("Failed to create pool.");
@@ -77,7 +73,11 @@ pub fn serve(port: u16, database_url: impl Into<String>) {
             else { Err(warp::reject()) }
         })
         .and(connect_db(pool.clone()))
-        .map(|_, conn| handle_refresh(conn));
+        .and_then(|_, conn| {
+            handling::fetch_items_task(conn)
+                .map(|_| warp::reply())
+                .map_err(|_| warp::reject::server_error())
+        });
 
     let route = api.or(refresh).with(warp::log("feeds"));
 

@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use chrono::NaiveDateTime;
 use diesel;
 use diesel::prelude::*;
@@ -194,12 +196,20 @@ fn insert_new_feed_items<'a>(
         .expect("Error saving new post");
 }
 
-pub fn fetch_items_if_needed(conn: &PgConnection) {
-    let feeds = data::load_feeds(conn)
+pub fn fetch_items_task(conn: impl Deref<Target=PgConnection> + Send)
+-> impl Future<Item=(), Error=()> + Send {
+    let feeds = data::load_feeds(&conn)
         .expect("Error loading feeds");
 
-    let feed_responses = fetch_feeds(&feeds);
-    insert_new_feed_items(feeds.iter().zip(feed_responses.wait()), conn);
+    fetch_feeds(&feeds)
+        .then(|result| -> Result<_, ()> {
+            Ok(result)
+        })
+        .collect()
+        .map(move |responses| {
+            let iter = feeds.iter().zip(responses);
+            insert_new_feed_items(iter, &conn)
+        })
 }
 
 pub fn handle_api_request(request: &ApiRequest, connection: &PgConnection)
