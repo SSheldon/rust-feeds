@@ -1,3 +1,4 @@
+use diesel;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
 
@@ -75,4 +76,10 @@ pub fn item_already_exists(link: &str, feed: &Feed, conn: &PgConnection)
     let query = item.filter(feed_id.eq(feed.id).and(url.eq(link)));
     select(exists(query))
         .get_result(conn)
+}
+
+pub fn prune_read_items(conn: &PgConnection) -> QueryResult<usize> {
+    let query = include_str!("prune.sql");
+    diesel::sql_query(query)
+        .execute(conn)
 }

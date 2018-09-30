@@ -35,6 +35,7 @@ fn main() {
         .setting(clap::AppSettings::SubcommandRequired)
         .subcommand(clap::SubCommand::with_name("serve"))
         .subcommand(clap::SubCommand::with_name("refresh"))
+        .subcommand(clap::SubCommand::with_name("prune"))
         .get_matches();
 
     env_logger::init();
@@ -52,6 +53,9 @@ fn main() {
         },
         Some("refresh") => {
             feeds.refresh();
+        }
+        Some("prune") => {
+            feeds.prune();
         }
         _ => unreachable!(),
     }
