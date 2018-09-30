@@ -34,7 +34,7 @@ fn main() {
         .setting(clap::AppSettings::VersionlessSubcommands)
         .setting(clap::AppSettings::SubcommandRequired)
         .subcommand(clap::SubCommand::with_name("serve"))
-        .subcommand(clap::SubCommand::with_name("refresh"))
+        .subcommand(clap::SubCommand::with_name("fetch"))
         .subcommand(clap::SubCommand::with_name("prune"))
         .get_matches();
 
@@ -51,8 +51,8 @@ fn main() {
 
             feeds.serve(port);
         },
-        Some("refresh") => {
-            feeds.refresh();
+        Some("fetch") => {
+            feeds.fetch();
         }
         Some("prune") => {
             feeds.prune();

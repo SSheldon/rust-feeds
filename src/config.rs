@@ -8,7 +8,7 @@ use data;
 use handling;
 use serve;
 
-fn refresh(conn: PgConnection) {
+fn fetch(conn: PgConnection) {
     use std::ops::Deref;
 
     struct ConnectionWrapper(PgConnection);
@@ -40,9 +40,9 @@ impl Feeds {
             .expect(&format!("Error connecting to {}", self.database_url))
     }
 
-    pub fn refresh(self) {
+    pub fn fetch(self) {
         let conn = self.establish_connection();
-        refresh(conn)
+        fetch(conn)
     }
 
     pub fn prune(self) {
