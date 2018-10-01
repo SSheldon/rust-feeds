@@ -90,7 +90,17 @@ impl Entry {
 }
 
 pub fn from_rss_item(elem: Element) -> Result<Entry, FeedParseError> {
+    let feedburner_ns = "http://rssnamespace.org/feedburner/ext/1.0";
+    let orig_link = elem
+        .get_child("origLink", Some(feedburner_ns))
+        .map(Element::content_str);
+
     RssItem::from_xml(elem)
+        .map(|mut item| {
+            // If there was an original link, use it instead
+            item.link = orig_link.or(item.link);
+            item
+        })
         .map(Entry::from_rss)
         .map_err(|e| FeedParseError::Rss(e))
 }
