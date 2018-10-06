@@ -1,11 +1,14 @@
 use schema::feed;
+use super::group::Group;
 
-#[derive(Identifiable, Queryable)]
+#[derive(Identifiable, Queryable, Associations)]
+#[belongs_to(Group)]
 #[table_name = "feed"]
 pub struct Feed {
     pub id: i32,
     pub url: String,
     pub title: String,
+    pub group_id: Option<i32>,
 }
 
 #[derive(Insertable)]

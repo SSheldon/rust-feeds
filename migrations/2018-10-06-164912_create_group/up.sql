@@ -1,0 +1,6 @@
+CREATE TABLE feed_group (
+  id SERIAL PRIMARY KEY,
+  title VARCHAR NOT NULL
+);
+
+ALTER TABLE feed ADD group_id INTEGER REFERENCES feed_group;

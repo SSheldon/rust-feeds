@@ -3,6 +3,14 @@ table! {
         id -> Int4,
         url -> Varchar,
         title -> Varchar,
+        group_id -> Nullable<Int4>,
+    }
+}
+
+table! {
+    feed_group (id) {
+        id -> Int4,
+        title -> Varchar,
     }
 }
 
@@ -19,9 +27,11 @@ table! {
     }
 }
 
+joinable!(feed -> feed_group (group_id));
 joinable!(item -> feed (feed_id));
 
 allow_tables_to_appear_in_same_query!(
     feed,
+    feed_group,
     item,
 );
