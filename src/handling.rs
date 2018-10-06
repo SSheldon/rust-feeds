@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::ops::Deref;
 
 use chrono::NaiveDateTime;
@@ -28,6 +29,20 @@ fn format_feed(feed: DbFeed) -> fever_api::Feed {
     }
 }
 
+fn format_feeds_groups(feed_groups: impl Iterator<Item=(i32, Option<i32>)>)
+-> Vec<fever_api::FeedsGroup> {
+    let mut groups: HashMap<u32, Vec<u32>> = HashMap::new();
+    for (feed_id, group_id) in feed_groups {
+        if let Some(group_id) = group_id {
+            groups.entry(group_id as u32).or_default().push(feed_id as u32)
+        }
+    }
+
+    groups.into_iter()
+        .map(|(group_id, feed_ids)| fever_api::FeedsGroup { group_id, feed_ids })
+        .collect()
+}
+
 fn format_item(item: DbItem) -> fever_api::Item {
     fever_api::Item {
         id: item.id as u32,
@@ -43,14 +58,23 @@ fn format_item(item: DbItem) -> fever_api::Item {
 
 fn load_feeds(conn: &PgConnection) -> ApiResponsePayload {
     let feeds = data::load_feeds(conn)
-        .expect("Error loading feeds")
+        .expect("Error loading feeds");
+
+    let feeds_groups = {
+        let feed_groups = feeds.iter()
+            .map(|feed| (feed.id, feed.group_id));
+
+        format_feeds_groups(feed_groups)
+    };
+
+    let feeds = feeds
         .into_iter()
         .map(format_feed)
         .collect();
 
     ApiResponsePayload::Feeds {
         feeds: feeds,
-        feeds_groups: vec![],
+        feeds_groups: feeds_groups,
     }
 }
 
