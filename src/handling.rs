@@ -280,7 +280,7 @@ pub fn handle_api_request(request: &ApiRequest, connection: &PgConnection)
         ApiRequestType::MarkItemUnread(id) => update_item_read(id, false, connection),
         ApiRequestType::MarkItemSaved(id) => update_item_saved(id, true, connection),
         ApiRequestType::MarkItemUnsaved(id) => update_item_saved(id, false, connection),
-        _ => ApiResponsePayload::None,
+        _ => ApiResponsePayload::None {},
     };
     ApiResponse {
         api_version: 1,
