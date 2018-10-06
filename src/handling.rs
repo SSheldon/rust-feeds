@@ -11,16 +11,15 @@ use reqwest::async::{Chunk, Client};
 
 use feed_stream::{Entry, FeedParser};
 use fever_api::{
-    ApiRequest, ApiRequestType, ApiResponse, ApiResponsePayload,
-    Feed as ApiFeed, Item as ApiItem,
+    ApiRequest, ApiRequestType, ApiResponse, ApiResponsePayload, self,
 };
 
 use data::{ItemsQuery, self};
 use models::feed::Feed as DbFeed;
 use models::item::{Item as DbItem, NewItem};
 
-fn format_feed(feed: DbFeed) -> ApiFeed {
-    ApiFeed {
+fn format_feed(feed: DbFeed) -> fever_api::Feed {
+    fever_api::Feed {
         id: feed.id as u32,
         title: feed.title,
         url: feed.url,
@@ -29,8 +28,8 @@ fn format_feed(feed: DbFeed) -> ApiFeed {
     }
 }
 
-fn format_item(item: DbItem) -> ApiItem {
-    ApiItem {
+fn format_item(item: DbItem) -> fever_api::Item {
+    fever_api::Item {
         id: item.id as u32,
         feed_id: item.feed_id as u32,
         title: item.title,
