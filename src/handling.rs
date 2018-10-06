@@ -17,7 +17,15 @@ use fever_api::{
 
 use data::{ItemsQuery, self};
 use models::feed::Feed as DbFeed;
+use models::group::Group as DbGroup;
 use models::item::{Item as DbItem, NewItem};
+
+fn format_group(group: DbGroup) -> fever_api::Group {
+    fever_api::Group {
+        id: group.id as u32,
+        title: group.title,
+    }
+}
 
 fn format_feed(feed: DbFeed) -> fever_api::Feed {
     fever_api::Feed {
@@ -54,6 +62,20 @@ fn format_item(item: DbItem) -> fever_api::Item {
         is_read: item.is_read,
         created_on_time: item.published,
     }
+}
+
+fn load_groups(conn: &PgConnection) -> ApiResponsePayload {
+    let groups = data::load_groups(conn)
+        .expect("Error loading groups")
+        .into_iter()
+        .map(format_group)
+        .collect();
+
+    let feed_groups = data::load_feed_groups(conn)
+        .expect("Error loading feeds");
+    let feeds_groups = format_feeds_groups(feed_groups.into_iter());
+
+    ApiResponsePayload::Groups { groups, feeds_groups }
 }
 
 fn load_feeds(conn: &PgConnection) -> ApiResponsePayload {
@@ -238,6 +260,7 @@ pub fn fetch_items_task(conn: impl Deref<Target=PgConnection> + Send)
 pub fn handle_api_request(request: &ApiRequest, connection: &PgConnection)
 -> ApiResponse {
     let payload = match request.req_type {
+        ApiRequestType::Groups => load_groups(connection),
         ApiRequestType::Feeds => load_feeds(connection),
         ApiRequestType::LatestItems => {
             load_items(ItemsQuery::Latest, connection)

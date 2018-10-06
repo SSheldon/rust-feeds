@@ -3,7 +3,21 @@ use diesel::prelude::*;
 use diesel::pg::PgConnection;
 
 use models::feed::Feed;
+use models::group::Group;
 use models::item::Item;
+
+pub fn load_groups(conn: &PgConnection) -> QueryResult<Vec<Group>> {
+    use schema::feed_group::dsl::*;
+    feed_group.load(conn)
+}
+
+pub fn load_feed_groups(conn: &PgConnection)
+-> QueryResult<Vec<(i32, Option<i32>)>> {
+    use schema::feed::dsl::*;
+
+    feed.select((id, group_id))
+        .load(conn)
+}
 
 pub fn load_feeds(conn: &PgConnection) -> QueryResult<Vec<Feed>> {
     use schema::feed::dsl::*;
