@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 use std::ops::Deref;
 
-use chrono::NaiveDateTime;
 use diesel;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
@@ -32,8 +31,9 @@ fn format_feed(feed: DbFeed) -> fever_api::Feed {
         id: feed.id as u32,
         title: feed.title,
         url: feed.url,
+        site_url: None,
         is_spark: false,
-        last_updated_on_time: NaiveDateTime::from_timestamp(1472799906, 0),
+        last_updated_on_time: None,
     }
 }
 
@@ -56,6 +56,7 @@ fn format_item(item: DbItem) -> fever_api::Item {
         id: item.id as u32,
         feed_id: item.feed_id as u32,
         title: item.title,
+        author: None,
         url: item.url,
         html: item.content,
         is_saved: item.is_saved,

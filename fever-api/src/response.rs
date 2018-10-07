@@ -51,11 +51,13 @@ pub struct Feed {
     // pub favicon_id: u32,
     pub title: String,
     pub url: String,
-    // pub site_url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub site_url: Option<String>,
     #[serde(serialize_with = "serialize_bool_as_number")]
     pub is_spark: bool,
-    #[serde(serialize_with = "serialize_datetime_as_timestamp")]
-    pub last_updated_on_time: NaiveDateTime,
+    #[serde(skip_serializing_if = "Option::is_none",
+            serialize_with = "serialize_opt_datetime_as_timestamp")]
+    pub last_updated_on_time: Option<NaiveDateTime>,
 }
 
 #[derive(Serialize)]
@@ -63,7 +65,8 @@ pub struct Item {
     pub id: u32,
     pub feed_id: u32,
     pub title: String,
-    // pub author: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub author: Option<String>,
     pub html: String,
     pub url: String,
     #[serde(serialize_with = "serialize_bool_as_number")]
