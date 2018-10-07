@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::ops::Deref;
 
 use diesel;
 use diesel::prelude::*;
@@ -14,6 +13,7 @@ use fever_api::{
     ApiRequest, ApiRequestType, ApiResponse, ApiResponsePayload, self,
 };
 
+use config::PgConnectionPool;
 use data::{ItemsQuery, self};
 use models::feed::Feed as DbFeed;
 use models::group::Group as DbGroup;
@@ -242,20 +242,47 @@ fn insert_new_feed_items<'a>(
         .expect("Error saving new post");
 }
 
-pub fn fetch_items_task(conn: impl Deref<Target=PgConnection> + Send)
+fn fetch_feeds_task(feeds: Vec<DbFeed>, pool: PgConnectionPool)
 -> impl Future<Item=(), Error=()> + Send {
-    let feeds = data::load_feeds(&conn)
-        .expect("Error loading feeds");
-
     fetch_feeds(&feeds)
         .then(|result| -> Result<_, ()> {
             Ok(result)
         })
         .collect()
         .map(move |responses| {
+            let conn = pool.get().expect("Error getting connection from pool");
             let iter = feeds.iter().zip(responses);
             insert_new_feed_items(iter, &conn)
         })
+}
+
+fn chunk<T>(v: Vec<T>, size: usize) -> Vec<Vec<T>> {
+    if v.is_empty() {
+        return Vec::new();
+    }
+
+    let num_chunks = v.len() / size + if v.len() % size != 0 {1} else {0};
+    let mut elems = v.into_iter();
+    (0..num_chunks)
+        .map(|_| elems.by_ref().take(size).collect())
+        .collect()
+}
+
+fn fetch_items_tasks(pool: PgConnectionPool)
+-> impl Stream<Item=(), Error=()> + Send {
+    let feeds = {
+        let conn = pool.get().expect("Error getting connection from pool");
+        let feeds = data::load_feeds(&conn).expect("Error loading feeds");
+        chunk(feeds, 10)
+    };
+
+    stream::iter_ok(feeds)
+        .and_then(move |feeds| fetch_feeds_task(feeds, pool.clone()))
+}
+
+pub fn fetch_items_task(pool: PgConnectionPool)
+-> impl Future<Item=(), Error=()> + Send {
+    fetch_items_tasks(pool).collect().map(|_| ())
 }
 
 pub fn handle_api_request(request: &ApiRequest, connection: &PgConnection)

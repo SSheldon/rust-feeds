@@ -64,9 +64,8 @@ pub fn serve(port: u16, pool: PgConnectionPool) {
             if is_refresh_request(query) { Ok(()) }
             else { Err(warp::reject()) }
         })
-        .and(connect_db(pool.clone()))
-        .and_then(|_, conn| {
-            handling::fetch_items_task(conn)
+        .and_then(move |_| {
+            handling::fetch_items_task(pool.clone())
                 .map(|_| warp::reply())
                 .map_err(|_| warp::reject::server_error())
         });

@@ -13,19 +13,6 @@ pub type PgConnectionManager = r2d2::ConnectionManager<PgConnection>;
 pub type PgConnectionPool = r2d2::Pool<PgConnectionManager>;
 pub type PooledPgConnection = r2d2::PooledConnection<PgConnectionManager>;
 
-fn fetch(conn: PgConnection) {
-    use std::ops::Deref;
-
-    struct ConnectionWrapper(PgConnection);
-    impl Deref for ConnectionWrapper {
-        type Target = PgConnection;
-        fn deref(&self) -> &PgConnection { &self.0 }
-    }
-
-    let task = handling::fetch_items_task(ConnectionWrapper(conn));
-    runtime::run(task);
-}
-
 pub struct Feeds {
     database_url: String,
 }
@@ -52,8 +39,8 @@ impl Feeds {
     }
 
     pub fn fetch(self) {
-        let conn = self.establish_connection();
-        fetch(conn)
+        let pool = self.establish_connection_pool();
+        runtime::run(handling::fetch_items_task(pool));
     }
 
     pub fn prune(self) {
