@@ -1,5 +1,6 @@
 use std::env;
 
+use diesel::r2d2;
 use diesel::Connection;
 use diesel::pg::PgConnection;
 use tokio::runtime;
@@ -7,6 +8,10 @@ use tokio::runtime;
 use data;
 use handling;
 use serve;
+
+pub type PgConnectionManager = r2d2::ConnectionManager<PgConnection>;
+pub type PgConnectionPool = r2d2::Pool<PgConnectionManager>;
+pub type PooledPgConnection = r2d2::PooledConnection<PgConnectionManager>;
 
 fn fetch(conn: PgConnection) {
     use std::ops::Deref;
@@ -31,13 +36,19 @@ impl Feeds {
             .map(|database_url| Feeds { database_url })
     }
 
-    pub fn serve(self, port: u16) {
-        serve::serve(port, self.database_url)
+    fn establish_connection_pool(&self) -> PgConnectionPool {
+        PgConnectionPool::new(PgConnectionManager::new(&*self.database_url))
+            .expect("Failed to create pool.")
     }
 
     fn establish_connection(&self) -> PgConnection {
         PgConnection::establish(&self.database_url)
             .expect(&format!("Error connecting to {}", self.database_url))
+    }
+
+    pub fn serve(self, port: u16) {
+        let pool = self.establish_connection_pool();
+        serve::serve(port, pool)
     }
 
     pub fn fetch(self) {

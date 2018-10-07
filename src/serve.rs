@@ -1,16 +1,11 @@
 use std::collections::HashMap;
 
-use diesel::r2d2;
-use diesel::pg::PgConnection;
 use futures::Future;
 use warp::{Filter, self};
 
+use config::{PgConnectionPool, PooledPgConnection};
 use fever_api::ApiRequest;
 use handling;
-
-type PgConnectionManager = r2d2::ConnectionManager<PgConnection>;
-type PgConnectionPool = r2d2::Pool<PgConnectionManager>;
-type PooledPgConnection = r2d2::PooledConnection<PgConnectionManager>;
 
 fn connect_db(pool: PgConnectionPool)
 -> impl Filter<Extract=(PooledPgConnection,), Error=warp::Rejection> + Clone {
@@ -55,10 +50,7 @@ fn handle_request(
     warp::reply::json(&response)
 }
 
-pub fn serve(port: u16, database_url: impl Into<String>) {
-    let pool = PgConnectionPool::new(PgConnectionManager::new(database_url))
-        .expect("Failed to create pool.");
-
+pub fn serve(port: u16, pool: PgConnectionPool) {
     let api = warp::post2()
         .and(warp::query::<Vec<(String, String)>>())
         .and(warp::body::form::<HashMap<String, String>>())
