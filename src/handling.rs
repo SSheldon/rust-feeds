@@ -192,9 +192,12 @@ fn parse_new_entries(
 fn fetch_feed(feed: &DbFeed, client: &Client)
 -> impl Future<Item=Vec<Chunk>, Error=reqwest::Error> + 'static {
     println!("Fetching items from {}...", feed.url);
-    client.get(&feed.url).send().and_then(|response| {
-        response.into_body().collect()
-    })
+    client.get(&feed.url)
+        .header(reqwest::header::USER_AGENT, "Mozilla/5.0")
+        .send()
+        .and_then(|response| {
+            response.into_body().collect()
+        })
 }
 
 fn fetch_feeds(feeds: &[DbFeed])
