@@ -9,6 +9,7 @@ pub struct Feed {
     pub url: String,
     pub title: String,
     pub group_id: Option<i32>,
+    pub site_url: Option<String>,
 }
 
 #[derive(Insertable)]

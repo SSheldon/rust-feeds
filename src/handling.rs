@@ -31,7 +31,7 @@ fn format_feed(feed: DbFeed) -> fever_api::Feed {
         id: feed.id as u32,
         title: feed.title,
         url: feed.url,
-        site_url: None,
+        site_url: feed.site_url,
         is_spark: false,
         last_updated_on_time: None,
     }

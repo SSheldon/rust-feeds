@@ -4,6 +4,7 @@ table! {
         url -> Varchar,
         title -> Varchar,
         group_id -> Nullable<Int4>,
+        site_url -> Nullable<Varchar>,
     }
 }
 

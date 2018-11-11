@@ -1,0 +1,1 @@
+ALTER TABLE feed ADD site_url VARCHAR;
