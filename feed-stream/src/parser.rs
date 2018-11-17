@@ -6,7 +6,7 @@ use xml::{
     EndTag, Event, Parser, ParserError, StartTag
 };
 
-use entry::{Entry, self};
+use entry::Entry;
 use str_buf_reader::StrBufReader;
 
 #[derive(Clone, Copy)]
@@ -103,9 +103,9 @@ impl<R: Read> FeedParser<R> {
         while let Some(elem) = self.next_element()? {
             let entry = match self.state {
                 ParserState::InChannel if elem.name.eq_ignore_ascii_case("item") =>
-                    entry::from_rss_item(elem)?,
+                    Entry::from_rss_element(elem)?,
                 ParserState::InFeed if elem.name.eq_ignore_ascii_case("entry") =>
-                    entry::from_atom_entry(elem)?,
+                    Entry::from_atom_element(elem)?,
                 _ => continue,
             };
             return Ok(Some(entry));

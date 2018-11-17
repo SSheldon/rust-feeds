@@ -17,6 +17,21 @@ pub struct Entry {
 }
 
 impl Entry {
+    pub(crate) fn from_rss_element(elem: Element)
+    -> Result<Entry, FeedParseError> {
+        let feedburner_ns = "http://rssnamespace.org/feedburner/ext/1.0";
+        let orig_link = elem
+            .get_child("origLink", Some(feedburner_ns))
+            .map(Element::content_str);
+
+        let item = RssItem::from_xml(elem).map_err(FeedParseError::Rss)?;
+
+        let mut entry = Entry::from_rss(item);
+        // If there was an original link, use it instead
+        entry.link = orig_link.or(entry.link);
+        Ok(entry)
+    }
+
     fn from_rss(item: RssItem) -> Entry {
         fn maybe_guid_link(id: &Guid) -> Option<String> {
             if id.is_perma_link { Some(id.value.clone()) } else { None }
@@ -37,6 +52,14 @@ impl Entry {
             authors: authors,
             id: id,
         }
+    }
+
+    pub(crate) fn from_atom_element(elem: Element)
+    -> Result<Entry, FeedParseError> {
+        let entry = AtomEntry::from_xml(&elem).map_err(FeedParseError::Atom)?;
+
+        let entry = Entry::from_atom(entry);
+        Ok(entry)
     }
 
     fn from_atom(entry: AtomEntry) -> Entry {
@@ -87,26 +110,4 @@ impl Entry {
             id: Some(id),
         }
     }
-}
-
-pub fn from_rss_item(elem: Element) -> Result<Entry, FeedParseError> {
-    let feedburner_ns = "http://rssnamespace.org/feedburner/ext/1.0";
-    let orig_link = elem
-        .get_child("origLink", Some(feedburner_ns))
-        .map(Element::content_str);
-
-    RssItem::from_xml(elem)
-        .map(|mut item| {
-            // If there was an original link, use it instead
-            item.link = orig_link.or(item.link);
-            item
-        })
-        .map(Entry::from_rss)
-        .map_err(|e| FeedParseError::Rss(e))
-}
-
-pub fn from_atom_entry(elem: Element) -> Result<Entry, FeedParseError> {
-    AtomEntry::from_xml(&elem)
-        .map(Entry::from_atom)
-        .map_err(|e| FeedParseError::Atom(e))
 }
