@@ -7,6 +7,9 @@ use xml::Element;
 
 use parser::FeedParseError;
 
+const FEEDBURNER_NS: &str = "http://rssnamespace.org/feedburner/ext/1.0";
+const CONTENT_NS: &str = "http://purl.org/rss/1.0/modules/content/";
+
 pub struct Entry {
     pub title: String,
     pub content: String,
@@ -19,9 +22,12 @@ pub struct Entry {
 impl Entry {
     pub(crate) fn from_rss_element(elem: Element)
     -> Result<Entry, FeedParseError> {
-        let feedburner_ns = "http://rssnamespace.org/feedburner/ext/1.0";
         let orig_link = elem
-            .get_child("origLink", Some(feedburner_ns))
+            .get_child("origLink", Some(FEEDBURNER_NS))
+            .map(Element::content_str);
+
+        let encoded_content = elem
+            .get_child("encoded", Some(CONTENT_NS))
             .map(Element::content_str);
 
         let item = RssItem::from_xml(elem).map_err(FeedParseError::Rss)?;
@@ -29,6 +35,7 @@ impl Entry {
         let mut entry = Entry::from_rss(item);
         // If there was an original link, use it instead
         entry.link = orig_link.or(entry.link);
+        entry.content = encoded_content.unwrap_or(entry.content);
         Ok(entry)
     }
 
