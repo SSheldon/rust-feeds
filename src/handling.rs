@@ -15,9 +15,13 @@ use fever_api::{
 
 use config::PgConnectionPool;
 use data::{ItemsQuery, self};
+use error::Error;
 use models::feed::Feed as DbFeed;
 use models::group::Group as DbGroup;
 use models::item::{Item as DbItem, NewItem};
+
+type DataError = Error<diesel::result::Error>;
+type DataResult<T> = Result<T, DataError>;
 
 fn format_group(group: DbGroup) -> fever_api::Group {
     fever_api::Group {
@@ -65,23 +69,23 @@ fn format_item(item: DbItem) -> fever_api::Item {
     }
 }
 
-fn load_groups(conn: &PgConnection) -> ApiResponsePayload {
+fn load_groups(conn: &PgConnection) -> DataResult<ApiResponsePayload> {
     let groups = data::load_groups(conn)
-        .expect("Error loading groups")
+        .map_err(fill_err!("Error loading groups"))?
         .into_iter()
         .map(format_group)
         .collect();
 
     let feed_groups = data::load_feed_groups(conn)
-        .expect("Error loading feeds");
+        .map_err(fill_err!("Error loading feeds"))?;
     let feeds_groups = format_feeds_groups(feed_groups.into_iter());
 
-    ApiResponsePayload::Groups { groups, feeds_groups }
+    Ok(ApiResponsePayload::Groups { groups, feeds_groups })
 }
 
-fn load_feeds(conn: &PgConnection) -> ApiResponsePayload {
+fn load_feeds(conn: &PgConnection) -> DataResult<ApiResponsePayload> {
     let feeds = data::load_feeds(conn)
-        .expect("Error loading feeds");
+        .map_err(fill_err!("Error loading feeds"))?;
 
     let feeds_groups = {
         let feed_groups = feeds.iter()
@@ -95,70 +99,71 @@ fn load_feeds(conn: &PgConnection) -> ApiResponsePayload {
         .map(format_feed)
         .collect();
 
-    ApiResponsePayload::Feeds {
+    Ok(ApiResponsePayload::Feeds {
         feeds: feeds,
         feeds_groups: feeds_groups,
-    }
+    })
 }
 
-fn load_items(query: ItemsQuery, conn: &PgConnection) -> ApiResponsePayload {
+fn load_items(query: ItemsQuery, conn: &PgConnection)
+-> DataResult<ApiResponsePayload> {
     let items = data::load_items(query, conn)
-        .expect("Error loading items")
+        .map_err(fill_err!("Error loading items"))?
         .into_iter()
         .map(format_item)
         .collect();
     let total_items = data::count_items(conn).unwrap();
 
-    ApiResponsePayload::Items {
+    Ok(ApiResponsePayload::Items {
         items: items,
         total_items: total_items,
-    }
+    })
 }
 
-fn load_unread_item_ids(conn: &PgConnection) -> ApiResponsePayload {
+fn load_unread_item_ids(conn: &PgConnection) -> DataResult<ApiResponsePayload> {
     let ids = data::load_unread_item_ids(conn)
-        .expect("Error loading unread item ids")
+        .map_err(fill_err!("Error loading unread item ids"))?
         .into_iter()
         .map(|i| i as u32)
         .collect();
 
-    ApiResponsePayload::UnreadItems {
+    Ok(ApiResponsePayload::UnreadItems {
         unread_item_ids: ids,
-    }
+    })
 }
 
-fn load_saved_item_ids(conn: &PgConnection) -> ApiResponsePayload {
+fn load_saved_item_ids(conn: &PgConnection) -> DataResult<ApiResponsePayload> {
     let ids = data::load_saved_item_ids(conn)
-        .expect("Error loading saved item ids")
+        .map_err(fill_err!("Error loading saved item ids"))?
         .into_iter()
         .map(|i| i as u32)
         .collect();
 
-    ApiResponsePayload::SavedItems {
+    Ok(ApiResponsePayload::SavedItems {
         saved_item_ids: ids,
-    }
+    })
 }
 
 fn update_item_read(id: u32, is_read: bool, conn: &PgConnection)
--> ApiResponsePayload {
+-> DataResult<ApiResponsePayload> {
     use schema::item;
 
     diesel::update(item::table.find(id as i32))
         .set(item::is_read.eq(is_read))
         .execute(conn)
-        .expect("Error updating item is_read");
+        .map_err(fill_err!("Error updating item is_read"))?;
 
     load_unread_item_ids(conn)
 }
 
 fn update_item_saved(id: u32, is_saved: bool, conn: &PgConnection)
--> ApiResponsePayload {
+-> DataResult<ApiResponsePayload> {
     use schema::item;
 
     diesel::update(item::table.find(id as i32))
         .set(item::is_saved.eq(is_saved))
         .execute(conn)
-        .expect("Error updating item is_saved");
+        .map_err(fill_err!("Error updating item is_saved"))?;
 
     load_saved_item_ids(conn)
 }
@@ -291,8 +296,8 @@ pub fn fetch_items_task(pool: PgConnectionPool)
 pub fn handle_api_request(
     request: &ApiRequest,
     expected_key: Option<&ApiKey>,
-    connection: &PgConnection,
-) -> ApiResponse {
+    conn: &PgConnection,
+) -> DataResult<ApiResponse> {
     let mut response = ApiResponse {
         api_version: 1,
         auth: false,
@@ -301,33 +306,33 @@ pub fn handle_api_request(
     };
 
     if !expected_key.map_or(true, |key| request.api_key == *key) {
-        return response;
+        return Ok(response);
     }
     response.auth = true;
 
     response.payload = match request.req_type {
-        ApiRequestType::Groups => load_groups(connection),
-        ApiRequestType::Feeds => load_feeds(connection),
+        ApiRequestType::Groups => load_groups(conn)?,
+        ApiRequestType::Feeds => load_feeds(conn)?,
         ApiRequestType::LatestItems => {
-            load_items(ItemsQuery::Latest, connection)
+            load_items(ItemsQuery::Latest, conn)?
         },
         ApiRequestType::ItemsBefore(id) => {
-            load_items(ItemsQuery::Before(id as i32), connection)
+            load_items(ItemsQuery::Before(id as i32), conn)?
         },
         ApiRequestType::ItemsSince(id) => {
-            load_items(ItemsQuery::After(id as i32), connection)
+            load_items(ItemsQuery::After(id as i32), conn)?
         },
         ApiRequestType::Items(ref ids) => {
             let ids: Vec<_> = ids.iter().map(|&i| i as i32).collect();
-            load_items(ItemsQuery::ForIds(&ids), connection)
+            load_items(ItemsQuery::ForIds(&ids), conn)?
         }
-        ApiRequestType::UnreadItems => load_unread_item_ids(connection),
-        ApiRequestType::MarkItemRead(id) => update_item_read(id, true, connection),
-        ApiRequestType::MarkItemUnread(id) => update_item_read(id, false, connection),
-        ApiRequestType::MarkItemSaved(id) => update_item_saved(id, true, connection),
-        ApiRequestType::MarkItemUnsaved(id) => update_item_saved(id, false, connection),
+        ApiRequestType::UnreadItems => load_unread_item_ids(conn)?,
+        ApiRequestType::MarkItemRead(id) => update_item_read(id, true, conn)?,
+        ApiRequestType::MarkItemUnread(id) => update_item_read(id, false, conn)?,
+        ApiRequestType::MarkItemSaved(id) => update_item_saved(id, true, conn)?,
+        ApiRequestType::MarkItemUnsaved(id) => update_item_saved(id, false, conn)?,
         _ => ApiResponsePayload::None {},
     };
 
-    response
+    Ok(response)
 }

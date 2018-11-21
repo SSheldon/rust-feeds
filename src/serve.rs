@@ -46,14 +46,15 @@ fn is_refresh_request(query_pairs: Vec<(String, String)>) -> bool {
 fn handle_request(
     request: ApiRequest,
     conn: PooledPgConnection,
-) -> impl warp::Reply {
-    let response = handling::handle_api_request(&request, None, &conn);
+) -> Result<impl warp::Reply, warp::Rejection> {
+    let response = handling::handle_api_request(&request, None, &conn)
+        .map_err(|err| warp::reject::server_error().with(err))?;
     let status = if response.auth {
         StatusCode::OK
     } else {
         StatusCode::UNAUTHORIZED
     };
-    warp::reply::with_status(warp::reply::json(&response), status)
+    Ok(warp::reply::with_status(warp::reply::json(&response), status))
 }
 
 pub fn serve(port: u16, pool: PgConnectionPool) {
@@ -62,7 +63,7 @@ pub fn serve(port: u16, pool: PgConnectionPool) {
         .and(warp::body::form::<HashMap<String, String>>())
         .and_then(parse_request)
         .and(connect_db(pool.clone()))
-        .map(handle_request);
+        .and_then(handle_request);
 
     let refresh = warp::get2()
         .and(warp::query::<Vec<(String, String)>>())

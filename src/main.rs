@@ -19,6 +19,8 @@ extern crate warp;
 
 mod config;
 mod data;
+#[macro_use]
+mod error;
 mod handling;
 mod models;
 mod schema;
