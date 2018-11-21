@@ -10,7 +10,7 @@ use handling;
 fn connect_db(pool: PgConnectionPool)
 -> impl Filter<Extract=(PooledPgConnection,), Error=warp::Rejection> + Clone {
     warp::any().and_then(move || {
-        pool.get().map_err(|_| warp::reject::server_error())
+        pool.get().map_err(|err| warp::reject::server_error().with(err))
     })
 }
 
