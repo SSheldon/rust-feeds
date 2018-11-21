@@ -2,6 +2,7 @@ use std::collections::HashMap;
 
 use futures::Future;
 use warp::{Filter, self};
+use warp::http::StatusCode;
 
 use config::{PgConnectionPool, PooledPgConnection};
 use fever_api::ApiRequest;
@@ -47,7 +48,12 @@ fn handle_request(
     conn: PooledPgConnection,
 ) -> impl warp::Reply {
     let response = handling::handle_api_request(&request, &conn);
-    warp::reply::json(&response)
+    let status = if response.auth {
+        StatusCode::OK
+    } else {
+        StatusCode::UNAUTHORIZED
+    };
+    warp::reply::with_status(warp::reply::json(&response), status)
 }
 
 pub fn serve(port: u16, pool: PgConnectionPool) {
