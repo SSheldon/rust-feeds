@@ -47,7 +47,7 @@ fn handle_request(
     request: ApiRequest,
     conn: PooledPgConnection,
 ) -> impl warp::Reply {
-    let response = handling::handle_api_request(&request, &conn);
+    let response = handling::handle_api_request(&request, None, &conn);
     let status = if response.auth {
         StatusCode::OK
     } else {

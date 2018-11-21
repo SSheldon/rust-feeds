@@ -10,7 +10,7 @@ use reqwest::async::{Chunk, Client};
 
 use feed_stream::{Entry, FeedParser};
 use fever_api::{
-    ApiRequest, ApiRequestType, ApiResponse, ApiResponsePayload, self,
+    ApiKey, ApiRequest, ApiRequestType, ApiResponse, ApiResponsePayload, self,
 };
 
 use config::PgConnectionPool;
@@ -288,9 +288,24 @@ pub fn fetch_items_task(pool: PgConnectionPool)
     fetch_items_tasks(pool).collect().map(|_| ())
 }
 
-pub fn handle_api_request(request: &ApiRequest, connection: &PgConnection)
--> ApiResponse {
-    let payload = match request.req_type {
+pub fn handle_api_request(
+    request: &ApiRequest,
+    expected_key: Option<&ApiKey>,
+    connection: &PgConnection,
+) -> ApiResponse {
+    let mut response = ApiResponse {
+        api_version: 1,
+        auth: false,
+        last_refreshed_on_time: None,
+        payload: ApiResponsePayload::None {},
+    };
+
+    if !expected_key.map_or(true, |key| request.api_key == *key) {
+        return response;
+    }
+    response.auth = true;
+
+    response.payload = match request.req_type {
         ApiRequestType::Groups => load_groups(connection),
         ApiRequestType::Feeds => load_feeds(connection),
         ApiRequestType::LatestItems => {
@@ -313,10 +328,6 @@ pub fn handle_api_request(request: &ApiRequest, connection: &PgConnection)
         ApiRequestType::MarkItemUnsaved(id) => update_item_saved(id, false, connection),
         _ => ApiResponsePayload::None {},
     };
-    ApiResponse {
-        api_version: 1,
-        auth: true,
-        last_refreshed_on_time: None,
-        payload: payload,
-    }
+
+    response
 }
