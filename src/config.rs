@@ -33,9 +33,9 @@ impl Feeds {
             .expect(&format!("Error connecting to {}", self.database_url))
     }
 
-    pub fn serve(self, port: u16) {
+    pub fn serve(self, port: u16, creds: Option<(String, String)>) {
         let pool = self.establish_connection_pool();
-        serve::serve(port, pool)
+        serve::serve(port, creds, pool)
     }
 
     pub fn fetch(self) {

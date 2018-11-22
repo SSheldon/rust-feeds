@@ -5,7 +5,7 @@ use warp::{Filter, self};
 use warp::http::StatusCode;
 
 use config::{PgConnectionPool, PooledPgConnection};
-use fever_api::ApiRequest;
+use fever_api::{ApiKey, ApiRequest};
 use handling;
 
 fn connect_db(pool: PgConnectionPool)
@@ -45,9 +45,10 @@ fn is_refresh_request(query_pairs: Vec<(String, String)>) -> bool {
 
 fn handle_request(
     request: ApiRequest,
+    key: Option<&ApiKey>,
     conn: PooledPgConnection,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let response = handling::handle_api_request(&request, None, &conn)
+    let response = handling::handle_api_request(&request, key, &conn)
         .map_err(|err| warp::reject::server_error().with(err))?;
     let status = if response.auth {
         StatusCode::OK
@@ -57,13 +58,20 @@ fn handle_request(
     Ok(warp::reply::with_status(warp::reply::json(&response), status))
 }
 
-pub fn serve(port: u16, pool: PgConnectionPool) {
+pub fn serve(
+    port: u16,
+    creds: Option<(String, String)>,
+    pool: PgConnectionPool,
+) {
+    let key = creds.map(|(user, pass)| ApiKey::new(&user, &pass));
     let api = warp::post2()
         .and(warp::query::<Vec<(String, String)>>())
         .and(warp::body::form::<HashMap<String, String>>())
         .and_then(parse_request)
         .and(connect_db(pool.clone()))
-        .and_then(handle_request);
+        .and_then(move |request, conn| {
+            handle_request(request, key.as_ref(), conn)
+        });
 
     let refresh = warp::get2()
         .and(warp::query::<Vec<(String, String)>>())

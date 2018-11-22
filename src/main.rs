@@ -51,7 +51,11 @@ fn main() {
                 .and_then(|s| s.parse().ok())
                 .unwrap_or(3000);
 
-            feeds.serve(port);
+            let creds = env::var("FEVER_API_USERNAME").and_then(|user| {
+                env::var("FEVER_API_PASSWORD").map(|pass| (user, pass))
+            }).ok();
+
+            feeds.serve(port, creds);
         },
         Some("fetch") => {
             feeds.fetch();
