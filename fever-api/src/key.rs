@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use md5::{Digest, Md5};
 
-#[derive(PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct ApiKey([u8; 16]);
 
 impl ApiKey {
