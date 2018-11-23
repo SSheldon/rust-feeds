@@ -112,7 +112,8 @@ fn load_items(query: ItemsQuery, conn: &PgConnection)
         .into_iter()
         .map(format_item)
         .collect();
-    let total_items = data::count_items(conn).unwrap();
+    let total_items = data::count_items(conn)
+        .map_err(fill_err!("Error counting items"))?;
 
     Ok(ApiResponsePayload::Items {
         items: items,
