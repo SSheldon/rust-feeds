@@ -82,7 +82,7 @@ pub fn serve(
         .and_then(move |_| {
             handling::fetch_items_task(pool.clone())
                 .map(|_| warp::reply())
-                .map_err(|_| warp::reject::not_found())
+                .map_err(|err| warp::reject::custom(err))
         });
 
     let route = api.or(refresh).with(warp::log("feeds"));

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use diesel;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
-use futures::{Future, Stream, stream};
+use futures::{Future, Stream, future, stream};
 use iter_read::IterRead;
 use reqwest;
 use reqwest::async::{Chunk, Client};
@@ -22,6 +22,7 @@ use models::item::{Item as DbItem, NewItem};
 
 type DataError = Error<diesel::result::Error>;
 type DataResult<T> = Result<T, DataError>;
+type FetchError = Box<::std::error::Error + Send + Sync>;
 
 fn format_group(group: DbGroup) -> fever_api::Group {
     fever_api::Group {
@@ -275,16 +276,18 @@ fn insert_new_feed_items<'a>(
 }
 
 fn fetch_feeds_task(feeds: Vec<DbFeed>, pool: PgConnectionPool)
--> impl Future<Item=(), Error=()> + Send {
+-> impl Future<Item=(), Error=FetchError> + Send {
     fetch_feeds(&feeds)
-        .then(|result| -> Result<_, ()> {
+        .then(|result| -> Result<_, FetchError> {
             Ok(result)
         })
         .collect()
-        .map(move |responses| {
-            let conn = pool.get().expect("Error getting connection from pool");
+        .and_then(move |responses| {
+            let conn = pool.get()
+                .map_err(fill_err!("Error getting connection from pool"))?;
             let iter = feeds.iter().zip(responses);
-            insert_new_feed_items(iter, &conn).unwrap();
+            insert_new_feed_items(iter, &conn)?;
+            Ok(())
         })
 }
 
@@ -300,21 +303,22 @@ fn chunk<T>(v: Vec<T>, size: usize) -> Vec<Vec<T>> {
         .collect()
 }
 
-fn fetch_items_tasks(pool: PgConnectionPool)
--> impl Stream<Item=(), Error=()> + Send {
-    let feeds = {
-        let conn = pool.get().expect("Error getting connection from pool");
-        let feeds = data::load_feeds(&conn).expect("Error loading feeds");
-        chunk(feeds, 10)
-    };
-
-    stream::iter_ok(feeds)
-        .and_then(move |feeds| fetch_feeds_task(feeds, pool.clone()))
-}
-
 pub fn fetch_items_task(pool: PgConnectionPool)
--> impl Future<Item=(), Error=()> + Send {
-    fetch_items_tasks(pool).collect().map(|_| ())
+-> impl Future<Item=(), Error=FetchError> + Send {
+    let pool2 = pool.clone();
+    future::lazy(move || {
+        let conn = pool.get()
+            .map_err(fill_err!("Error getting connection from pool"))?;
+        let feeds = data::load_feeds(&conn)
+            .map_err(fill_err!("Error loading feeds"))?;
+        Ok(feeds)
+    }).and_then(|feeds| {
+        let feeds = chunk(feeds, 10);
+        stream::iter_ok(feeds)
+            .and_then(move |feeds| fetch_feeds_task(feeds, pool2.clone()))
+            .collect()
+            .map(|_| ())
+    })
 }
 
 pub fn handle_api_request(

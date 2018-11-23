@@ -3,6 +3,7 @@ use std::env;
 use diesel::r2d2;
 use diesel::Connection;
 use diesel::pg::PgConnection;
+use futures::Future;
 use tokio::runtime;
 
 use data;
@@ -40,7 +41,7 @@ impl Feeds {
 
     pub fn fetch(self) {
         let pool = self.establish_connection_pool();
-        runtime::run(handling::fetch_items_task(pool));
+        runtime::run(handling::fetch_items_task(pool).map_err(|_| ()));
     }
 
     pub fn prune(self) {
