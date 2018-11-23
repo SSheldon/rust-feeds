@@ -182,17 +182,35 @@ fn item_to_insert_for_entry<'a>(entry: &'a Entry, feed: &DbFeed) -> NewItem<'a> 
 fn parse_new_entries(
     response: &[Chunk],
     feed: &DbFeed,
-    connection: &PgConnection,
-) -> Vec<Entry> {
+    conn: &PgConnection,
+) -> DataResult<Vec<Entry>> {
     let chunks = response.iter().map(|chunk| -> &[u8] { &chunk });
     let parser = FeedParser::new(IterRead::new(chunks));
-    parser
-        .map(|entry| entry.unwrap())
-        .take_while(|entry| {
-            let link = entry.link.as_ref().unwrap();
-            !data::item_already_exists(link, feed, connection).expect("error")
-        })
-        .collect()
+
+    let mut entries = Vec::new();
+    for entry in parser {
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(err) => {
+                println!("Error parsing {}: {}", feed.url, err);
+                break;
+            }
+        };
+        let exists = match entry.link.as_ref() {
+            Some(link) => {
+                data::item_already_exists(link, feed, conn)
+                    .map_err(fill_err!("Error querying if item exists"))?
+            }
+            // Currently we require entries to have links
+            None => continue,
+        };
+        // If we've reached an item that we've already seen, stop parsing
+        if exists {
+            break;
+        }
+        entries.push(entry);
+    }
+    Ok(entries)
 }
 
 fn fetch_feed(feed: &DbFeed, client: &Client)
@@ -219,24 +237,27 @@ fn fetch_feeds(feeds: &[DbFeed])
 fn insert_new_feed_items<'a>(
     iter: impl Iterator<Item=(&'a DbFeed, Result<Vec<Chunk>, reqwest::Error>)>,
     conn: &'a PgConnection,
-) {
+) -> DataResult<()> {
     use schema::item;
 
     let feed_entries: Vec<_> = iter
         .filter_map(|(feed, response)| {
             match response {
-                Ok(response) => {
-                    let entries = parse_new_entries(&response, feed, conn);
-                    println!("Found {} new items for {}", entries.len(), feed.url);
-                    Some((feed, entries))
-                },
+                Ok(response) => Some((feed, response)),
                 Err(err) => {
                     println!("Error fetching from {}: {}", feed.url, err);
                     None
                 }
             }
         })
-        .collect();
+        .map(|(feed, response)| {
+            parse_new_entries(&response, feed, conn)
+                .map(|entries| {
+                    println!("Found {} new items for {}", entries.len(), feed.url);
+                    (feed, entries)
+                })
+        })
+        .collect::<Result<_, _>>()?;
 
     let mut new_items = Vec::new();
     for &(feed, ref entries) in feed_entries.iter() {
@@ -248,7 +269,9 @@ fn insert_new_feed_items<'a>(
     diesel::insert_into(item::table)
         .values(&new_items)
         .execute(conn)
-        .expect("Error saving new post");
+        .map_err(fill_err!("Error saving new items"))?;
+
+    Ok(())
 }
 
 fn fetch_feeds_task(feeds: Vec<DbFeed>, pool: PgConnectionPool)
@@ -261,7 +284,7 @@ fn fetch_feeds_task(feeds: Vec<DbFeed>, pool: PgConnectionPool)
         .map(move |responses| {
             let conn = pool.get().expect("Error getting connection from pool");
             let iter = feeds.iter().zip(responses);
-            insert_new_feed_items(iter, &conn)
+            insert_new_feed_items(iter, &conn).unwrap();
         })
 }
 
