@@ -1,3 +1,5 @@
+use std::error::Error;
+use std::fmt;
 use std::io::{Read, self};
 
 use rss::ReadError;
@@ -133,6 +135,33 @@ pub enum FeedParseError {
     Dom(BuilderError),
     Rss(ReadError),
     Atom(&'static str),
+}
+
+impl fmt::Display for FeedParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use FeedParseError::*;
+        match self {
+            Io(err) => fmt::Display::fmt(err, f),
+            Xml(err) => fmt::Display::fmt(err, f),
+            Dom(err) => fmt::Display::fmt(err, f),
+            Rss(err) => fmt::Display::fmt(err, f),
+            Atom(err) => fmt::Display::fmt(err, f),
+        }
+    }
+}
+
+
+impl Error for FeedParseError {
+    fn source(&self) -> Option<&(Error + 'static)> {
+        use FeedParseError::*;
+        match self {
+            Io(err) => Some(err),
+            Xml(err) => Some(err),
+            Dom(err) => Some(err),
+            Rss(err) => Some(err),
+            Atom(_) => None,
+        }
+    }
 }
 
 impl From<io::Error> for FeedParseError {
