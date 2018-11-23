@@ -11,7 +11,7 @@ use handling;
 fn connect_db(pool: PgConnectionPool)
 -> impl Filter<Extract=(PooledPgConnection,), Error=warp::Rejection> + Clone {
     warp::any().and_then(move || {
-        pool.get().map_err(|err| warp::reject::server_error().with(err))
+        pool.get().map_err(|err| warp::reject::custom(err))
     })
 }
 
@@ -33,7 +33,7 @@ fn parse_request(
     println!("query: {:?}\nparams: {:?}\nparsed: {:?}",
         query_pairs, body_params, request);
 
-    request.ok_or_else(warp::reject)
+    request.ok_or_else(warp::reject::not_found)
 }
 
 fn is_refresh_request(query_pairs: Vec<(String, String)>) -> bool {
@@ -49,7 +49,7 @@ fn handle_request(
     conn: PooledPgConnection,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     let response = handling::handle_api_request(&request, key, &conn)
-        .map_err(|err| warp::reject::server_error().with(err))?;
+        .map_err(|err| warp::reject::custom(err))?;
     let status = if response.auth {
         StatusCode::OK
     } else {
@@ -77,12 +77,12 @@ pub fn serve(
         .and(warp::query::<Vec<(String, String)>>())
         .and_then(|query| {
             if is_refresh_request(query) { Ok(()) }
-            else { Err(warp::reject()) }
+            else { Err(warp::reject::not_found()) }
         })
         .and_then(move |_| {
             handling::fetch_items_task(pool.clone())
                 .map(|_| warp::reply())
-                .map_err(|_| warp::reject::server_error())
+                .map_err(|_| warp::reject::not_found())
         });
 
     let route = api.or(refresh).with(warp::log("feeds"));
