@@ -42,7 +42,8 @@ fn main() {
 
     env_logger::init();
 
-    let feeds = Feeds::new()
+    let feeds = env::var("DATABASE_URL")
+        .map(Feeds::new)
         .expect("DATABASE_URL must be set");
 
     match matches.subcommand_name() {

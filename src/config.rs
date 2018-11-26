@@ -1,5 +1,3 @@
-use std::env;
-
 use diesel::r2d2;
 use diesel::Connection;
 use diesel::pg::PgConnection;
@@ -19,9 +17,8 @@ pub struct Feeds {
 }
 
 impl Feeds {
-    pub fn new() -> Result<Self, env::VarError> {
-        env::var("DATABASE_URL")
-            .map(|database_url| Feeds { database_url })
+    pub fn new(database_url: String) -> Self {
+        Feeds { database_url }
     }
 
     fn establish_connection_pool(&self) -> PgConnectionPool {
