@@ -5,6 +5,7 @@ use warp::{Filter, self};
 use warp::http::StatusCode;
 
 use config::{PgConnectionPool, PooledPgConnection};
+use fetch;
 use fever_api::{ApiKey, ApiRequest};
 use handling;
 
@@ -80,7 +81,7 @@ pub fn serve(
             else { Err(warp::reject::not_found()) }
         })
         .and_then(move |_| {
-            handling::fetch_items_task(pool.clone())
+            fetch::fetch_items_task(pool.clone())
                 .map(|_| warp::reply())
                 .map_err(|err| warp::reject::custom(err))
         });

@@ -5,7 +5,7 @@ use futures::Future;
 use tokio::runtime;
 
 use data;
-use handling;
+use fetch;
 use serve;
 
 pub type PgConnectionManager = r2d2::ConnectionManager<PgConnection>;
@@ -38,7 +38,7 @@ impl Feeds {
 
     pub fn fetch(self) {
         let pool = self.establish_connection_pool();
-        runtime::run(handling::fetch_items_task(pool).map_err(|_| ()));
+        runtime::run(fetch::fetch_items_task(pool).map_err(|_| ()));
     }
 
     pub fn prune(self) {

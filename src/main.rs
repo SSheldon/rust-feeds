@@ -21,6 +21,7 @@ mod config;
 mod data;
 #[macro_use]
 mod error;
+mod fetch;
 mod handling;
 mod models;
 mod schema;
