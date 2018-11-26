@@ -6,7 +6,11 @@ use warp::http::StatusCode;
 
 use config::{PgConnectionPool, PooledPgConnection};
 use fetch;
-use fever_api::{ApiKey, ApiRequest};
+use fever_api::{
+    Key as ApiKey,
+    Request as ApiRequest,
+};
+
 use handling;
 
 fn connect_db(pool: PgConnectionPool)

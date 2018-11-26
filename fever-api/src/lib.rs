@@ -9,9 +9,9 @@ mod key;
 mod request;
 mod response;
 
-pub use key::ApiKey;
-pub use request::{ApiRequest, ApiRequestType};
-pub use response::{ApiResponse, ApiResponsePayload, Feed, FeedsGroup, Group, Item};
+pub use key::Key;
+pub use request::{Request, RequestType};
+pub use response::{Response, ResponsePayload, Feed, FeedsGroup, Group, Item};
 
 fn join_ids(ids: &[u32], out: &mut String) {
     use std::fmt::Write;

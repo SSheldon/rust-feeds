@@ -2,10 +2,10 @@ use std::collections::HashMap;
 
 use chrono::NaiveDateTime;
 
-use {ApiKey, join_ids};
+use {Key, join_ids};
 
 #[derive(Debug, PartialEq)]
-pub enum ApiRequestType {
+pub enum RequestType {
     None,
     Groups,
     Feeds,
@@ -24,10 +24,10 @@ pub enum ApiRequestType {
     MarkGroupRead(u32, NaiveDateTime),
 }
 
-impl ApiRequestType {
+impl RequestType {
     pub fn parse<'a, I>(mut query_params: I,
                         body_params: &HashMap<String, String>)
-            -> Option<ApiRequestType>
+            -> Option<RequestType>
             where I: Iterator<Item=(&'a str, &'a str)> {
         match query_params.next() {
             Some(("api", "")) => (),
@@ -44,51 +44,51 @@ impl ApiRequestType {
                     .and_then(|v| v.parse().ok())
                     .map(|t| NaiveDateTime::from_timestamp(t, 0));
                 match (mark, mark_as) {
-                    (None, None) => Some(ApiRequestType::None),
+                    (None, None) => Some(RequestType::None),
                     (Some("item"), Some("read")) =>
-                        id.map(ApiRequestType::MarkItemRead),
+                        id.map(RequestType::MarkItemRead),
                     (Some("item"), Some("unread")) =>
-                        id.map(ApiRequestType::MarkItemUnread),
+                        id.map(RequestType::MarkItemUnread),
                     (Some("item"), Some("saved")) =>
-                        id.map(ApiRequestType::MarkItemSaved),
+                        id.map(RequestType::MarkItemSaved),
                     (Some("item"), Some("unsaved")) =>
-                        id.map(ApiRequestType::MarkItemUnsaved),
+                        id.map(RequestType::MarkItemUnsaved),
                     (Some("feed"), Some("read")) =>
                         id.and_then(|i| before.map(|b| (i, b)))
-                          .map(|(i, b)| ApiRequestType::MarkFeedRead(i, b)),
+                          .map(|(i, b)| RequestType::MarkFeedRead(i, b)),
                     (Some("group"), Some("read")) =>
                         id.and_then(|i| before.map(|b| (i, b)))
-                          .map(|(i, b)| ApiRequestType::MarkGroupRead(i, b)),
+                          .map(|(i, b)| RequestType::MarkGroupRead(i, b)),
                     _ => None,
                 }
             },
-            Some("groups") => Some(ApiRequestType::Groups),
-            Some("feeds") => Some(ApiRequestType::Feeds),
-            Some("favicons") => Some(ApiRequestType::Favicons),
+            Some("groups") => Some(RequestType::Groups),
+            Some("feeds") => Some(RequestType::Feeds),
+            Some("favicons") => Some(RequestType::Favicons),
             Some("items") => match query_params.next() {
                 Some(("since_id", val)) =>
-                    val.parse().ok().map(|v| ApiRequestType::ItemsSince(v)),
+                    val.parse().ok().map(|v| RequestType::ItemsSince(v)),
                 Some(("max_id", val)) =>
-                    val.parse().ok().map(|v| ApiRequestType::ItemsBefore(v)),
+                    val.parse().ok().map(|v| RequestType::ItemsBefore(v)),
                 Some(("with_ids", val)) => {
                     let ids: Result<_, _> = val.split(',').map(|v| v.parse()).collect();
-                    ids.map(|v| ApiRequestType::Items(v)).ok()
+                    ids.map(|v| RequestType::Items(v)).ok()
                 },
-                None => Some(ApiRequestType::LatestItems),
+                None => Some(RequestType::LatestItems),
                 _ => None,
             },
             Some("links") => {
                 // TODO: Implement link support
                 None
             },
-            Some("unread_item_ids") => Some(ApiRequestType::UnreadItems),
-            Some("saved_item_ids") => Some(ApiRequestType::SavedItems),
+            Some("unread_item_ids") => Some(RequestType::UnreadItems),
+            Some("saved_item_ids") => Some(RequestType::SavedItems),
             _ => None,
         }
     }
 
     pub fn query(&self) -> String {
-        use self::ApiRequestType::*;
+        use self::RequestType::*;
 
         match *self {
             None |
@@ -118,23 +118,23 @@ impl ApiRequestType {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct ApiRequest {
-    pub req_type: ApiRequestType,
-    pub api_key: ApiKey,
+pub struct Request {
+    pub req_type: RequestType,
+    pub api_key: Key,
 }
 
-impl ApiRequest {
+impl Request {
     pub fn parse<'a, I>(
         query_params: I,
         body_params: &HashMap<String, String>
-    ) -> Option<ApiRequest>
+    ) -> Option<Request>
     where I: Iterator<Item=(&'a str, &'a str)> {
         let api_key = body_params.get("api_key")
             .and_then(|s| s.parse().ok());
 
         api_key.and_then(|api_key| {
-            ApiRequestType::parse(query_params, body_params).map(|req_type| {
-                ApiRequest { req_type, api_key }
+            RequestType::parse(query_params, body_params).map(|req_type| {
+                Request { req_type, api_key }
             })
         })
     }
@@ -142,21 +142,21 @@ impl ApiRequest {
 
 #[cfg(test)]
 mod tests {
-    use super::ApiRequestType;
+    use super::RequestType;
 
-    fn parse_query(query: &str) -> Option<ApiRequestType> {
+    fn parse_query(query: &str) -> Option<RequestType> {
         None
     }
 
     #[test]
     fn test_request_type() {
-        assert_eq!(parse_query("api"), Some(ApiRequestType::None));
-        assert_eq!(parse_query("api&feeds"), Some(ApiRequestType::Feeds));
+        assert_eq!(parse_query("api"), Some(RequestType::None));
+        assert_eq!(parse_query("api&feeds"), Some(RequestType::Feeds));
         assert_eq!(parse_query("api&unread_item_ids"),
-                   Some(ApiRequestType::UnreadItems));
+                   Some(RequestType::UnreadItems));
         assert_eq!(parse_query("api&items&since_id=0"),
-                   Some(ApiRequestType::ItemsSince(0)));
+                   Some(RequestType::ItemsSince(0)));
         assert_eq!(parse_query("api&items&with_ids=0,1,2"),
-                   Some(ApiRequestType::Items(vec![0, 1, 2])));
+                   Some(RequestType::Items(vec![0, 1, 2])));
     }
 }

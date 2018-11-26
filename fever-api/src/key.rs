@@ -4,15 +4,15 @@ use std::str::FromStr;
 use md5::{Digest, Md5};
 
 #[derive(Clone, PartialEq)]
-pub struct ApiKey([u8; 16]);
+pub struct Key([u8; 16]);
 
-impl ApiKey {
-    pub fn new(username: &str, password: &str) -> ApiKey {
+impl Key {
+    pub fn new(username: &str, password: &str) -> Key {
         let mut hash = Md5::new();
         hash.input(username.as_bytes());
         hash.input(":".as_bytes());
         hash.input(password.as_bytes());
-        ApiKey(hash.hash())
+        Key(hash.hash())
     }
 }
 
@@ -29,7 +29,7 @@ fn byte_from_hex(s: &[u8]) -> Result<u8, ()> {
     Ok(val_from_hex_char(s[0])? * 16 + val_from_hex_char(s[1])?)
 }
 
-impl FromStr for ApiKey {
+impl FromStr for Key {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, ()> {
@@ -42,17 +42,17 @@ impl FromStr for ApiKey {
             *byte = byte_from_hex(hex)?;
         }
 
-        Ok(ApiKey(bytes))
+        Ok(Key(bytes))
     }
 }
 
-impl fmt::Debug for ApiKey {
+impl fmt::Debug for Key {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Display::fmt(self, f)
     }
 }
 
-impl fmt::Display for ApiKey {
+impl fmt::Display for Key {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         for byte in self.0.iter() {
             fmt::LowerHex::fmt(byte, f)?;
@@ -63,7 +63,7 @@ impl fmt::Display for ApiKey {
 
 #[cfg(test)]
 mod tests {
-    use super::{ApiKey, byte_from_hex};
+    use super::{Key, byte_from_hex};
 
     // Expected signature for "user:password"
     static SAMPLE_BYTES: [u8; 16] = [
@@ -74,7 +74,7 @@ mod tests {
 
     #[test]
     fn test_formatting() {
-        let key = ApiKey(SAMPLE_BYTES);
+        let key = Key(SAMPLE_BYTES);
         assert_eq!(key.to_string(), SAMPLE_HEX);
     }
 
@@ -83,13 +83,13 @@ mod tests {
         let byte = byte_from_hex(b"3a");
         assert_eq!(byte, Ok(0x3a));
 
-        let key = SAMPLE_HEX.parse::<ApiKey>();
-        assert_eq!(key, Ok(ApiKey(SAMPLE_BYTES)));
+        let key = SAMPLE_HEX.parse::<Key>();
+        assert_eq!(key, Ok(Key(SAMPLE_BYTES)));
     }
 
     #[test]
     fn test_signing() {
-        let key = ApiKey::new("user", "password");
-        assert_eq!(key, ApiKey(SAMPLE_BYTES));
+        let key = Key::new("user", "password");
+        assert_eq!(key, Key(SAMPLE_BYTES));
     }
 }

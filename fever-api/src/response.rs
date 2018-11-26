@@ -79,7 +79,7 @@ pub struct Item {
 
 #[derive(Serialize)]
 #[serde(untagged)]
-pub enum ApiResponsePayload {
+pub enum ResponsePayload {
     None {},
     Groups {
         groups: Vec<Group>,
@@ -104,7 +104,7 @@ pub enum ApiResponsePayload {
 }
 
 #[derive(Serialize)]
-pub struct ApiResponse {
+pub struct Response {
     pub api_version: u32,
     #[serde(serialize_with = "serialize_bool_as_number")]
     pub auth: bool,
@@ -112,5 +112,5 @@ pub struct ApiResponse {
             serialize_with = "serialize_opt_datetime_as_timestamp")]
     pub last_refreshed_on_time: Option<NaiveDateTime>,
     #[serde(flatten)]
-    pub payload: ApiResponsePayload,
+    pub payload: ResponsePayload,
 }

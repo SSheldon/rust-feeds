@@ -5,7 +5,12 @@ use diesel::prelude::*;
 use diesel::pg::PgConnection;
 
 use fever_api::{
-    ApiKey, ApiRequest, ApiRequestType, ApiResponse, ApiResponsePayload, self,
+    Key as ApiKey,
+    Request as ApiRequest,
+    RequestType as ApiRequestType,
+    Response as ApiResponse,
+    ResponsePayload as ApiResponsePayload,
+    self,
 };
 
 use data::{ItemsQuery, self};
