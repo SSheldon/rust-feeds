@@ -11,14 +11,14 @@ use feed_stream::{Entry, FeedParser};
 use config::PgConnectionPool;
 use data;
 use error::Error;
-use models::feed::Feed as DbFeed;
+use models::feed::Feed;
 use models::item::NewItem;
 
 type DataError = Error<diesel::result::Error>;
 type DataResult<T> = Result<T, DataError>;
 type FetchError = Box<::std::error::Error + Send + Sync>;
 
-fn item_to_insert_for_entry<'a>(entry: &'a Entry, feed: &DbFeed) -> NewItem<'a> {
+fn item_to_insert_for_entry<'a>(entry: &'a Entry, feed: &Feed) -> NewItem<'a> {
     NewItem {
         url: entry.link.as_ref().unwrap(),
         title: &entry.title,
@@ -30,7 +30,7 @@ fn item_to_insert_for_entry<'a>(entry: &'a Entry, feed: &DbFeed) -> NewItem<'a> 
 
 fn parse_new_entries(
     response: &[Chunk],
-    feed: &DbFeed,
+    feed: &Feed,
     conn: &PgConnection,
 ) -> DataResult<Vec<Entry>> {
     let chunks = response.iter().map(|chunk| -> &[u8] { &chunk });
@@ -62,7 +62,7 @@ fn parse_new_entries(
     Ok(entries)
 }
 
-fn fetch_feed(feed: &DbFeed, client: &Client)
+fn fetch_feed(feed: &Feed, client: &Client)
 -> impl Future<Item=Vec<Chunk>, Error=reqwest::Error> + 'static {
     println!("Fetching items from {}...", feed.url);
     client.get(&feed.url)
@@ -73,7 +73,7 @@ fn fetch_feed(feed: &DbFeed, client: &Client)
         })
 }
 
-fn fetch_feeds(feeds: &[DbFeed])
+fn fetch_feeds(feeds: &[Feed])
 -> impl Stream<Item=Vec<Chunk>, Error=reqwest::Error> + 'static {
     let client = Client::new();
     let feed_responses: Vec<_> = feeds.iter()
@@ -84,7 +84,7 @@ fn fetch_feeds(feeds: &[DbFeed])
 }
 
 fn insert_new_feed_items<'a>(
-    iter: impl Iterator<Item=(&'a DbFeed, Result<Vec<Chunk>, reqwest::Error>)>,
+    iter: impl Iterator<Item=(&'a Feed, Result<Vec<Chunk>, reqwest::Error>)>,
     conn: &'a PgConnection,
 ) -> DataResult<()> {
     use schema::item;
@@ -123,7 +123,7 @@ fn insert_new_feed_items<'a>(
     Ok(())
 }
 
-fn fetch_feeds_task(feeds: Vec<DbFeed>, pool: PgConnectionPool)
+fn fetch_feeds_task(feeds: Vec<Feed>, pool: PgConnectionPool)
 -> impl Future<Item=(), Error=FetchError> + Send {
     fetch_feeds(&feeds)
         .then(|result| -> Result<_, FetchError> {
