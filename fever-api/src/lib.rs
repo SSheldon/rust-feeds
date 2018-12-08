@@ -1,10 +1,3 @@
-extern crate chrono;
-extern crate md5;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
-
 mod key;
 mod request;
 mod response;

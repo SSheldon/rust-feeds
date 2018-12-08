@@ -1,5 +1,6 @@
 use chrono::NaiveDateTime;
 use serde::{self, Serialize};
+use serde_derive::Serialize;
 
 use crate::join_ids;
 
