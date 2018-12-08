@@ -1,4 +1,4 @@
-use schema::feed;
+use crate::schema::feed;
 use super::group::Group;
 
 #[derive(Identifiable, Queryable, Associations)]

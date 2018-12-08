@@ -1,6 +1,6 @@
 use chrono::NaiveDateTime;
 
-use schema::item;
+use crate::schema::item;
 use super::feed::Feed;
 
 #[derive(Identifiable, Queryable, Associations)]

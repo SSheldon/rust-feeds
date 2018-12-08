@@ -29,7 +29,7 @@ mod serve;
 
 use std::env;
 
-use config::Feeds;
+use crate::config::Feeds;
 
 fn main() {
     let matches = clap::App::new("feeds")

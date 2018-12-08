@@ -2,25 +2,25 @@ use diesel;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
 
-use models::feed::Feed;
-use models::group::Group;
-use models::item::Item;
+use crate::models::feed::Feed;
+use crate::models::group::Group;
+use crate::models::item::Item;
 
 pub fn load_groups(conn: &PgConnection) -> QueryResult<Vec<Group>> {
-    use schema::feed_group::dsl::*;
+    use crate::schema::feed_group::dsl::*;
     feed_group.load(conn)
 }
 
 pub fn load_feed_groups(conn: &PgConnection)
 -> QueryResult<Vec<(i32, Option<i32>)>> {
-    use schema::feed::dsl::*;
+    use crate::schema::feed::dsl::*;
 
     feed.select((id, group_id))
         .load(conn)
 }
 
 pub fn load_feeds(conn: &PgConnection) -> QueryResult<Vec<Feed>> {
-    use schema::feed::dsl::*;
+    use crate::schema::feed::dsl::*;
     feed.load(conn)
 }
 
@@ -33,7 +33,7 @@ pub enum ItemsQuery<'a> {
 
 pub fn load_items(query_type: ItemsQuery, conn: &PgConnection)
 -> QueryResult<Vec<Item>> {
-    use schema::item::dsl::*;
+    use crate::schema::item::dsl::*;
 
     let query = item.limit(50);
     match query_type {
@@ -60,7 +60,7 @@ pub fn load_items(query_type: ItemsQuery, conn: &PgConnection)
 
 pub fn load_unread_item_ids(conn: &PgConnection) -> QueryResult<Vec<i32>> {
     use diesel::dsl::not;
-    use schema::item::dsl::*;
+    use crate::schema::item::dsl::*;
 
     item.filter(not(is_read))
         .select(id)
@@ -68,7 +68,7 @@ pub fn load_unread_item_ids(conn: &PgConnection) -> QueryResult<Vec<i32>> {
 }
 
 pub fn load_saved_item_ids(conn: &PgConnection) -> QueryResult<Vec<i32>> {
-    use schema::item::dsl::*;
+    use crate::schema::item::dsl::*;
 
     item.filter(is_saved)
         .select(id)
@@ -76,7 +76,7 @@ pub fn load_saved_item_ids(conn: &PgConnection) -> QueryResult<Vec<i32>> {
 }
 
 pub fn count_items(conn: &PgConnection) -> QueryResult<u32> {
-    use schema::item::dsl::*;
+    use crate::schema::item::dsl::*;
 
     let query = item.count();
     query.get_result::<i64>(conn).map(|i| i as u32)
@@ -85,7 +85,7 @@ pub fn count_items(conn: &PgConnection) -> QueryResult<u32> {
 pub fn item_already_exists(link: &str, feed: &Feed, conn: &PgConnection)
 -> QueryResult<bool> {
     use diesel::dsl::{exists, select};
-    use schema::item::dsl::*;
+    use crate::schema::item::dsl::*;
 
     let query = item.filter(feed_id.eq(feed.id).and(url.eq(link)));
     select(exists(query))

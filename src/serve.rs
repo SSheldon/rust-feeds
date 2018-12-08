@@ -4,14 +4,14 @@ use futures::Future;
 use warp::{Filter, self};
 use warp::http::StatusCode;
 
-use config::{PgConnectionPool, PooledPgConnection};
-use fetch;
 use fever_api::{
     Key as ApiKey,
     Request as ApiRequest,
 };
 
-use handling;
+use crate::config::{PgConnectionPool, PooledPgConnection};
+use crate::fetch;
+use crate::handling;
 
 fn connect_db(pool: PgConnectionPool)
 -> impl Filter<Extract=(PooledPgConnection,), Error=warp::Rejection> + Clone {

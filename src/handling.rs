@@ -13,11 +13,11 @@ use fever_api::{
     self,
 };
 
-use data::{ItemsQuery, self};
-use error::Error;
-use models::feed::Feed as DbFeed;
-use models::group::Group as DbGroup;
-use models::item::Item as DbItem;
+use crate::data::{ItemsQuery, self};
+use crate::error::Error;
+use crate::models::feed::Feed as DbFeed;
+use crate::models::group::Group as DbGroup;
+use crate::models::item::Item as DbItem;
 
 type DataError = Error<diesel::result::Error>;
 type DataResult<T> = Result<T, DataError>;
@@ -146,7 +146,7 @@ fn load_saved_item_ids(conn: &PgConnection) -> DataResult<ApiResponsePayload> {
 
 fn update_item_read(id: u32, is_read: bool, conn: &PgConnection)
 -> DataResult<ApiResponsePayload> {
-    use schema::item;
+    use crate::schema::item;
 
     diesel::update(item::table.find(id as i32))
         .set(item::is_read.eq(is_read))
@@ -158,7 +158,7 @@ fn update_item_read(id: u32, is_read: bool, conn: &PgConnection)
 
 fn update_item_saved(id: u32, is_saved: bool, conn: &PgConnection)
 -> DataResult<ApiResponsePayload> {
-    use schema::item;
+    use crate::schema::item;
 
     diesel::update(item::table.find(id as i32))
         .set(item::is_saved.eq(is_saved))

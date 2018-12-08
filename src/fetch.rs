@@ -4,15 +4,15 @@ use diesel::pg::PgConnection;
 use futures::{Future, Stream, future, stream};
 use iter_read::IterRead;
 use reqwest;
-use reqwest::async::{Chunk, Client};
+use reqwest::r#async::{Chunk, Client};
 
 use feed_stream::{Entry, FeedParser};
 
-use config::PgConnectionPool;
-use data;
-use error::Error;
-use models::feed::Feed;
-use models::item::NewItem;
+use crate::config::PgConnectionPool;
+use crate::data;
+use crate::error::Error;
+use crate::models::feed::Feed;
+use crate::models::item::NewItem;
 
 type DataError = Error<diesel::result::Error>;
 type DataResult<T> = Result<T, DataError>;
@@ -87,7 +87,7 @@ fn insert_new_feed_items<'a>(
     iter: impl Iterator<Item=(&'a Feed, Result<Vec<Chunk>, reqwest::Error>)>,
     conn: &'a PgConnection,
 ) -> DataResult<()> {
-    use schema::item;
+    use crate::schema::item;
 
     let feed_entries: Vec<_> = iter
         .filter_map(|(feed, response)| {

@@ -4,9 +4,9 @@ use diesel::pg::PgConnection;
 use futures::Future;
 use tokio::runtime;
 
-use data;
-use fetch;
-use serve;
+use crate::data;
+use crate::fetch;
+use crate::serve;
 
 pub type PgConnectionManager = r2d2::ConnectionManager<PgConnection>;
 pub type PgConnectionPool = r2d2::Pool<PgConnectionManager>;
