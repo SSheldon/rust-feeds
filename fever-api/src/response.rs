@@ -1,7 +1,7 @@
 use chrono::NaiveDateTime;
 use serde::{self, Serialize};
 
-use join_ids;
+use crate::join_ids;
 
 fn serialize_bool_as_number<S>(value: &bool, serializer: S)
         -> Result<S::Ok, S::Error>

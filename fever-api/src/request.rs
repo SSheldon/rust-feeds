@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use chrono::NaiveDateTime;
 
-use {Key, join_ids};
+use crate::{Key, join_ids};
 
 #[derive(Debug, PartialEq)]
 pub enum RequestType {
