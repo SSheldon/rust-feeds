@@ -1,21 +1,8 @@
 // Workaround for diesl#1785
 #![allow(proc_macro_derive_resolution_fallback)]
 
-extern crate chrono;
-extern crate clap;
 #[macro_use]
 extern crate diesel;
-extern crate env_logger;
-extern crate feed_stream;
-extern crate fever_api;
-extern crate futures;
-extern crate iter_read;
-extern crate reqwest;
-extern crate serde;
-extern crate serde_json;
-extern crate tokio;
-extern crate url;
-extern crate warp;
 
 mod config;
 mod data;
