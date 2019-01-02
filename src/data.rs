@@ -87,7 +87,13 @@ pub fn item_already_exists(link: &str, feed: &Feed, conn: &PgConnection)
     use diesel::dsl::{exists, select};
     use crate::schema::item::dsl::*;
 
-    let query = item.filter(feed_id.eq(feed.id).and(url.eq(link)));
+    // Compare insensitive to http vs https
+    // some feeds seem to alternate...
+    let http_link = link.replace("http://", "https://");
+    let https_link = link.replace("https://", "http://");
+
+    let link_expr = url.eq(http_link).or(url.eq(https_link));
+    let query = item.filter(feed_id.eq(feed.id).and(link_expr));
     select(exists(query))
         .get_result(conn)
 }
