@@ -84,7 +84,8 @@ pub fn serve(
             if is_refresh_request(query) { Ok(()) }
             else { Err(warp::reject::not_found()) }
         })
-        .and_then(move |_| {
+        .untuple_one()
+        .and_then(move || {
             fetch::fetch_items_task(pool.clone())
                 .map(|_| warp::reply())
                 .map_err(|err| warp::reject::custom(err))
