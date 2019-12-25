@@ -1,7 +1,8 @@
 use std::fmt;
 use std::str::FromStr;
 
-use md5::{Digest, Md5};
+use md5::Md5;
+use md5::digest::{Digest, FixedOutput};
 
 #[derive(Clone, PartialEq)]
 pub struct Key([u8; 16]);
@@ -12,7 +13,7 @@ impl Key {
         hash.input(username.as_bytes());
         hash.input(":".as_bytes());
         hash.input(password.as_bytes());
-        Key(hash.hash())
+        Key(hash.fixed_result().into())
     }
 }
 
