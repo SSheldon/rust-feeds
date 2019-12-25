@@ -16,7 +16,7 @@ impl<C: fmt::Display> fmt::Display for Error<C> {
 }
 
 impl<C: 'static + StdError> StdError for Error<C> {
-    fn source(&self) -> Option<&(StdError + 'static)> {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
         Some(&self.source)
     }
 }

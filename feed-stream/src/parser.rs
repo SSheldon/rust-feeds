@@ -152,7 +152,7 @@ impl fmt::Display for FeedParseError {
 
 
 impl Error for FeedParseError {
-    fn source(&self) -> Option<&(Error + 'static)> {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
         use FeedParseError::*;
         match self {
             Io(err) => Some(err),
