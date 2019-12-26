@@ -1,8 +1,7 @@
 use diesel::r2d2;
 use diesel::Connection;
 use diesel::pg::PgConnection;
-use futures::Future;
-use tokio::runtime;
+use tokio::runtime::Runtime;
 
 use crate::data;
 use crate::fetch;
@@ -33,12 +32,16 @@ impl Feeds {
 
     pub fn serve(self, port: u16, creds: Option<(String, String)>) {
         let pool = self.establish_connection_pool();
-        serve::serve(port, creds, pool)
+        let mut rt = Runtime::new()
+            .expect("Error creating runtime");
+        let _ = rt.block_on(serve::serve(port, creds, pool));
     }
 
     pub fn fetch(self) {
         let pool = self.establish_connection_pool();
-        runtime::run(fetch::fetch_items_task(pool).map_err(|_| ()));
+        let mut rt = Runtime::new()
+            .expect("Error creating runtime");
+        let _ = rt.block_on(fetch::fetch_items_task(pool));
     }
 
     pub fn prune(self) {
