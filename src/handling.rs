@@ -19,8 +19,7 @@ use crate::models::feed::Feed as DbFeed;
 use crate::models::group::Group as DbGroup;
 use crate::models::item::Item as DbItem;
 
-type DataError = Error<diesel::result::Error>;
-type DataResult<T> = Result<T, DataError>;
+type DataResult<T> = Result<T, Error>;
 
 fn format_group(group: DbGroup) -> fever_api::Group {
     fever_api::Group {

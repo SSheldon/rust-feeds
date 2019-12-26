@@ -14,8 +14,7 @@ use crate::error::Error;
 use crate::models::feed::Feed;
 use crate::models::item::NewItem;
 
-type DataError = Error<diesel::result::Error>;
-type DataResult<T> = Result<T, DataError>;
+type DataResult<T> = Result<T, Error>;
 type FetchError = Box<dyn ::std::error::Error + Send + Sync>;
 
 fn item_to_insert_for_entry<'a>(entry: &'a Entry, feed: &Feed) -> NewItem<'a> {
