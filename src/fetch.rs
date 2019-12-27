@@ -1,10 +1,8 @@
-use std::future::Future;
-
 use bytes::Bytes;
 use diesel;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
-use futures::{FutureExt, StreamExt, TryFutureExt, future, stream};
+use futures::future;
 use reqwest;
 use reqwest::Client;
 
@@ -61,25 +59,14 @@ fn parse_new_entries(
     Ok(entries)
 }
 
-fn fetch_feed(feed: &Feed, client: &Client)
--> impl Future<Output=Result<Bytes, reqwest::Error>> + 'static {
+async fn fetch_feed(feed: &Feed, client: &Client)
+-> Result<Bytes, reqwest::Error> {
     println!("Fetching items from {}...", feed.url);
-    client.get(&feed.url)
+    let response = client.get(&feed.url)
         .header(reqwest::header::USER_AGENT, "Mozilla/5.0 Gecko")
         .send()
-        .and_then(|response| {
-            response.bytes()
-        })
-}
-
-fn fetch_feeds(feeds: &[Feed])
--> impl Future<Output=Vec<Result<Bytes, reqwest::Error>>> + 'static {
-    let client = Client::new();
-    let feed_responses: Vec<_> = feeds.iter()
-        .map(move |feed| fetch_feed(feed, &client))
-        .collect();
-
-    future::join_all(feed_responses)
+        .await?;
+    response.bytes().await
 }
 
 fn insert_new_feed_items<'a>(
@@ -122,49 +109,19 @@ fn insert_new_feed_items<'a>(
     Ok(())
 }
 
-fn fetch_feeds_task(feeds: Vec<Feed>, pool: PgConnectionPool)
--> impl Future<Output=Result<(), Error>> + Send {
-    fetch_feeds(&feeds)
-        .map(move |responses| {
-            let conn = pool.get()
-                .map_err(fill_err!("Error getting connection from pool"))?;
-            let iter = feeds.iter().zip(responses);
-            insert_new_feed_items(iter, &conn)?;
-            Ok(())
-        })
-}
+pub async fn fetch_items_task(pool: PgConnectionPool) -> Result<(), Error> {
+    let conn = pool.get()
+        .map_err(fill_err!("Error getting connection from pool"))?;
+    let feeds = data::load_feeds(&conn)
+        .map_err(fill_err!("Error loading feeds"))?;
+    let client = Client::new();
 
-fn chunk<T>(v: Vec<T>, size: usize) -> Vec<Vec<T>> {
-    if v.is_empty() {
-        return Vec::new();
+    for feeds in feeds.chunks(10) {
+        let responses = feeds.iter().map(|feed| fetch_feed(feed, &client));
+        let responses = future::join_all(responses).await;
+        let iter = feeds.iter().zip(responses);
+        insert_new_feed_items(iter, &conn)?;
     }
 
-    let num_chunks = v.len() / size + if v.len() % size != 0 {1} else {0};
-    let mut elems = v.into_iter();
-    (0..num_chunks)
-        .map(|_| elems.by_ref().take(size).collect())
-        .collect()
-}
-
-pub fn fetch_items_task(pool: PgConnectionPool)
--> impl Future<Output=Result<(), Error>> + Send {
-    let pool2 = pool.clone();
-    future::lazy(move |_| {
-        let conn = pool.get()
-            .map_err(fill_err!("Error getting connection from pool"))?;
-        let feeds = data::load_feeds(&conn)
-            .map_err(fill_err!("Error loading feeds"))?;
-        Ok(feeds)
-    }).and_then(|feeds| {
-        let feeds = chunk(feeds, 10);
-        stream::iter(feeds)
-            .then(move |feeds| fetch_feeds_task(feeds, pool2.clone()))
-            .collect::<Vec<_>>()
-            .map(|results| {
-                results
-                    .into_iter()
-                    .collect::<Result<Vec<_>, _>>()
-                    .map(|_| ())
-            })
-    })
+    Ok(())
 }
