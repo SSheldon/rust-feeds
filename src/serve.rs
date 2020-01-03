@@ -14,7 +14,8 @@ use crate::error::Error;
 use crate::fetch;
 use crate::handling;
 
-impl warp::reject::Reject for Error { }
+impl warp::reject::Reject for Error<diesel::result::Error> { }
+impl warp::reject::Reject for Error<diesel::r2d2::PoolError> { }
 
 fn connect_db(pool: PgConnectionPool)
 -> impl Filter<Extract=(PooledPgConnection,), Error=warp::Rejection> + Clone {

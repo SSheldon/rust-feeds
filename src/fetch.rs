@@ -14,7 +14,7 @@ use crate::error::Error;
 use crate::models::feed::Feed;
 use crate::models::item::NewItem;
 
-type DataResult<T> = Result<T, Error>;
+type DataResult<T> = Result<T, Error<diesel::result::Error>>;
 
 fn item_to_insert_for_entry<'a>(entry: &'a Entry, feed: &Feed) -> NewItem<'a> {
     NewItem {
@@ -109,7 +109,7 @@ fn insert_new_feed_items<'a>(
     Ok(())
 }
 
-pub async fn fetch_items_task(conn: PooledPgConnection) -> Result<(), Error> {
+pub async fn fetch_items_task(conn: PooledPgConnection) -> DataResult<()> {
     let feeds = data::load_feeds(&conn)
         .map_err(fill_err!("Error loading feeds"))?;
     let client = Client::new();
