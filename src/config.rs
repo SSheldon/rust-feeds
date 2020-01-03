@@ -39,9 +39,11 @@ impl Feeds {
 
     pub fn fetch(self) {
         let pool = self.establish_connection_pool();
+        let conn = pool.get()
+            .expect("Error getting connection from pool");
         let mut rt = Runtime::new()
             .expect("Error creating runtime");
-        let _ = rt.block_on(fetch::fetch_items_task(pool));
+        let _ = rt.block_on(fetch::fetch_items_task(conn));
     }
 
     pub fn prune(self) {

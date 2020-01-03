@@ -8,7 +8,7 @@ use reqwest::Client;
 
 use feed_stream::{Entry, FeedParser};
 
-use crate::config::PgConnectionPool;
+use crate::config::PooledPgConnection;
 use crate::data;
 use crate::error::Error;
 use crate::models::feed::Feed;
@@ -109,9 +109,7 @@ fn insert_new_feed_items<'a>(
     Ok(())
 }
 
-pub async fn fetch_items_task(pool: PgConnectionPool) -> Result<(), Error> {
-    let conn = pool.get()
-        .map_err(fill_err!("Error getting connection from pool"))?;
+pub async fn fetch_items_task(conn: PooledPgConnection) -> Result<(), Error> {
     let feeds = data::load_feeds(&conn)
         .map_err(fill_err!("Error loading feeds"))?;
     let client = Client::new();

@@ -96,8 +96,9 @@ pub async fn serve(
         .and(warp::query::<Vec<(String, String)>>())
         .and_then(accept_refresh)
         .untuple_one()
-        .and_then(move || {
-            fetch::fetch_items_task(pool.clone())
+        .and(connect_db(pool.clone()))
+        .and_then(move |conn| {
+            fetch::fetch_items_task(conn)
                 .map_ok(|_| warp::reply())
                 .map_err(|err| warp::reject::custom(err))
         });
