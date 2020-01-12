@@ -1,14 +1,6 @@
-use atom_syndication::{Content, Entry as AtomEntry, Link, Person};
-use atom_syndication::FromXml;
+use atom_syndication::{Entry as AtomEntry};
 use chrono::{DateTime, FixedOffset};
-use rss::{Guid, Item as RssItem};
-use rss::ViaXml;
-use xml::Element;
-
-use parser::FeedParseError;
-
-const FEEDBURNER_NS: &str = "http://rssnamespace.org/feedburner/ext/1.0";
-const CONTENT_NS: &str = "http://purl.org/rss/1.0/modules/content/";
+use rss::{Item as RssItem};
 
 pub struct Entry {
     pub title: String,
@@ -20,101 +12,83 @@ pub struct Entry {
 }
 
 impl Entry {
-    pub(crate) fn from_rss_element(elem: Element)
-    -> Result<Entry, FeedParseError> {
-        let orig_link = elem
-            .get_child("origLink", Some(FEEDBURNER_NS))
-            .map(Element::content_str);
+    pub(crate) fn from_rss(item: &RssItem) -> Entry {
+        let title = item.title()
+            .map(str::trim)
+            .map(str::to_owned)
+            .unwrap_or(String::new());
 
-        let encoded_content = elem
-            .get_child("encoded", Some(CONTENT_NS))
-            .map(Element::content_str);
+        let content = item.content()
+            .or(item.description())
+            .map(str::trim)
+            .map(str::to_owned)
+            .unwrap_or(String::new());
 
-        let item = RssItem::from_xml(elem).map_err(FeedParseError::Rss)?;
+        let orig_link = item.extensions()
+            .get("feedburner")
+            .and_then(|ext| ext.get("origLink"))
+            .and_then(|exts| exts.first())
+            .and_then(|ext| ext.value());
 
-        let mut entry = Entry::from_rss(item);
-        // If there was an original link, use it instead
-        entry.link = orig_link.or(entry.link);
-        entry.content = encoded_content.unwrap_or(entry.content);
-        Ok(entry)
+        let link = orig_link
+            .or(item.link())
+            .or_else(|| {
+                item.guid().and_then(|id| {
+                    if id.is_permalink() { Some(id.value()) }
+                    else { None }
+                })
+            })
+            .map(str::to_owned);
+
+        let published = item.pub_date()
+            .and_then(|s| DateTime::parse_from_rfc2822(s).ok());
+
+        let authors = item.author()
+            .map(str::to_owned)
+            .map_or(Vec::new(), |s| vec![s]);
+
+        let id = item.guid()
+            .map(|id| id.value().to_owned());
+
+        Entry { title, content, link, published, authors, id }
     }
 
-    fn from_rss(item: RssItem) -> Entry {
-        fn maybe_guid_link(id: &Guid) -> Option<String> {
-            if id.is_perma_link { Some(id.value.clone()) } else { None }
-        }
+    pub(crate) fn from_atom(entry: &AtomEntry) -> Entry {
+        let title = entry.title()
+            .trim()
+            .to_owned();
 
-        let RssItem { title, link, description, author, guid, pub_date, .. } = item;
+        let content = entry.content()
+            .and_then(|content| content.value())
+            .or(entry.summary())
+            .map(str::trim)
+            .map(str::to_owned)
+            .unwrap_or(String::new());
 
-        let link = link.or_else(|| guid.as_ref().and_then(maybe_guid_link));
-        let published = pub_date.and_then(|s| DateTime::parse_from_rfc2822(&s).ok());
-        let authors = author.map_or(Vec::new(), |s| vec![s]);
-        let id = guid.map(|id| id.value);
+        let link = entry.links()
+            .iter().filter(|link| link.rel() == "alternate").next()
+            .or(entry.links().first())
+            .map(|link| link.href())
+            .map(str::to_owned);
 
-        Entry {
-            title: title.unwrap_or(String::new()),
-            content: description.unwrap_or(String::new()),
-            link: link,
-            published: published,
-            authors: authors,
-            id: id,
-        }
-    }
+        let published = entry.published()
+            .unwrap_or(entry.updated())
+            .clone();
+        let published = Some(published);
 
-    pub(crate) fn from_atom_element(elem: Element)
-    -> Result<Entry, FeedParseError> {
-        let entry = AtomEntry::from_xml(&elem).map_err(FeedParseError::Atom)?;
-
-        let entry = Entry::from_atom(entry);
-        Ok(entry)
-    }
-
-    fn from_atom(entry: AtomEntry) -> Entry {
-        fn is_alt_link(link: &Link) -> bool {
-            link.rel.as_ref().map_or(true, |rel| rel == "alternate")
-        }
-
-        fn author_string_from_person(author: Person) -> String {
-            use std::fmt::Write;
-
-            let Person { mut name, email, .. } = author;
-            if let Some(email) = email {
-                write!(&mut name, " ({})", email).unwrap();
-            }
-            name
-        }
-
-        let AtomEntry { id, title, updated, published, links, authors, summary, content, ..} = entry;
-
-        let content = content.map(|content| match content {
-            Content::Text(s) => s,
-            Content::Html(s) => s,
-            Content::Xhtml(e) => e.to_string(),
-        }).or(summary).unwrap_or(String::new());
-
-        let alt_link_pos = links.iter().position(is_alt_link);
-        let link = if let Some(pos) = alt_link_pos {
-            let mut links = links;
-            Some(links.swap_remove(pos))
-        } else {
-            links.into_iter().next()
-        };
-
-        let published = published
-            .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-            .or_else(|| DateTime::parse_from_rfc3339(&updated).ok());
-
-        let authors = authors.into_iter()
-            .map(author_string_from_person)
+        let authors = entry.authors().iter()
+            .map(|author| {
+                if let Some(email) = author.email() {
+                    format!("{} ({})", author.name(), email)
+                } else {
+                    author.name().to_owned()
+                }
+            })
             .collect();
 
-        Entry {
-            title: title,
-            content: content,
-            link: link.map(|link| link.href),
-            published: published,
-            authors: authors,
-            id: Some(id),
-        }
+        let id = entry.id().to_owned();
+        let id = Some(id);
+
+        Entry { title, content, link, published, authors, id }
     }
 }

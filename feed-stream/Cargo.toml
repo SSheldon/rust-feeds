@@ -5,6 +5,5 @@ authors = ["Steven Sheldon"]
 
 [dependencies]
 chrono = "0.4"
-RustyXML = "0.1"
-atom_syndication = { path = "../atom" }
-rss = { path = "../rss" }
+atom_syndication = { git = "https://github.com/rust-syndication/atom" }
+rss = { git = "https://github.com/rust-syndication/rss" }

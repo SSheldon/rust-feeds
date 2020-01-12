@@ -1,151 +1,73 @@
 use std::error::Error;
 use std::fmt;
-use std::io::{Read, self};
+use std::slice;
 
-use rss::ReadError;
-use xml::{
-    BuilderError, Element, ElementBuilder,
-    EndTag, Event, Parser, ParserError, StartTag
-};
+use atom_syndication as atom;
+use rss;
 
 use entry::Entry;
-use str_buf_reader::StrBufReader;
 
-#[derive(Clone, Copy)]
-enum ParserState {
-    None,
-    InRss,
-    InChannel,
-    InFeed,
+pub enum Feed {
+    Rss(rss::Channel),
+    Atom(atom::Feed),
 }
 
-pub struct FeedParser<R> {
-    reader: StrBufReader<R>,
-    parser: Parser,
-    builder: ElementBuilder,
-    state: ParserState,
-}
-
-impl<R: Read> FeedParser<R> {
-    pub fn new(source: R) -> FeedParser<R> {
-        FeedParser {
-            reader: StrBufReader::with_capacity(4096, source),
-            parser: Parser::new(),
-            builder: ElementBuilder::new(),
-            state: ParserState::None,
+impl Feed {
+    pub fn parse(source: &[u8]) -> Result<Feed, FeedParseError> {
+        match rss::Channel::read_from(source) {
+            Ok(channel) => Ok(Feed::Rss(channel)),
+            Err(rss::Error::InvalidStartTag) => {
+                atom::Feed::read_from(source)
+                    .map(Feed::Atom)
+                    .map_err(FeedParseError::Atom)
+            }
+            Err(err) => Err(FeedParseError::Rss(err)),
         }
     }
 
-    fn intercept_event(&mut self, event: &Event) -> bool {
-        match (self.state, event) {
-            (ParserState::None, &Event::ElementStart(StartTag { ref name, .. }))
-                    if name.eq_ignore_ascii_case("rss") => {
-                self.state = ParserState::InRss;
-                true
+    pub fn entries<'a>(&'a self) -> impl Iterator<Item=Entry> + 'a {
+        match *self {
+            Feed::Rss(ref channel) => {
+                Entries::Rss(channel.items().iter())
             }
-            (ParserState::None, &Event::ElementStart(StartTag { ref name, .. }))
-                    if name.eq_ignore_ascii_case("feed") => {
-                self.state = ParserState::InFeed;
-                true
-            }
-            (ParserState::InRss, &Event::ElementStart(StartTag { ref name, .. }))
-                    if name.eq_ignore_ascii_case("channel") => {
-                self.state = ParserState::InChannel;
-                true
-            }
-            (ParserState::InRss, &Event::ElementEnd(EndTag { ref name, .. }))
-                    if name.eq_ignore_ascii_case("rss") => {
-                self.state = ParserState::None;
-                true
-            }
-            (ParserState::InChannel, &Event::ElementEnd(EndTag { ref name, .. }))
-                    if name.eq_ignore_ascii_case("channel") => {
-                self.state = ParserState::InRss;
-                true
-            }
-            (ParserState::InFeed, &Event::ElementEnd(EndTag { ref name, .. }))
-                    if name.eq_ignore_ascii_case("feed") => {
-                self.state = ParserState::None;
-                true
-            }
-            // Swallow all events until we're in a channel/feed
-            (ParserState::None, _) | (ParserState::InRss, _) => true,
-            _ => false
-        }
-    }
-
-    fn next_event(&mut self) -> Result<Option<Event>, FeedParseError> {
-        loop {
-            if let Some(event) = self.parser.next() {
-                return event
-                    .map(|event| Some(event))
-                    .map_err(|err| FeedParseError::Xml(err));
-            } else if let Some(s) = self.reader.next_str()? {
-                self.parser.feed_str(s);
-            } else {
-                return Ok(None);
+            Feed::Atom(ref feed) => {
+                Entries::Atom(feed.entries().iter())
             }
         }
-    }
-
-    fn next_element(&mut self) -> Result<Option<Element>, FeedParseError> {
-        while let Some(event) = self.next_event()? {
-            if self.intercept_event(&event) { continue }
-
-            if let Some(elem) = self.builder.handle_event(Ok(event)) {
-                return elem
-                    .map(|elem| Some(elem))
-                    .map_err(|err| FeedParseError::Dom(err));
-            }
-        }
-        Ok(None)
-    }
-
-    fn next_entry(&mut self) -> Result<Option<Entry>, FeedParseError> {
-        while let Some(elem) = self.next_element()? {
-            let entry = match self.state {
-                ParserState::InChannel if elem.name.eq_ignore_ascii_case("item") =>
-                    Entry::from_rss_element(elem)?,
-                ParserState::InFeed if elem.name.eq_ignore_ascii_case("entry") =>
-                    Entry::from_atom_element(elem)?,
-                _ => continue,
-            };
-            return Ok(Some(entry));
-        }
-        Ok(None)
     }
 }
 
-impl<R: Read> Iterator for FeedParser<R> {
-    type Item = Result<Entry, FeedParseError>;
+enum Entries<'a> {
+    Rss(slice::Iter<'a, rss::Item>),
+    Atom(slice::Iter<'a, atom::Entry>),
+}
 
-    fn next(&mut self) -> Option<Result<Entry, FeedParseError>> {
-        match self.next_entry() {
-            Ok(Some(elem)) => Some(Ok(elem)),
-            Ok(None) => None,
-            Err(err) => Some(Err(err)),
+impl<'a> Iterator for Entries<'a> {
+    type Item = Entry;
+
+    fn next(&mut self) -> Option<Entry> {
+        match self {
+            Entries::Rss(items) => {
+                items.next().map(Entry::from_rss)
+            }
+            Entries::Atom(entries) => {
+                entries.next().map(Entry::from_atom)
+            }
         }
     }
 }
 
 #[derive(Debug)]
 pub enum FeedParseError {
-    Io(io::Error),
-    Xml(ParserError),
-    Dom(BuilderError),
-    Rss(ReadError),
-    Atom(&'static str),
+    Rss(rss::Error),
+    Atom(atom::Error),
 }
 
 impl fmt::Display for FeedParseError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use FeedParseError::*;
         match self {
-            Io(err) => fmt::Display::fmt(err, f),
-            Xml(err) => fmt::Display::fmt(err, f),
-            Dom(err) => fmt::Display::fmt(err, f),
-            Rss(err) => fmt::Display::fmt(err, f),
-            Atom(err) => fmt::Display::fmt(err, f),
+            FeedParseError::Rss(err) => fmt::Display::fmt(err, f),
+            FeedParseError::Atom(err) => fmt::Display::fmt(err, f),
         }
     }
 }
@@ -153,27 +75,17 @@ impl fmt::Display for FeedParseError {
 
 impl Error for FeedParseError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
-        use FeedParseError::*;
         match self {
-            Io(err) => Some(err),
-            Xml(err) => Some(err),
-            Dom(err) => Some(err),
-            Rss(err) => Some(err),
-            Atom(_) => None,
+            FeedParseError::Rss(err) => Some(err),
+            FeedParseError::Atom(err) => Some(err),
         }
-    }
-}
-
-impl From<io::Error> for FeedParseError {
-    fn from(err: io::Error) -> FeedParseError {
-        FeedParseError::Io(err)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use chrono::{TimeZone, Utc};
-    use super::FeedParser;
+    use super::Feed;
 
     static RSS_STR: &'static str = r#"
 <?xml version="1.0" encoding="UTF-8"?>
@@ -207,27 +119,29 @@ mod tests {
 
     #[test]
     fn test_rss_stream() {
-        let mut parser = FeedParser::new(RSS_STR.as_bytes());
+        let feed = Feed::parse(RSS_STR.as_bytes()).unwrap();
+        let mut entries = feed.entries();
 
-        let entry = parser.next().unwrap().unwrap();
+        let entry = entries.next().unwrap();
         assert_eq!(entry.title, "Ford hires Elon Musk as CEO");
         assert_eq!(entry.content, "In an unprecedented move, Ford hires Elon Musk.");
         let expected_date = Utc.ymd(2019, 4, 1).and_hms(7, 30, 0);
         assert_eq!(entry.published.unwrap(), expected_date);
 
-        assert!(parser.next().is_none());
+        assert!(entries.next().is_none());
     }
 
     #[test]
     fn test_atom_stream() {
-        let mut parser = FeedParser::new(ATOM_STR.as_bytes());
+        let feed = Feed::parse(ATOM_STR.as_bytes()).unwrap();
+        let mut entries = feed.entries();
 
-        let entry = parser.next().unwrap().unwrap();
+        let entry = entries.next().unwrap();
         assert_eq!(entry.title, "Ford hires Elon Musk as CEO");
         assert_eq!(entry.id.unwrap(), "urn:uuid:4ae8550b-2987-49fa-9f8c-54c180c418ac");
         let expected_date = Utc.ymd(2019, 4, 1).and_hms(7, 30, 0);
         assert_eq!(entry.published.unwrap(), expected_date);
 
-        assert!(parser.next().is_none());
+        assert!(entries.next().is_none());
     }
 }

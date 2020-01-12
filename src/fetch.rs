@@ -6,7 +6,7 @@ use futures::future;
 use reqwest;
 use reqwest::Client;
 
-use feed_stream::{Entry, FeedParser};
+use feed_stream::{Entry, Feed as ParsedFeed};
 
 use crate::config::PooledPgConnection;
 use crate::data;
@@ -31,17 +31,17 @@ fn parse_new_entries(
     feed: &Feed,
     conn: &PgConnection,
 ) -> DataResult<Vec<Entry>> {
-    let parser = FeedParser::new(response);
-
     let mut entries = Vec::new();
-    for entry in parser {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(err) => {
-                println!("Error parsing {}: {}", feed.url, err);
-                break;
-            }
-        };
+
+    let parsed_feed = match ParsedFeed::parse(response) {
+        Ok(parsed_feed) => parsed_feed,
+        Err(err) => {
+            println!("Error parsing {}: {}", feed.url, err);
+            return Ok(entries);
+        }
+    };
+
+    for entry in parsed_feed.entries() {
         let exists = match entry.link.as_ref() {
             Some(link) => {
                 data::item_already_exists(link, feed, conn)
