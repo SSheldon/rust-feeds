@@ -6,7 +6,7 @@ use futures::future;
 use reqwest;
 use reqwest::Client;
 
-use crate::config::PooledPgConnection;
+use crate::config::MaybePooled;
 use crate::data;
 use crate::error::Error;
 use crate::models::feed::Feed;
@@ -108,7 +108,7 @@ fn insert_new_feed_items<'a>(
     Ok(())
 }
 
-pub async fn fetch_items_task(conn: PooledPgConnection) -> DataResult<()> {
+pub async fn fetch_items_task(conn: MaybePooled<PgConnection>) -> DataResult<()> {
     let feeds = data::load_feeds(&conn)
         .map_err(fill_err!("Error loading feeds"))?;
     let client = Client::new();

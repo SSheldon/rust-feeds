@@ -9,7 +9,7 @@ use fever_api::{
     Request as ApiRequest,
 };
 
-use crate::config::{PgConnectionPool, PooledPgConnection};
+use crate::config::{MaybePooled, PgConnectionPool, PooledPgConnection};
 use crate::error::Error;
 use crate::fetch;
 use crate::handling;
@@ -99,7 +99,7 @@ pub async fn serve(
         .untuple_one()
         .and(connect_db(pool.clone()))
         .and_then(move |conn| {
-            fetch::fetch_items_task(conn)
+            fetch::fetch_items_task(MaybePooled::Pooled(conn))
                 .map_ok(|_| warp::reply())
                 .map_err(|err| warp::reject::custom(err))
         });

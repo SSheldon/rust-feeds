@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use diesel::r2d2;
 use diesel::Connection;
 use diesel::pg::PgConnection;
@@ -10,6 +12,22 @@ use crate::serve;
 pub type PgConnectionManager = r2d2::ConnectionManager<PgConnection>;
 pub type PgConnectionPool = r2d2::Pool<PgConnectionManager>;
 pub type PooledPgConnection = r2d2::PooledConnection<PgConnectionManager>;
+
+pub enum MaybePooled<T: 'static + Connection> {
+    Pooled(r2d2::PooledConnection<r2d2::ConnectionManager<T>>),
+    Owned(T),
+}
+
+impl<T: 'static + Connection> Deref for MaybePooled<T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        match self {
+            MaybePooled::Pooled(conn) => conn,
+            MaybePooled::Owned(conn) => conn,
+        }
+    }
+}
 
 pub struct Feeds {
     database_url: String,
@@ -38,9 +56,8 @@ impl Feeds {
     }
 
     pub fn fetch(self) {
-        let pool = self.establish_connection_pool();
-        let conn = pool.get()
-            .expect("Error getting connection from pool");
+        let conn = self.establish_connection();
+        let conn = MaybePooled::Owned(conn);
         let mut rt = Runtime::new()
             .expect("Error creating runtime");
         let _ = rt.block_on(fetch::fetch_items_task(conn));
