@@ -1,9 +1,0 @@
-[package]
-name = "feed-stream"
-version = "0.0.0"
-authors = ["Steven Sheldon"]
-
-[dependencies]
-chrono = "0.4"
-atom_syndication = { git = "https://github.com/rust-syndication/atom" }
-rss = { git = "https://github.com/rust-syndication/rss" }

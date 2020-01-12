@@ -5,7 +5,7 @@ use std::slice;
 use atom_syndication as atom;
 use rss;
 
-use entry::Entry;
+use super::entry::Entry;
 
 pub enum Feed {
     Rss(rss::Channel),

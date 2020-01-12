@@ -8,6 +8,7 @@ mod error;
 mod fetch;
 mod handling;
 mod models;
+mod parse;
 mod schema;
 mod serve;
 

@@ -12,7 +12,7 @@ pub struct Entry {
 }
 
 impl Entry {
-    pub(crate) fn from_rss(item: &RssItem) -> Entry {
+    pub(super) fn from_rss(item: &RssItem) -> Entry {
         let title = item.title()
             .map(str::trim)
             .map(str::to_owned)
@@ -53,7 +53,7 @@ impl Entry {
         Entry { title, content, link, published, authors, id }
     }
 
-    pub(crate) fn from_atom(entry: &AtomEntry) -> Entry {
+    pub(super) fn from_atom(entry: &AtomEntry) -> Entry {
         let title = entry.title()
             .trim()
             .to_owned();

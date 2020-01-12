@@ -6,13 +6,12 @@ use futures::future;
 use reqwest;
 use reqwest::Client;
 
-use feed_stream::{Entry, Feed as ParsedFeed};
-
 use crate::config::PooledPgConnection;
 use crate::data;
 use crate::error::Error;
 use crate::models::feed::Feed;
 use crate::models::item::NewItem;
+use crate::parse::{Entry, Feed as ParsedFeed};
 
 type DataResult<T> = Result<T, Error<diesel::result::Error>>;
 
