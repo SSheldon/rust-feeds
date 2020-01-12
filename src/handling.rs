@@ -167,6 +167,18 @@ fn update_item_saved(id: u32, is_saved: bool, conn: &PgConnection)
     load_saved_item_ids(conn)
 }
 
+fn mark_feed_read(id: u32, conn: &PgConnection)
+-> DataResult<ApiResponsePayload> {
+    use crate::schema::item;
+
+    diesel::update(item::table.filter(item::feed_id.eq(id as i32)))
+        .set(item::is_read.eq(true))
+        .execute(conn)
+        .map_err(fill_err!("Error marking feed read"))?;
+
+    load_unread_item_ids(conn)
+}
+
 pub fn handle_api_request(
     request: &ApiRequest,
     expected_key: Option<&ApiKey>,
@@ -205,6 +217,7 @@ pub fn handle_api_request(
         ApiRequestType::MarkItemUnread(id) => update_item_read(id, false, conn)?,
         ApiRequestType::MarkItemSaved(id) => update_item_saved(id, true, conn)?,
         ApiRequestType::MarkItemUnsaved(id) => update_item_saved(id, false, conn)?,
+        ApiRequestType::MarkFeedRead(id, _) => mark_feed_read(id, conn)?,
         _ => ApiResponsePayload::None {},
     };
 
