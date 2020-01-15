@@ -26,13 +26,21 @@ fn item_to_insert_for_entry<'a>(entry: &'a Entry, feed: &Feed) -> NewItem<'a> {
 }
 
 fn parse_new_entries(
-    response: &[u8],
+    response: Result<Bytes, reqwest::Error>,
     feed: &Feed,
     conn: &PgConnection,
 ) -> DataResult<Vec<Entry>> {
     let mut entries = Vec::new();
 
-    let parsed_feed = match ParsedFeed::parse(response) {
+    let response = match response {
+        Ok(response) => response,
+        Err(err) => {
+            println!("Error fetching from {}: {}", feed.url, err);
+            return Ok(entries);
+        }
+    };
+
+    let parsed_feed = match ParsedFeed::parse(&response) {
         Ok(parsed_feed) => parsed_feed,
         Err(err) => {
             println!("Error parsing {}: {}", feed.url, err);
@@ -55,6 +63,8 @@ fn parse_new_entries(
         }
         entries.push(entry);
     }
+
+    println!("Found {} new items for {}", entries.len(), feed.url);
     Ok(entries)
 }
 
@@ -74,31 +84,19 @@ fn insert_new_feed_items<'a>(
 ) -> DataResult<()> {
     use crate::schema::item;
 
-    let feed_entries: Vec<_> = iter
-        .filter_map(|(feed, response)| {
-            match response {
-                Ok(response) => Some((feed, response)),
-                Err(err) => {
-                    println!("Error fetching from {}: {}", feed.url, err);
-                    None
-                }
-            }
-        })
-        .map(|(feed, response)| {
-            parse_new_entries(&response, feed, conn)
-                .map(|entries| {
-                    println!("Found {} new items for {}", entries.len(), feed.url);
-                    (feed, entries)
-                })
-        })
-        .collect::<Result<_, _>>()?;
-
-    let mut new_items = Vec::new();
-    for &(feed, ref entries) in feed_entries.iter() {
-        for entry in entries.iter().rev() {
-            new_items.push(item_to_insert_for_entry(entry, feed));
-        }
+    let mut new_entries = Vec::new();
+    for (feed, response) in iter {
+        new_entries.extend(
+            parse_new_entries(response, feed, conn)?
+                .into_iter()
+                .rev()
+                .map(|entry| (feed, entry))
+        );
     }
+
+    let new_items: Vec<_> = new_entries.iter()
+        .map(|&(feed, ref entry)| item_to_insert_for_entry(entry, feed))
+        .collect();
 
     diesel::insert_into(item::table)
         .values(&new_items)
