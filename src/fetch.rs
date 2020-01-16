@@ -88,7 +88,7 @@ fn insert_items<'a>(
 
     let new_items: Vec<_> = iter
         .flat_map(|(feed, entries)| {
-            entries.iter().map(move |entry| {
+            entries.iter().rev().map(move |entry| {
                 item_to_insert_for_entry(entry, feed)
             })
         })
