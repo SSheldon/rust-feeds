@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use bytes::Bytes;
 use diesel;
 use diesel::prelude::*;
@@ -81,17 +79,13 @@ async fn fetch_feed(feed: &Feed, client: &Client)
 }
 
 fn insert_items<'a>(
-    iter: impl Iterator<Item=(&'a Feed, &'a [Entry])>,
+    iter: impl Iterator<Item=(&'a Feed, &'a Entry)>,
     conn: &'a PgConnection,
 ) -> DataResult<()> {
     use crate::schema::item;
 
     let new_items: Vec<_> = iter
-        .flat_map(|(feed, entries)| {
-            entries.iter().rev().map(move |entry| {
-                item_to_insert_for_entry(entry, feed)
-            })
-        })
+        .map(|(feed, entry)| item_to_insert_for_entry(entry, feed))
         .collect();
 
     diesel::insert_into(item::table)
@@ -117,7 +111,11 @@ pub async fn fetch_items_task(conn: MaybePooled<PgConnection>) -> DataResult<()>
             .collect::<Result<_, _>>()?;
 
         let iter = feeds.iter()
-            .zip(new_entries.iter().map(Deref::deref));
+            .zip(&new_entries)
+            .flat_map(|(feed, entries)| {
+                // Reverse order so older entries get inserted first
+                entries.iter().rev().map(move |entry| (feed, entry))
+            });
         insert_items(iter, &conn)?;
     }
 
