@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use bytes::Bytes;
 use diesel;
 use diesel::prelude::*;
@@ -78,24 +80,18 @@ async fn fetch_feed(feed: &Feed, client: &Client)
     response.bytes().await
 }
 
-fn insert_new_feed_items<'a>(
-    iter: impl Iterator<Item=(&'a Feed, Result<Bytes, reqwest::Error>)>,
+fn insert_items<'a>(
+    iter: impl Iterator<Item=(&'a Feed, &'a [Entry])>,
     conn: &'a PgConnection,
 ) -> DataResult<()> {
     use crate::schema::item;
 
-    let mut new_entries = Vec::new();
-    for (feed, response) in iter {
-        new_entries.extend(
-            parse_new_entries(response, feed, conn)?
-                .into_iter()
-                .rev()
-                .map(|entry| (feed, entry))
-        );
-    }
-
-    let new_items: Vec<_> = new_entries.iter()
-        .map(|&(feed, ref entry)| item_to_insert_for_entry(entry, feed))
+    let new_items: Vec<_> = iter
+        .flat_map(|(feed, entries)| {
+            entries.iter().map(move |entry| {
+                item_to_insert_for_entry(entry, feed)
+            })
+        })
         .collect();
 
     diesel::insert_into(item::table)
@@ -114,8 +110,15 @@ pub async fn fetch_items_task(conn: MaybePooled<PgConnection>) -> DataResult<()>
     for feeds in feeds.chunks(10) {
         let responses = feeds.iter().map(|feed| fetch_feed(feed, &client));
         let responses = future::join_all(responses).await;
-        let iter = feeds.iter().zip(responses);
-        insert_new_feed_items(iter, &conn)?;
+
+        let new_entries: Vec<_> = feeds.iter()
+            .zip(responses)
+            .map(|(feed, response)| parse_new_entries(response, feed, &conn))
+            .collect::<Result<_, _>>()?;
+
+        let iter = feeds.iter()
+            .zip(new_entries.iter().map(Deref::deref));
+        insert_items(iter, &conn)?;
     }
 
     Ok(())
