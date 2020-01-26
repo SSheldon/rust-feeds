@@ -25,6 +25,14 @@ fn main() {
         .setting(clap::AppSettings::SubcommandRequired)
         .subcommand(clap::SubCommand::with_name("serve"))
         .subcommand(clap::SubCommand::with_name("fetch"))
+        .subcommand(
+            clap::SubCommand::with_name("subscribe")
+                .arg(
+                    clap::Arg::with_name("FEED_URL")
+                        .required(true)
+                        .takes_value(true)
+                )
+        )
         .subcommand(clap::SubCommand::with_name("prune"))
         .get_matches();
 
@@ -34,8 +42,8 @@ fn main() {
         .map(Feeds::new)
         .expect("DATABASE_URL must be set");
 
-    match matches.subcommand_name() {
-        Some("serve") => {
+    match matches.subcommand() {
+        ("serve", _) => {
             let port = env::var("PORT").ok()
                 .and_then(|s| s.parse().ok())
                 .unwrap_or(3000);
@@ -47,13 +55,20 @@ fn main() {
             let mut rt = Runtime::new()
                 .expect("Error creating runtime");
             let _ = rt.block_on(feeds.serve(port, creds));
-        },
-        Some("fetch") => {
+        }
+        ("fetch", _) => {
             let mut rt = Runtime::new()
                 .expect("Error creating runtime");
             let _ = rt.block_on(feeds.fetch());
         }
-        Some("prune") => {
+        ("subscribe", Some(subscribe_matches)) => {
+            let url = subscribe_matches.value_of("FEED_URL")
+                .expect("FEED_URL was not provided");
+            let mut rt = Runtime::new()
+                .expect("Error creating runtime");
+            let _ = rt.block_on(feeds.subscribe(url));
+        }
+        ("prune", _) => {
             feeds.prune();
         }
         _ => unreachable!(),
