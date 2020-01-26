@@ -96,7 +96,7 @@ fn insert_items<'a>(
     Ok(())
 }
 
-pub async fn fetch_items_task(conn: MaybePooled<PgConnection>) -> DataResult<()> {
+pub async fn fetch_items(conn: MaybePooled<PgConnection>) -> DataResult<()> {
     let feeds = data::load_feeds(&conn)
         .map_err(fill_err!("Error loading feeds"))?;
     let client = Client::new();

@@ -55,7 +55,7 @@ impl Feeds {
     pub async fn fetch(self) {
         let conn = self.establish_connection();
         let conn = MaybePooled::Owned(conn);
-        fetch::fetch_items_task(conn).await
+        fetch::fetch_items(conn).await
             .expect("Error fetching feeds");
     }
 

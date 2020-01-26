@@ -99,7 +99,7 @@ pub async fn serve(
         .untuple_one()
         .and(connect_db(pool.clone()))
         .and_then(move |conn| {
-            fetch::fetch_items_task(MaybePooled::Pooled(conn))
+            fetch::fetch_items(MaybePooled::Pooled(conn))
                 .map_ok(|_| warp::reply())
                 .map_err(|err| warp::reject::custom(err))
         });
