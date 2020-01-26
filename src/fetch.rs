@@ -68,10 +68,10 @@ fn parse_new_entries(
     Ok(entries)
 }
 
-async fn fetch_feed(feed: &Feed, client: &Client)
+async fn fetch_feed(url: &str, client: &Client)
 -> Result<Bytes, reqwest::Error> {
-    println!("Fetching items from {}...", feed.url);
-    let response = client.get(&feed.url)
+    println!("Fetching items from {}...", url);
+    let response = client.get(url)
         .header(reqwest::header::USER_AGENT, "Mozilla/5.0 Gecko")
         .send()
         .await?;
@@ -102,7 +102,7 @@ pub async fn fetch_items(conn: MaybePooled<PgConnection>) -> DataResult<()> {
     let client = Client::new();
 
     for feeds in feeds.chunks(10) {
-        let responses = feeds.iter().map(|feed| fetch_feed(feed, &client));
+        let responses = feeds.iter().map(|feed| fetch_feed(&feed.url, &client));
         let responses = future::join_all(responses).await;
 
         let new_entries: Vec<_> = feeds.iter()
