@@ -59,6 +59,12 @@ impl Feeds {
             .expect("Error fetching feeds");
     }
 
+    pub async fn subscribe(self, url: &str) {
+        let conn = self.establish_connection();
+        fetch::subscribe(url, &conn).await
+            .expect("Error subscribing to feed");
+    }
+
     pub fn prune(self) {
         let conn = self.establish_connection();
         let count = data::prune_read_items(&conn)

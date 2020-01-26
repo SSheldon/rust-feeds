@@ -17,4 +17,5 @@ pub struct Feed {
 pub struct NewFeed<'a> {
     pub url: &'a str,
     pub title: &'a str,
+    pub site_url: Option<&'a str>,
 }

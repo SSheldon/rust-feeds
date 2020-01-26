@@ -25,6 +25,25 @@ impl Feed {
         }
     }
 
+    pub fn title(&self) -> &str {
+        match self {
+            Feed::Rss(channel) => channel.title(),
+            Feed::Atom(feed) => feed.title(),
+        }.trim()
+    }
+
+    pub fn site_url(&self) -> Option<&str> {
+        match self {
+            Feed::Rss(channel) => Some(channel.link()),
+            Feed::Atom(feed) => {
+                feed.links()
+                    .iter().filter(|link| link.rel() == "alternate").next()
+                    .or(feed.links().first())
+                    .map(|link| link.href())
+            }
+        }.map(str::trim)
+    }
+
     pub fn entries<'a>(&'a self) -> impl Iterator<Item=Entry> + 'a {
         match *self {
             Feed::Rss(ref channel) => {
