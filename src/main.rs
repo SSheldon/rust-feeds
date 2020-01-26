@@ -14,6 +14,8 @@ mod serve;
 
 use std::env;
 
+use tokio::runtime::Runtime;
+
 use crate::config::Feeds;
 
 fn main() {
@@ -42,10 +44,14 @@ fn main() {
                 env::var("FEVER_API_PASSWORD").map(|pass| (user, pass))
             }).ok();
 
-            feeds.serve(port, creds);
+            let mut rt = Runtime::new()
+                .expect("Error creating runtime");
+            let _ = rt.block_on(feeds.serve(port, creds));
         },
         Some("fetch") => {
-            feeds.fetch();
+            let mut rt = Runtime::new()
+                .expect("Error creating runtime");
+            let _ = rt.block_on(feeds.fetch());
         }
         Some("prune") => {
             feeds.prune();

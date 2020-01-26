@@ -3,7 +3,6 @@ use std::ops::Deref;
 use diesel::r2d2;
 use diesel::Connection;
 use diesel::pg::PgConnection;
-use tokio::runtime::Runtime;
 
 use crate::data;
 use crate::fetch;
@@ -48,19 +47,16 @@ impl Feeds {
             .expect(&format!("Error connecting to {}", self.database_url))
     }
 
-    pub fn serve(self, port: u16, creds: Option<(String, String)>) {
+    pub async fn serve(self, port: u16, creds: Option<(String, String)>) {
         let pool = self.establish_connection_pool();
-        let mut rt = Runtime::new()
-            .expect("Error creating runtime");
-        let _ = rt.block_on(serve::serve(port, creds, pool));
+        serve::serve(port, creds, pool).await;
     }
 
-    pub fn fetch(self) {
+    pub async fn fetch(self) {
         let conn = self.establish_connection();
         let conn = MaybePooled::Owned(conn);
-        let mut rt = Runtime::new()
-            .expect("Error creating runtime");
-        let _ = rt.block_on(fetch::fetch_items_task(conn));
+        fetch::fetch_items_task(conn).await
+            .expect("Error fetching feeds");
     }
 
     pub fn prune(self) {
