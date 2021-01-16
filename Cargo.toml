@@ -9,7 +9,7 @@ atom_syndication = { version = "0.9", default-features = false }
 bytes = "1.0"
 chrono = "0.4"
 clap = "2.32"
-env_logger = "0.5"
+env_logger = "0.8"
 fever-api = { path = "fever-api" }
 futures = "0.3"
 reqwest = "0.11"
