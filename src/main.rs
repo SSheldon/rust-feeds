@@ -52,19 +52,19 @@ fn main() {
                 env::var("FEVER_API_PASSWORD").map(|pass| (user, pass))
             }).ok();
 
-            let mut rt = Runtime::new()
+            let rt = Runtime::new()
                 .expect("Error creating runtime");
             let _ = rt.block_on(feeds.serve(port, creds));
         }
         ("fetch", _) => {
-            let mut rt = Runtime::new()
+            let rt = Runtime::new()
                 .expect("Error creating runtime");
             let _ = rt.block_on(feeds.fetch());
         }
         ("subscribe", Some(subscribe_matches)) => {
             let url = subscribe_matches.value_of("FEED_URL")
                 .expect("FEED_URL was not provided");
-            let mut rt = Runtime::new()
+            let rt = Runtime::new()
                 .expect("Error creating runtime");
             let _ = rt.block_on(feeds.subscribe(url));
         }
