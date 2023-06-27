@@ -144,7 +144,7 @@ mod tests {
         let entry = entries.next().unwrap();
         assert_eq!(entry.title, "Ford hires Elon Musk as CEO");
         assert_eq!(entry.content, "In an unprecedented move, Ford hires Elon Musk.");
-        let expected_date = Utc.ymd(2019, 4, 1).and_hms(7, 30, 0);
+        let expected_date = Utc.with_ymd_and_hms(2019, 4, 1, 7, 30, 0).unwrap();
         assert_eq!(entry.published.unwrap(), expected_date);
 
         assert!(entries.next().is_none());
@@ -158,7 +158,7 @@ mod tests {
         let entry = entries.next().unwrap();
         assert_eq!(entry.title, "Ford hires Elon Musk as CEO");
         assert_eq!(entry.id.unwrap(), "urn:uuid:4ae8550b-2987-49fa-9f8c-54c180c418ac");
-        let expected_date = Utc.ymd(2019, 4, 1).and_hms(7, 30, 0);
+        let expected_date = Utc.with_ymd_and_hms(2019, 4, 1, 7, 30, 0).unwrap();
         assert_eq!(entry.published.unwrap(), expected_date);
 
         assert!(entries.next().is_none());
