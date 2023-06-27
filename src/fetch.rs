@@ -65,7 +65,8 @@ fn parse_new_entries(
         entries.push(entry);
     }
 
-    println!("Found {} new items for {}", entries.len(), feed.url);
+    println!("Found {} new items of {} for {}",
+        entries.len(), parsed_feed.len(), feed.url);
     Ok(entries)
 }
 

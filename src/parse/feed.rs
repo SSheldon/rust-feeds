@@ -44,6 +44,13 @@ impl Feed {
         }.map(str::trim)
     }
 
+    pub fn len(&self) -> usize {
+        match self {
+            Feed::Rss(channel) => channel.items().len(),
+            Feed::Atom(feed) => feed.entries().len(),
+        }
+    }
+
     pub fn entries<'a>(&'a self) -> impl Iterator<Item=Entry> + 'a {
         match *self {
             Feed::Rss(ref channel) => {
