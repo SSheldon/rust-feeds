@@ -60,7 +60,7 @@ impl Entry {
 
         let content = entry.content()
             .and_then(|content| content.value())
-            .or(entry.summary())
+            .or(entry.summary().map(|summary| summary.as_str()))
             .map(str::trim)
             .map(str::to_owned)
             .unwrap_or(String::new());
