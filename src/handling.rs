@@ -213,6 +213,7 @@ pub fn handle_api_request(
             load_items(ItemsQuery::ForIds(&ids), conn)?
         }
         ApiRequestType::UnreadItems => load_unread_item_ids(conn)?,
+        ApiRequestType::SavedItems => load_saved_item_ids(conn)?,
         ApiRequestType::MarkItemRead(id) => update_item_read(id, true, conn)?,
         ApiRequestType::MarkItemUnread(id) => update_item_read(id, false, conn)?,
         ApiRequestType::MarkItemSaved(id) => update_item_saved(id, true, conn)?,
