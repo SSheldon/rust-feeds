@@ -10,10 +10,10 @@ pub struct Key([u8; 16]);
 impl Key {
     pub fn new(username: &str, password: &str) -> Key {
         let mut hash = Md5::new();
-        hash.input(username.as_bytes());
-        hash.input(":".as_bytes());
-        hash.input(password.as_bytes());
-        Key(hash.fixed_result().into())
+        hash.update(username.as_bytes());
+        hash.update(":".as_bytes());
+        hash.update(password.as_bytes());
+        Key(hash.finalize_fixed().into())
     }
 }
 

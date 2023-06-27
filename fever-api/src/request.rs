@@ -42,7 +42,7 @@ impl RequestType {
                 let id = body_params.get("id").and_then(|v| v.parse().ok());
                 let before = body_params.get("before")
                     .and_then(|v| v.parse().ok())
-                    .map(|t| NaiveDateTime::from_timestamp(t, 0));
+                    .and_then(|t| NaiveDateTime::from_timestamp_opt(t, 0));
                 match (mark, mark_as) {
                     (None, None) => Some(RequestType::None),
                     (Some("item"), Some("read")) =>
