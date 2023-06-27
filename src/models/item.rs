@@ -4,8 +4,8 @@ use crate::schema::item;
 use super::feed::Feed;
 
 #[derive(Identifiable, Queryable, Associations)]
-#[belongs_to(Feed)]
-#[table_name = "item"]
+#[diesel(belongs_to(Feed))]
+#[diesel(table_name = item)]
 pub struct Item {
     pub id: i32,
     pub url: String,
@@ -18,7 +18,7 @@ pub struct Item {
 }
 
 #[derive(Insertable)]
-#[table_name="item"]
+#[diesel(table_name = item)]
 pub struct NewItem<'a> {
     pub url: &'a str,
     pub title: &'a str,

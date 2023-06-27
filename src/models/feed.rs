@@ -2,8 +2,8 @@ use crate::schema::feed;
 use super::group::Group;
 
 #[derive(Identifiable, Queryable, Associations)]
-#[belongs_to(Group)]
-#[table_name = "feed"]
+#[diesel(belongs_to(Group))]
+#[diesel(table_name = feed)]
 pub struct Feed {
     pub id: i32,
     pub url: String,
@@ -13,7 +13,7 @@ pub struct Feed {
 }
 
 #[derive(Insertable)]
-#[table_name="feed"]
+#[diesel(table_name = feed)]
 pub struct NewFeed<'a> {
     pub url: &'a str,
     pub title: &'a str,

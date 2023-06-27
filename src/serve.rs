@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use futures::{TryFutureExt, future};
+use futures::future;
 use warp::{Filter, self};
 use warp::http::StatusCode;
 
@@ -9,7 +9,7 @@ use fever_api::{
     Request as ApiRequest,
 };
 
-use crate::config::{MaybePooled, PgConnectionPool, PooledPgConnection};
+use crate::config::{PgConnectionPool, PooledPgConnection};
 use crate::error::Error;
 use crate::fetch;
 use crate::handling;
@@ -63,12 +63,20 @@ async fn accept_refresh(
     }
 }
 
+async fn handle_refresh(
+    mut conn: PooledPgConnection,
+) -> Result<impl warp::Reply, warp::Rejection> {
+    fetch::fetch_items(&mut conn).await
+        .map(|_| warp::reply())
+        .map_err(|err| warp::reject::custom(err))
+}
+
 async fn handle_request(
     request: ApiRequest,
     key: Option<ApiKey>,
-    conn: PooledPgConnection,
+    mut conn: PooledPgConnection,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    let response = handling::handle_api_request(&request, key.as_ref(), &conn)
+    let response = handling::handle_api_request(&request, key.as_ref(), &mut conn)
         .map_err(|err| warp::reject::custom(err))?;
     let status = if response.auth {
         StatusCode::OK
@@ -98,11 +106,7 @@ pub async fn serve(
         .and_then(accept_refresh)
         .untuple_one()
         .and(connect_db(pool.clone()))
-        .and_then(move |conn| {
-            fetch::fetch_items(MaybePooled::Pooled(conn))
-                .map_ok(|_| warp::reply())
-                .map_err(|err| warp::reject::custom(err))
-        });
+        .and_then(handle_refresh);
 
     let route = api.or(refresh).with(warp::log("feeds"));
 

@@ -67,7 +67,7 @@ fn format_item(item: DbItem) -> fever_api::Item {
     }
 }
 
-fn load_groups(conn: &PgConnection) -> DataResult<ApiResponsePayload> {
+fn load_groups(conn: &mut PgConnection) -> DataResult<ApiResponsePayload> {
     let groups = data::load_groups(conn)
         .map_err(fill_err!("Error loading groups"))?
         .into_iter()
@@ -81,7 +81,7 @@ fn load_groups(conn: &PgConnection) -> DataResult<ApiResponsePayload> {
     Ok(ApiResponsePayload::Groups { groups, feeds_groups })
 }
 
-fn load_feeds(conn: &PgConnection) -> DataResult<ApiResponsePayload> {
+fn load_feeds(conn: &mut PgConnection) -> DataResult<ApiResponsePayload> {
     let feeds = data::load_feeds(conn)
         .map_err(fill_err!("Error loading feeds"))?;
 
@@ -103,7 +103,7 @@ fn load_feeds(conn: &PgConnection) -> DataResult<ApiResponsePayload> {
     })
 }
 
-fn load_items(query: ItemsQuery, conn: &PgConnection)
+fn load_items(query: ItemsQuery, conn: &mut PgConnection)
 -> DataResult<ApiResponsePayload> {
     let items = data::load_items(query, conn)
         .map_err(fill_err!("Error loading items"))?
@@ -119,7 +119,7 @@ fn load_items(query: ItemsQuery, conn: &PgConnection)
     })
 }
 
-fn load_unread_item_ids(conn: &PgConnection) -> DataResult<ApiResponsePayload> {
+fn load_unread_item_ids(conn: &mut PgConnection) -> DataResult<ApiResponsePayload> {
     let ids = data::load_unread_item_ids(conn)
         .map_err(fill_err!("Error loading unread item ids"))?
         .into_iter()
@@ -131,7 +131,7 @@ fn load_unread_item_ids(conn: &PgConnection) -> DataResult<ApiResponsePayload> {
     })
 }
 
-fn load_saved_item_ids(conn: &PgConnection) -> DataResult<ApiResponsePayload> {
+fn load_saved_item_ids(conn: &mut PgConnection) -> DataResult<ApiResponsePayload> {
     let ids = data::load_saved_item_ids(conn)
         .map_err(fill_err!("Error loading saved item ids"))?
         .into_iter()
@@ -143,7 +143,7 @@ fn load_saved_item_ids(conn: &PgConnection) -> DataResult<ApiResponsePayload> {
     })
 }
 
-fn update_item_read(id: u32, is_read: bool, conn: &PgConnection)
+fn update_item_read(id: u32, is_read: bool, conn: &mut PgConnection)
 -> DataResult<ApiResponsePayload> {
     use crate::schema::item;
 
@@ -155,7 +155,7 @@ fn update_item_read(id: u32, is_read: bool, conn: &PgConnection)
     load_unread_item_ids(conn)
 }
 
-fn update_item_saved(id: u32, is_saved: bool, conn: &PgConnection)
+fn update_item_saved(id: u32, is_saved: bool, conn: &mut PgConnection)
 -> DataResult<ApiResponsePayload> {
     use crate::schema::item;
 
@@ -167,7 +167,7 @@ fn update_item_saved(id: u32, is_saved: bool, conn: &PgConnection)
     load_saved_item_ids(conn)
 }
 
-fn mark_feed_read(id: u32, conn: &PgConnection)
+fn mark_feed_read(id: u32, conn: &mut PgConnection)
 -> DataResult<ApiResponsePayload> {
     use crate::schema::item;
 
@@ -182,7 +182,7 @@ fn mark_feed_read(id: u32, conn: &PgConnection)
 pub fn handle_api_request(
     request: &ApiRequest,
     expected_key: Option<&ApiKey>,
-    conn: &PgConnection,
+    conn: &mut PgConnection,
 ) -> DataResult<ApiResponse> {
     let mut response = ApiResponse {
         api_version: 1,

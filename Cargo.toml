@@ -21,7 +21,7 @@ url = "2.0"
 warp = { version = "0.3", default-features = false }
 
 [dependencies.diesel]
-version = "1.0"
+version = "2.0"
 default-features = false
 features = [
   "postgres",

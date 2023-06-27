@@ -8,7 +8,6 @@ use futures::future;
 use reqwest;
 use reqwest::Client;
 
-use crate::config::MaybePooled;
 use crate::data;
 use crate::error::Error;
 use crate::models::feed::{Feed, NewFeed};
@@ -30,7 +29,7 @@ fn item_to_insert_for_entry<'a>(entry: &'a Entry, feed: &Feed) -> NewItem<'a> {
 fn parse_new_entries(
     response: Result<Bytes, reqwest::Error>,
     feed: &Feed,
-    conn: &PgConnection,
+    conn: &mut PgConnection,
 ) -> DataResult<Vec<Entry>> {
     let mut entries = Vec::new();
 
@@ -82,7 +81,7 @@ async fn fetch_feed(url: &str, client: &Client)
 
 fn insert_items<'a>(
     iter: impl Iterator<Item=(&'a Feed, &'a Entry)>,
-    conn: &'a PgConnection,
+    conn: &'a mut PgConnection,
 ) -> DataResult<()> {
     use crate::schema::item;
 
@@ -98,8 +97,8 @@ fn insert_items<'a>(
     Ok(())
 }
 
-pub async fn fetch_items(conn: MaybePooled<PgConnection>) -> DataResult<()> {
-    let feeds = data::load_feeds(&conn)
+pub async fn fetch_items(conn: &mut PgConnection) -> DataResult<()> {
+    let feeds = data::load_feeds(conn)
         .map_err(fill_err!("Error loading feeds"))?;
     let client = Client::new();
 
@@ -109,7 +108,7 @@ pub async fn fetch_items(conn: MaybePooled<PgConnection>) -> DataResult<()> {
 
         let new_entries: Vec<_> = feeds.iter()
             .zip(responses)
-            .map(|(feed, response)| parse_new_entries(response, feed, &conn))
+            .map(|(feed, response)| parse_new_entries(response, feed, conn))
             .collect::<Result<_, _>>()?;
 
         let iter = feeds.iter()
@@ -118,13 +117,13 @@ pub async fn fetch_items(conn: MaybePooled<PgConnection>) -> DataResult<()> {
                 // Reverse order so older entries get inserted first
                 entries.iter().rev().map(move |entry| (feed, entry))
             });
-        insert_items(iter, &conn)?;
+        insert_items(iter, conn)?;
     }
 
     Ok(())
 }
 
-fn insert_feed(feed: &ParsedFeed, url: &str, conn: &PgConnection)
+fn insert_feed(feed: &ParsedFeed, url: &str, conn: &mut PgConnection)
 -> DataResult<Feed> {
     use crate::schema::feed;
 
@@ -140,7 +139,7 @@ fn insert_feed(feed: &ParsedFeed, url: &str, conn: &PgConnection)
         .map_err(fill_err!("Error inserting new feed"))
 }
 
-pub async fn subscribe(url: &str, conn: &PgConnection)
+pub async fn subscribe(url: &str, conn: &mut PgConnection)
 -> Result<(), Box<dyn StdError + 'static>> {
     let client = Client::new();
     let response = fetch_feed(url, &client).await
