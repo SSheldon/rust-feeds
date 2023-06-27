@@ -19,21 +19,18 @@ use tokio::runtime::Runtime;
 use crate::config::Feeds;
 
 fn main() {
-    let matches = clap::App::new("feeds")
-        .setting(clap::AppSettings::DisableVersion)
-        .setting(clap::AppSettings::VersionlessSubcommands)
-        .setting(clap::AppSettings::SubcommandRequired)
-        .subcommand(clap::SubCommand::with_name("serve"))
-        .subcommand(clap::SubCommand::with_name("fetch"))
+    let matches = clap::Command::new("feeds")
+        .subcommand_required(true)
+        .subcommand(clap::Command::new("serve"))
+        .subcommand(clap::Command::new("fetch"))
         .subcommand(
-            clap::SubCommand::with_name("subscribe")
+            clap::Command::new("subscribe")
                 .arg(
-                    clap::Arg::with_name("FEED_URL")
+                    clap::Arg::new("FEED_URL")
                         .required(true)
-                        .takes_value(true)
                 )
         )
-        .subcommand(clap::SubCommand::with_name("prune"))
+        .subcommand(clap::Command::new("prune"))
         .get_matches();
 
     env_logger::init();
@@ -43,7 +40,7 @@ fn main() {
         .expect("DATABASE_URL must be set");
 
     match matches.subcommand() {
-        ("serve", _) => {
+        Some(("serve", _)) => {
             let port = env::var("PORT").ok()
                 .and_then(|s| s.parse().ok())
                 .unwrap_or(3000);
@@ -56,19 +53,19 @@ fn main() {
                 .expect("Error creating runtime");
             let _ = rt.block_on(feeds.serve(port, creds));
         }
-        ("fetch", _) => {
+        Some(("fetch", _)) => {
             let rt = Runtime::new()
                 .expect("Error creating runtime");
             let _ = rt.block_on(feeds.fetch());
         }
-        ("subscribe", Some(subscribe_matches)) => {
-            let url = subscribe_matches.value_of("FEED_URL")
+        Some(("subscribe", subscribe_matches)) => {
+            let url = subscribe_matches.get_one::<String>("FEED_URL")
                 .expect("FEED_URL was not provided");
             let rt = Runtime::new()
                 .expect("Error creating runtime");
             let _ = rt.block_on(feeds.subscribe(url));
         }
-        ("prune", _) => {
+        Some(("prune", _)) => {
             feeds.prune();
         }
         _ => unreachable!(),
