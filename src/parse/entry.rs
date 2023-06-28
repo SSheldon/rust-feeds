@@ -1,6 +1,7 @@
 use atom_syndication::{Entry as AtomEntry};
 use chrono::{DateTime, FixedOffset};
 use rss::{Item as RssItem};
+use url::Url;
 
 pub struct Entry {
     pub title: String,
@@ -90,5 +91,12 @@ impl Entry {
         let id = Some(id);
 
         Entry { title, content, link, published, authors, id }
+    }
+
+    pub(crate) fn expand_link(&mut self, base_url: &Url) {
+        let link_url = self.link.as_ref()
+            .and_then(|link| base_url.join(link).ok());
+
+        self.link = link_url.map(Into::into).or(self.link.take());
     }
 }

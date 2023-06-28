@@ -7,6 +7,7 @@ use diesel::pg::PgConnection;
 use futures::future;
 use reqwest;
 use reqwest::Client;
+use url::Url;
 
 use crate::data;
 use crate::error::Error;
@@ -49,7 +50,20 @@ fn parse_new_entries(
         }
     };
 
-    for entry in parsed_feed.entries() {
+    let base_url = parsed_feed.site_url().map(Url::parse)
+        .unwrap_or_else(|| Url::parse(&feed.url));
+    let base_url = match base_url {
+        Ok(base_url) => base_url,
+        Err(err) => {
+            print!("Error parsing base url for {}: {}", feed.url, err);
+            return Ok(entries);
+        }
+    };
+
+    for mut entry in parsed_feed.entries() {
+        // Some bad feeds use relative links...
+        entry.expand_link(&base_url);
+
         let exists = match entry.link.as_ref() {
             Some(link) => {
                 data::item_already_exists(link, feed, conn)
