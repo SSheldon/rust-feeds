@@ -6,6 +6,7 @@ mod data;
 #[macro_use]
 mod error;
 mod fetch;
+mod greader;
 mod handling;
 mod models;
 mod parse;
