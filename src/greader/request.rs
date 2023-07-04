@@ -2,6 +2,7 @@ use std::fmt;
 use std::str::FromStr;
 
 use chrono::NaiveDateTime;
+use serde::{self, Deserialize};
 use serde_derive::Deserialize;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -31,6 +32,12 @@ impl StreamRanking {
             StreamRanking::NewestFirst => "n",
             StreamRanking::OldestFirst => "o",
         }
+    }
+}
+
+impl Default for StreamRanking {
+    fn default() -> Self {
+        StreamRanking::NewestFirst
     }
 }
 
@@ -97,7 +104,6 @@ impl FromStr for StreamState {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[derive(Deserialize)]
 pub enum StreamTag {
     Label(Option<String>, String),
     State(Option<String>, StreamState),
@@ -157,8 +163,16 @@ impl FromStr for StreamTag {
     }
 }
 
+impl<'de> Deserialize<'de> for StreamTag {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: serde::Deserializer<'de>
+    {
+        let s = String::deserialize(deserializer)?;
+        FromStr::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[derive(Deserialize)]
 pub enum StreamId {
     Feed(String),
     Tag(StreamTag),
@@ -187,67 +201,82 @@ impl FromStr for StreamId {
     }
 }
 
+impl<'de> Deserialize<'de> for StreamId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: serde::Deserializer<'de>
+    {
+        let s = String::deserialize(deserializer)?;
+        FromStr::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize)]
 pub struct StreamContentsParams {
-    #[serde(rename = "r")]
+    #[serde(rename = "r", default)]
     ranking: StreamRanking,
-    #[serde(rename = "n")]
+    #[serde(rename = "n", default)]
     number: u32,
-    #[serde(rename = "c")]
-    continuation: String,
-    #[serde(rename = "xt")]
+    #[serde(rename = "c", default)]
+    continuation: Option<String>,
+    #[serde(rename = "xt", default)]
     exclude: Option<StreamTag>,
-    #[serde(rename = "ot")]
+    #[serde(rename = "ot", default)]
     exclude_older_than: Option<NaiveDateTime>,
-    #[serde(rename = "nt")]
+    #[serde(rename = "nt", default)]
     exclude_newer_than: Option<NaiveDateTime>,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize)]
 pub struct StreamItemsIdsParams {
     #[serde(rename = "s")]
     stream_id: StreamId,
-    #[serde(rename = "r")]
+    #[serde(rename = "r", default)]
     ranking: StreamRanking,
-    #[serde(rename = "n")]
+    #[serde(rename = "n", default)]
     number: u32,
-    #[serde(rename = "c")]
-    continuation: String,
-    #[serde(rename = "xt")]
+    #[serde(rename = "c", default)]
+    continuation: Option<String>,
+    #[serde(rename = "xt", default)]
     exclude: Option<StreamTag>,
-    #[serde(rename = "ot")]
+    #[serde(rename = "ot", default)]
     exclude_older_than: Option<NaiveDateTime>,
-    #[serde(rename = "nt")]
+    #[serde(rename = "nt", default)]
     exclude_newer_than: Option<NaiveDateTime>,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize)]
 pub struct StreamItemsCountParams {
     #[serde(rename = "s")]
     stream_id: StreamId,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize)]
 pub struct StreamItemsContentsParams {
     #[serde(rename = "i")]
     item_ids: Vec<String>,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize)]
 pub struct EditTagParams {
     #[serde(rename = "i")]
     item_ids: Vec<String>,
-    #[serde(rename = "a")]
+    #[serde(rename = "a", default)]
     add_tags: Vec<StreamTag>,
-    #[serde(rename = "r")]
+    #[serde(rename = "r", default)]
     remove_tags: Vec<StreamTag>,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize)]
 pub struct MarkAllAsReadParams {
     #[serde(rename = "s")]
     stream_id: StreamId,
-    #[serde(rename = "ts")]
+    #[serde(rename = "ts", default)]
     older_than: Option<NaiveDateTime>,
 }
 
@@ -263,4 +292,69 @@ pub enum RequestType {
     TagList,
     EditTag(EditTagParams),
     MarkAllAsRead(MarkAllAsReadParams),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tag_parse() {
+        assert_eq!(
+            StreamTag::from_str("user/-/state/com.google/starred"),
+            Ok(StreamTag::State(None, StreamState::Starred)),
+        );
+        assert_eq!(
+            StreamTag::from_str("user/1/label/Blogs"),
+            Ok(StreamTag::Label(Some("1".to_owned()), "Blogs".to_owned())),
+        );
+        assert!(StreamTag::from_str("user/-/tag/foo").is_err());
+        assert!(StreamTag::from_str("user/label/Blogs").is_err());
+        assert!(StreamTag::from_str("label/Blogs").is_err());
+    }
+
+    #[test]
+    fn test_id_parse() {
+        assert_eq!(
+            StreamId::from_str("feed/foo"),
+            Ok(StreamId::Feed("foo".to_owned())),
+        );
+        assert_eq!(
+            StreamId::from_str("user/-/state/com.google/starred"),
+            Ok(StreamId::Tag(StreamTag::State(None, StreamState::Starred))),
+        );
+        assert!(StreamTag::from_str("user/-/feed/foo").is_err());
+    }
+
+    #[test]
+    fn test_deserialize_count_params() {
+        assert_eq!(
+            serde_html_form::from_str("s=user/-/state/com.google/reading-list"),
+            Ok(StreamItemsCountParams {
+                stream_id: StreamId::Tag(StreamTag::State(None, StreamState::ReadingList)),
+            }),
+        );
+    }
+
+    #[test]
+    fn test_deserialize_item_contents_params() {
+        assert_eq!(
+            serde_html_form::from_str("i=1&i=2"),
+            Ok(StreamItemsContentsParams {
+                item_ids: vec!["1".to_owned(), "2".to_owned()],
+            }),
+        );
+    }
+
+    #[test]
+    fn test_deserialize_edit_tags_params() {
+        assert_eq!(
+            serde_html_form::from_str("i=1&r=user/-/state/com.google/starred"),
+            Ok(EditTagParams {
+                item_ids: vec!["1".to_owned()],
+                add_tags: vec![],
+                remove_tags: vec![StreamTag::State(None, StreamState::Starred)],
+            }),
+        );
+    }
 }
