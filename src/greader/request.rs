@@ -2,8 +2,8 @@ use std::fmt;
 use std::str::FromStr;
 
 use chrono::NaiveDateTime;
-use serde::{self, Deserialize};
-use serde_derive::Deserialize;
+use serde::{self, Deserialize, Serialize};
+use serde_derive::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParseError {
@@ -18,7 +18,7 @@ impl fmt::Display for ParseError {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub enum StreamRanking {
     #[serde(rename = "n")]
     NewestFirst,
@@ -60,7 +60,7 @@ impl FromStr for StreamRanking {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub enum StreamState {
     #[serde(rename = "com.google/read")]
     Read,
@@ -172,6 +172,14 @@ impl<'de> Deserialize<'de> for StreamTag {
     }
 }
 
+impl Serialize for StreamTag {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: serde::Serializer,
+    {
+        serializer.collect_str(self)
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum StreamId {
     Feed(String),
@@ -207,6 +215,14 @@ impl<'de> Deserialize<'de> for StreamId {
     {
         let s = String::deserialize(deserializer)?;
         FromStr::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+impl Serialize for StreamId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: serde::Serializer,
+    {
+        serializer.collect_str(self)
     }
 }
 
