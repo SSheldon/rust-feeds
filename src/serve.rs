@@ -14,6 +14,7 @@ use crate::config::{PgConnectionPool, PooledPgConnection};
 use crate::error::Error;
 use crate::fetch;
 use crate::greader::request::RequestType as GReaderRequestType;
+use crate::greader::response::Response as GReaderResponse;
 use crate::handling;
 
 impl<T: Debug + Sized + Send + Sync + 'static> warp::reject::Reject for Error<T> { }
@@ -110,11 +111,34 @@ async fn parse_greader_request(
         .ok_or(warp::reject::not_found())
 }
 
+impl warp::Reply for GReaderResponse {
+    fn into_response(self) -> warp::reply::Response {
+        match self {
+            GReaderResponse::Plain(s) => s.into_response(),
+            GReaderResponse::UserInfo(r) => warp::reply::json(&r).into_response(),
+            _ => unimplemented!(),
+        }
+    }
+}
+
 async fn handle_greader_request(
     request: GReaderRequestType,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     println!("{:?}", request);
-    Ok("{}")
+    let response: GReaderResponse = match request {
+        GReaderRequestType::UserInfo => crate::greader::response::UserInfoResponse {
+            user_id: "123".to_owned(),
+            user_name: "Name".to_owned(),
+            user_profile_id: "123".to_owned(),
+            user_email: "username@gmail.com".to_owned(),
+            is_blogger_user: true,
+            signup_time_sec: 0,
+            public_user_name: "username".to_owned(),
+        }.into(),
+        _ => "OK".to_owned().into(),
+    };
+    println!("{:?}", response);
+    Ok(response)
 }
 
 fn greader_api() -> impl Filter<Extract=(impl warp::Reply,), Error=warp::Rejection> + Clone {
