@@ -128,6 +128,7 @@ pub struct Tag {
     pub sort_id: String,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum Response {
     Plain(String),
     UserInfo(UserInfoResponse),
