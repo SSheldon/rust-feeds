@@ -280,6 +280,7 @@ pub struct MarkAllAsReadParams {
     older_than: Option<NaiveDateTime>,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum RequestType {
     Token,
     UserInfo,
@@ -292,6 +293,25 @@ pub enum RequestType {
     TagList,
     EditTag(EditTagParams),
     MarkAllAsRead(MarkAllAsReadParams),
+}
+
+impl RequestType {
+    pub fn parse(path: &str, params: &str) -> Option<RequestType> {
+        Some(match path {
+            "token" => RequestType::Token,
+            "user-info" => RequestType::UserInfo,
+            "unread-count" => RequestType::UnreadCount,
+            "subscription/list" => RequestType::SubscriptionList,
+            // stream/contents
+            "stream/items/ids" => RequestType::StreamItemsIds(serde_html_form::from_str(params).ok()?),
+            "stream/items/count" => RequestType::StreamItemsCount(serde_html_form::from_str(params).ok()?),
+            "stream/items/contents" => RequestType::StreamItemsContents(serde_html_form::from_str(params).ok()?),
+            "tag/list" => RequestType::TagList,
+            "edit-tag" => RequestType::EditTag(serde_html_form::from_str(params).ok()?),
+            "mark-all-as-read" => RequestType::MarkAllAsRead(serde_html_form::from_str(params).ok()?),
+            _ => return None,
+        })
+    }
 }
 
 #[cfg(test)]
