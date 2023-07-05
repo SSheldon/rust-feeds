@@ -29,15 +29,15 @@ pub enum StreamRanking {
 impl StreamRanking {
     fn as_str(self) -> &'static str {
         match self {
-            StreamRanking::NewestFirst => "n",
-            StreamRanking::OldestFirst => "o",
+            Self::NewestFirst => "n",
+            Self::OldestFirst => "o",
         }
     }
 }
 
 impl Default for StreamRanking {
     fn default() -> Self {
-        StreamRanking::NewestFirst
+        Self::NewestFirst
     }
 }
 
@@ -52,8 +52,8 @@ impl FromStr for StreamRanking {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "n" => Ok(StreamRanking::NewestFirst),
-            "o" => Ok(StreamRanking::OldestFirst),
+            "n" => Ok(Self::NewestFirst),
+            "o" => Ok(Self::OldestFirst),
             _ => Err(ParseError { type_name: "StreamRanking", value: s.to_owned() })
         }
     }
@@ -75,10 +75,10 @@ pub enum StreamState {
 impl StreamState {
     fn as_str(self) -> &'static str {
         match self {
-            StreamState::Read => "com.google/read",
-            StreamState::KeptUnread => "com.google/kept-unread",
-            StreamState::ReadingList => "com.google/reading-list",
-            StreamState::Starred => "com.google/starred",
+            Self::Read => "com.google/read",
+            Self::KeptUnread => "com.google/kept-unread",
+            Self::ReadingList => "com.google/reading-list",
+            Self::Starred => "com.google/starred",
         }
     }
 }
@@ -94,10 +94,10 @@ impl FromStr for StreamState {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "com.google/read" => Ok(StreamState::Read),
-            "com.google/kept-unread" => Ok(StreamState::KeptUnread),
-            "com.google/reading-list" => Ok(StreamState::ReadingList),
-            "com.google/starred" => Ok(StreamState::Starred),
+            "com.google/read" => Ok(Self::Read),
+            "com.google/kept-unread" => Ok(Self::KeptUnread),
+            "com.google/reading-list" => Ok(Self::ReadingList),
+            "com.google/starred" => Ok(Self::Starred),
             _ => Err(ParseError { type_name: "StreamState", value: s.to_owned() })
         }
     }
@@ -112,8 +112,8 @@ pub enum StreamTag {
 impl StreamTag {
     fn user(&self) -> Option<&str> {
         match self {
-            StreamTag::Label(user, _) => user,
-            StreamTag::State(user, _) => user,
+            Self::Label(user, _) => user,
+            Self::State(user, _) => user,
         }.as_ref().map(String::as_str)
     }
 
@@ -123,15 +123,15 @@ impl StreamTag {
 
     fn type_str(&self) -> &'static str {
         match self {
-            StreamTag::Label(_, _) => "label",
-            StreamTag::State(_, _) => "state",
+            Self::Label(_, _) => "label",
+            Self::State(_, _) => "state",
         }
     }
 
     fn value_str(&self) -> &str {
         match self {
-            StreamTag::Label(_, label) => label,
-            StreamTag::State(_, state) => state.as_str(),
+            Self::Label(_, label) => label,
+            Self::State(_, state) => state.as_str(),
         }
     }
 }
@@ -155,8 +155,8 @@ impl FromStr for StreamTag {
 
         let (type_str, value_str) = remaining.split_once('/').ok_or_else(make_err)?;
         let tag = match type_str {
-            "label" => StreamTag::Label(user, value_str.to_owned()),
-            "state" => StreamTag::State(user, StreamState::from_str(value_str)?),
+            "label" => Self::Label(user, value_str.to_owned()),
+            "state" => Self::State(user, StreamState::from_str(value_str)?),
             _ => return Err(make_err()),
         };
         Ok(tag)
@@ -189,8 +189,8 @@ pub enum StreamId {
 impl fmt::Display for StreamId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            StreamId::Feed(feed) => write!(f, "feed/{}", feed),
-            StreamId::Tag(tag) => tag.fmt(f),
+            Self::Feed(feed) => write!(f, "feed/{}", feed),
+            Self::Tag(tag) => tag.fmt(f),
         }
     }
 }
@@ -200,9 +200,9 @@ impl FromStr for StreamId {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if let Some(feed) = s.strip_prefix("feed/") {
-            Ok(StreamId::Feed(feed.to_owned()))
+            Ok(Self::Feed(feed.to_owned()))
         } else if s.starts_with("user/") {
-            StreamTag::from_str(s).map(StreamId::Tag)
+            StreamTag::from_str(s).map(Self::Tag)
         } else {
             Err(ParseError { type_name: "StreamId", value: s.to_owned() })
         }
@@ -314,17 +314,17 @@ pub enum RequestType {
 impl RequestType {
     pub fn parse(path: &str, params: &str) -> Option<RequestType> {
         Some(match path {
-            "token" => RequestType::Token,
-            "user-info" => RequestType::UserInfo,
-            "unread-count" => RequestType::UnreadCount,
-            "subscription/list" => RequestType::SubscriptionList,
+            "token" => Self::Token,
+            "user-info" => Self::UserInfo,
+            "unread-count" => Self::UnreadCount,
+            "subscription/list" => Self::SubscriptionList,
             // stream/contents
-            "stream/items/ids" => RequestType::StreamItemsIds(serde_html_form::from_str(params).ok()?),
-            "stream/items/count" => RequestType::StreamItemsCount(serde_html_form::from_str(params).ok()?),
-            "stream/items/contents" => RequestType::StreamItemsContents(serde_html_form::from_str(params).ok()?),
-            "tag/list" => RequestType::TagList,
-            "edit-tag" => RequestType::EditTag(serde_html_form::from_str(params).ok()?),
-            "mark-all-as-read" => RequestType::MarkAllAsRead(serde_html_form::from_str(params).ok()?),
+            "stream/items/ids" => Self::StreamItemsIds(serde_html_form::from_str(params).ok()?),
+            "stream/items/count" => Self::StreamItemsCount(serde_html_form::from_str(params).ok()?),
+            "stream/items/contents" => Self::StreamItemsContents(serde_html_form::from_str(params).ok()?),
+            "tag/list" => Self::TagList,
+            "edit-tag" => Self::EditTag(serde_html_form::from_str(params).ok()?),
+            "mark-all-as-read" => Self::MarkAllAsRead(serde_html_form::from_str(params).ok()?),
             _ => return None,
         })
     }
