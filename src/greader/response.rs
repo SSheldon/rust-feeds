@@ -138,3 +138,35 @@ pub enum Response {
     StreamItemsContents(StreamItemsContentsResponse),
     TagList(TagListResponse),
 }
+
+impl From<String> for Response {
+    fn from(value: String) -> Self { Self::Plain(value) }
+}
+
+impl From<UserInfoResponse> for Response {
+    fn from(value: UserInfoResponse) -> Self { Self::UserInfo(value) }
+}
+
+impl From<UnreadCountResponse> for Response {
+    fn from(value: UnreadCountResponse) -> Self { Self::UnreadCount(value) }
+}
+
+impl From<SubscriptionListResponse> for Response {
+    fn from(value: SubscriptionListResponse) -> Self { Self::SubscriptionList(value) }
+}
+
+impl From<StreamContentsResponse> for Response {
+    fn from(value: StreamContentsResponse) -> Self { Self::StreamContents(value) }
+}
+
+impl From<StreamItemsIdsResponse> for Response {
+    fn from(value: StreamItemsIdsResponse) -> Self { Self::StreamItemsIds(value) }
+}
+
+impl From<StreamItemsContentsResponse> for Response {
+    fn from(value: StreamItemsContentsResponse) -> Self { Self::StreamItemsContents(value) }
+}
+
+impl From<TagListResponse> for Response {
+    fn from(value: TagListResponse) -> Self { Self::TagList(value) }
+}
