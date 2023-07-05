@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Debug;
 
 use futures::future;
 use warp::{Filter, self};
@@ -12,10 +13,10 @@ use fever_api::{
 use crate::config::{PgConnectionPool, PooledPgConnection};
 use crate::error::Error;
 use crate::fetch;
+use crate::greader::request::RequestType as GReaderRequestType;
 use crate::handling;
 
-impl warp::reject::Reject for Error<diesel::result::Error> { }
-impl warp::reject::Reject for Error<diesel::r2d2::PoolError> { }
+impl<T: Debug + Sized + Send + Sync + 'static> warp::reject::Reject for Error<T> { }
 
 fn connect_db(pool: PgConnectionPool)
 -> impl Filter<Extract=(PooledPgConnection,), Error=warp::Rejection> + Clone {
@@ -86,6 +87,69 @@ async fn handle_request(
     Ok(warp::reply::with_status(warp::reply::json(&response), status))
 }
 
+fn body_string() -> impl Filter<Extract=(String,), Error=warp::Rejection> + Clone {
+    async fn read_string(buf: impl bytes::buf::Buf) -> Result<String, warp::Rejection> {
+        use std::io::Read;
+
+        let mut result = String::new();
+        buf.reader().read_to_string(&mut result)
+            .map(|_| result)
+            .map_err(fill_err!("Error reading body to string"))
+            .map_err(warp::reject::custom)
+    }
+
+    warp::body::aggregate()
+        .and_then(read_string)
+}
+
+async fn parse_greader_request(
+    path: warp::filters::path::Tail,
+    params: String,
+) -> Result<GReaderRequestType, warp::Rejection> {
+    GReaderRequestType::parse(path.as_str(), &params)
+        .ok_or(warp::reject::not_found())
+}
+
+async fn handle_greader_request(
+    request: GReaderRequestType,
+) -> Result<impl warp::Reply, warp::Rejection> {
+    println!("{:?}", request);
+    Ok("{}")
+}
+
+fn greader_api() -> impl Filter<Extract=(impl warp::Reply,), Error=warp::Rejection> + Clone {
+    let api = warp::path("reader")
+        .and(warp::path("api"))
+        .and(warp::path("0"))
+        .and(warp::path::tail());
+
+    let api_get = api
+        .and(warp::get())
+        .and(warp::query::raw())
+        .and_then(parse_greader_request)
+        .and_then(handle_greader_request);
+
+    let api_post = api
+        .and(warp::post())
+        .and(body_string())
+        .and_then(parse_greader_request)
+        .and_then(handle_greader_request);
+
+    api_get.or(api_post)
+}
+
+fn greader_auth() -> impl Filter<Extract=(impl warp::Reply,), Error=warp::Rejection> + Clone {
+    warp::path("accounts")
+        .and(warp::path("ClientLogin"))
+        .map(|| "SID=...\nLSID=...\nAuth=<token>")
+}
+
+fn greader() -> impl Filter<Extract=(impl warp::Reply,), Error=warp::Rejection> + Clone {
+    warp::path("api")
+        .and(warp::path("greader.php"))
+        .and(greader_auth().or(greader_api()))
+}
+
 pub async fn serve(
     port: u16,
     creds: Option<(String, String)>,
@@ -108,7 +172,7 @@ pub async fn serve(
         .and(connect_db(pool.clone()))
         .and_then(handle_refresh);
 
-    let route = api.or(refresh).with(warp::log("feeds"));
+    let route = greader().or(api).or(refresh).with(warp::log("feeds"));
 
     warp::serve(route).run(([0, 0, 0, 0], port)).await;
 }
