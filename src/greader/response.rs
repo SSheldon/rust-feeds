@@ -4,6 +4,7 @@ use super::request::{StreamId, StreamTag};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UserInfoResponse {
     pub user_id: String,
     pub user_name: String,
@@ -18,11 +19,13 @@ pub struct UserInfoResponse {
 #[derive(Serialize)]
 pub struct UnreadCountResponse {
     pub max: u32,
-    pub unreadcounts: Vec<UnreadCount>,
+    #[serde(rename = "unreadcounts")]
+    pub unread_counts: Vec<UnreadCount>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UnreadCount {
     pub count: u32,
     pub id: StreamId,
@@ -39,8 +42,11 @@ pub struct SubscriptionListResponse {
 #[derive(Serialize)]
 pub struct Subscription {
     pub title: String,
+    #[serde(rename = "firstitemmsec")]
     pub first_item_msec: String,
+    #[serde(rename = "htmlUrl")]
     pub html_url: String,
+    #[serde(rename = "sortid")]
     pub sort_id: String,
     pub id: StreamId,
     pub categories: Vec<SubscriptionCategories>,
@@ -62,6 +68,7 @@ pub struct StreamContentsResponse {
     pub updated: u64,
     pub continuation: String,
     pub id: StreamId,
+    #[serde(rename = "self")]
     pub self_links: Vec<Link>,
     pub items: Vec<Item>,
 }
@@ -75,6 +82,7 @@ pub struct Link {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Item {
     pub updated: u64,
     pub id: String,
@@ -97,12 +105,14 @@ pub struct ItemContent {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct StreamItemsIdsResponse {
     pub item_refs: Vec<ItemRef>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ItemRef {
     pub id: String,
     pub timestamp_usec: String,
@@ -125,6 +135,7 @@ pub struct TagListResponse {
 #[derive(Serialize)]
 pub struct Tag {
     pub id: StreamTag,
+    #[serde(rename = "sortid")]
     pub sort_id: String,
 }
 

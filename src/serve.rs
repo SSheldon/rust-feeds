@@ -116,7 +116,12 @@ impl warp::Reply for GReaderResponse {
         match self {
             GReaderResponse::Plain(s) => s.into_response(),
             GReaderResponse::UserInfo(r) => warp::reply::json(&r).into_response(),
-            _ => unimplemented!(),
+            GReaderResponse::UnreadCount(r) => warp::reply::json(&r).into_response(),
+            GReaderResponse::SubscriptionList(r) => warp::reply::json(&r).into_response(),
+            GReaderResponse::StreamContents(r) => warp::reply::json(&r).into_response(),
+            GReaderResponse::StreamItemsIds(r) => warp::reply::json(&r).into_response(),
+            GReaderResponse::StreamItemsContents(r) => warp::reply::json(&r).into_response(),
+            GReaderResponse::TagList(r) => warp::reply::json(&r).into_response(),
         }
     }
 }
@@ -134,6 +139,15 @@ async fn handle_greader_request(
             is_blogger_user: true,
             signup_time_sec: 0,
             public_user_name: "username".to_owned(),
+        }.into(),
+        GReaderRequestType::TagList => crate::greader::response::TagListResponse {
+            tags: vec![],
+        }.into(),
+        GReaderRequestType::SubscriptionList => crate::greader::response::SubscriptionListResponse {
+            subscriptions: vec![],
+        }.into(),
+        GReaderRequestType::StreamItemsIds(_) => crate::greader::response::StreamItemsIdsResponse {
+            item_refs: vec![],
         }.into(),
         _ => "OK".to_owned().into(),
     };
