@@ -1,6 +1,6 @@
 use serde_derive::Serialize;
 
-use super::request::{StreamId, StreamTag};
+use super::request::{ItemId, StreamId, StreamTag};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Serialize)]
@@ -85,7 +85,7 @@ pub struct Link {
 #[serde(rename_all = "camelCase")]
 pub struct Item {
     pub updated: u64,
-    pub id: String,
+    pub id: ItemId,
     pub categories: Vec<StreamTag>,
     pub author: String,
     pub alternate: Vec<Link>,
@@ -114,7 +114,7 @@ pub struct StreamItemsIdsResponse {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemRef {
-    pub id: String,
+    pub id: ItemId,
     pub timestamp_usec: String,
     pub direct_stream_ids: Vec<StreamId>,
 }

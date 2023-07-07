@@ -158,7 +158,7 @@ async fn handle_greader_request(
         GReaderRequestType::StreamItemsIds(_) => crate::greader::response::StreamItemsIdsResponse {
             item_refs: vec![
                 crate::greader::response::ItemRef {
-                    id: "1".to_owned(),
+                    id: crate::greader::request::ItemId(1),
                     timestamp_usec: "1405538280000000".to_owned(),
                     direct_stream_ids: vec![],
                 },

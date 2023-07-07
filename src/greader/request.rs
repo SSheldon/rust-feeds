@@ -225,6 +225,44 @@ impl Serialize for StreamId {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ItemId(pub u64);
+
+impl fmt::Display for ItemId {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl FromStr for ItemId {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        s.strip_prefix("tag:google.com,2005:reader/item/")
+            .map(|s| u64::from_str_radix(s, 16))
+            .unwrap_or_else(|| u64::from_str(s))
+            .map(ItemId)
+            .map_err(|_| ParseError { type_name: "ItemId", value: s.to_owned() })
+    }
+}
+
+impl<'de> Deserialize<'de> for ItemId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where D: serde::Deserializer<'de>
+    {
+        let s = String::deserialize(deserializer)?;
+        FromStr::from_str(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+impl Serialize for ItemId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where S: serde::Serializer,
+    {
+        serializer.collect_str(self)
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize)]
 pub struct StreamContentsParams {
@@ -272,14 +310,14 @@ pub struct StreamItemsCountParams {
 #[derive(Deserialize)]
 pub struct StreamItemsContentsParams {
     #[serde(rename = "i")]
-    item_ids: Vec<String>,
+    item_ids: Vec<ItemId>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize)]
 pub struct EditTagParams {
     #[serde(rename = "i")]
-    item_ids: Vec<String>,
+    item_ids: Vec<ItemId>,
     #[serde(rename = "a", default)]
     add_tags: Vec<StreamTag>,
     #[serde(rename = "r", default)]
