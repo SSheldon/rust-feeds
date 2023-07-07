@@ -77,6 +77,7 @@ pub struct StreamContentsResponse {
 #[derive(Serialize)]
 pub struct Link {
     pub href: String,
+    #[serde(rename = "type")]
     pub link_type: Option<String>,
 }
 
