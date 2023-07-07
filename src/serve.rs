@@ -144,10 +144,28 @@ async fn handle_greader_request(
             tags: vec![],
         }.into(),
         GReaderRequestType::SubscriptionList => crate::greader::response::SubscriptionListResponse {
-            subscriptions: vec![],
+            subscriptions: vec![
+                crate::greader::response::Subscription {
+                    title: "xkcd".to_owned(),
+                    first_item_msec: "1373999174000".to_owned(),
+                    html_url: "https://xkcd.com/".to_owned(),
+                    sort_id: "A1".to_owned(),
+                    id: crate::greader::request::StreamId::Feed("1".to_owned()),
+                    categories: vec![],
+                },
+            ],
         }.into(),
         GReaderRequestType::StreamItemsIds(_) => crate::greader::response::StreamItemsIdsResponse {
-            item_refs: vec![],
+            item_refs: vec![
+                crate::greader::response::ItemRef {
+                    id: "1".to_owned(),
+                    timestamp_usec: "1405538280000000".to_owned(),
+                    direct_stream_ids: vec![],
+                },
+            ],
+        }.into(),
+        GReaderRequestType::StreamItemsContents(_) => crate::greader::response::StreamItemsContentsResponse {
+            items: vec![],
         }.into(),
         _ => "OK".to_owned().into(),
     };
