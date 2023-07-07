@@ -1,7 +1,6 @@
 use std::fmt;
 use std::str::FromStr;
 
-use chrono::NaiveDateTime;
 use serde::{self, Deserialize, Serialize};
 use serde_derive::{Deserialize, Serialize};
 
@@ -238,9 +237,9 @@ pub struct StreamContentsParams {
     #[serde(rename = "xt", default)]
     exclude: Option<StreamTag>,
     #[serde(rename = "ot", default)]
-    exclude_older_than: Option<NaiveDateTime>,
+    exclude_older_than: Option<u64>,
     #[serde(rename = "nt", default)]
-    exclude_newer_than: Option<NaiveDateTime>,
+    exclude_newer_than: Option<u64>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -257,9 +256,9 @@ pub struct StreamItemsIdsParams {
     #[serde(rename = "xt", default)]
     exclude: Option<StreamTag>,
     #[serde(rename = "ot", default)]
-    exclude_older_than: Option<NaiveDateTime>,
+    exclude_older_than: Option<u64>,
     #[serde(rename = "nt", default)]
-    exclude_newer_than: Option<NaiveDateTime>,
+    exclude_newer_than: Option<u64>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -293,7 +292,7 @@ pub struct MarkAllAsReadParams {
     #[serde(rename = "s")]
     stream_id: StreamId,
     #[serde(rename = "ts", default)]
-    older_than: Option<NaiveDateTime>,
+    older_than: Option<u64>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
