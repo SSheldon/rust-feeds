@@ -165,7 +165,28 @@ async fn handle_greader_request(
             ],
         }.into(),
         GReaderRequestType::StreamItemsContents(_) => crate::greader::response::StreamItemsContentsResponse {
-            items: vec![],
+            items: vec![
+                crate::greader::response::Item {
+                    updated: 1405538866,
+                    id: crate::greader::request::ItemId(1),
+                    categories: vec![],
+                    author: "Author".to_owned(),
+                    alternate: vec![
+                        crate::greader::response::Link {
+                            href: "http://example.com".to_owned(),
+                            link_type: Some("text/html".to_owned()),
+                        },
+                    ],
+                    timestamp_usec: "1405538280000000".to_owned(),
+                    content: crate::greader::response::ItemContent {
+                        direction: "ltr".to_owned(),
+                        content: "Hello world!".to_owned(),
+                    },
+                    crawl_time_msec: "1405538280000".to_owned(),
+                    published: 1405538280,
+                    title: "Title".to_owned(),
+                },
+            ],
         }.into(),
         _ => "OK".to_owned().into(),
     };
