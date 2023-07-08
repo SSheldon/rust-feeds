@@ -4,6 +4,8 @@ use std::str::FromStr;
 use serde::{self, Deserialize, Serialize};
 use serde_derive::{Deserialize, Serialize};
 
+use super::timestamp::{TimestampSec, TimestampUSec};
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParseError {
     type_name: &'static str,
@@ -275,9 +277,9 @@ pub struct StreamContentsParams {
     #[serde(rename = "xt", default)]
     exclude: Option<StreamTag>,
     #[serde(rename = "ot", default)]
-    exclude_older_than: Option<u64>,
+    exclude_older_than: Option<TimestampSec>,
     #[serde(rename = "nt", default)]
-    exclude_newer_than: Option<u64>,
+    exclude_newer_than: Option<TimestampSec>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -294,9 +296,9 @@ pub struct StreamItemsIdsParams {
     #[serde(rename = "xt", default)]
     exclude: Option<StreamTag>,
     #[serde(rename = "ot", default)]
-    exclude_older_than: Option<u64>,
+    exclude_older_than: Option<TimestampSec>,
     #[serde(rename = "nt", default)]
-    exclude_newer_than: Option<u64>,
+    exclude_newer_than: Option<TimestampSec>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -330,7 +332,7 @@ pub struct MarkAllAsReadParams {
     #[serde(rename = "s")]
     stream_id: StreamId,
     #[serde(rename = "ts", default)]
-    older_than: Option<u64>,
+    older_than: Option<TimestampUSec>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

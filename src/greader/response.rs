@@ -1,6 +1,7 @@
 use serde_derive::Serialize;
 
 use super::request::{ItemId, StreamId, StreamTag};
+use super::timestamp::{TimestampMSec, TimestampSec, TimestampUSec};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Serialize)]
@@ -11,7 +12,7 @@ pub struct UserInfoResponse {
     pub user_profile_id: String,
     pub user_email: String,
     pub is_blogger_user: bool,
-    pub signup_time_sec: u64,
+    pub signup_time_sec: TimestampSec,
     pub public_user_name: String,
 }
 
@@ -29,7 +30,7 @@ pub struct UnreadCountResponse {
 pub struct UnreadCount {
     pub count: u32,
     pub id: StreamId,
-    pub newest_item_timestamp_usec: String,
+    pub newest_item_timestamp_usec: TimestampUSec,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -43,7 +44,7 @@ pub struct SubscriptionListResponse {
 pub struct Subscription {
     pub title: String,
     #[serde(rename = "firstitemmsec")]
-    pub first_item_msec: String,
+    pub first_item_msec: TimestampMSec,
     #[serde(rename = "htmlUrl")]
     pub html_url: String,
     #[serde(rename = "sortid")]
@@ -65,7 +66,7 @@ pub struct StreamContentsResponse {
     pub direction: String,
     pub author: String,
     pub title: String,
-    pub updated: u64,
+    pub updated: TimestampSec,
     pub continuation: String,
     pub id: StreamId,
     #[serde(rename = "self")]
@@ -85,15 +86,15 @@ pub struct Link {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Item {
-    pub updated: u64,
+    pub updated: TimestampSec,
     pub id: ItemId,
     pub categories: Vec<StreamTag>,
     pub author: String,
     pub alternate: Vec<Link>,
-    pub timestamp_usec: String,
+    pub timestamp_usec: TimestampUSec,
     pub content: ItemContent,
-    pub crawl_time_msec: String,
-    pub published: u64,
+    pub crawl_time_msec: TimestampMSec,
+    pub published: TimestampSec,
     pub title: String,
 }
 
@@ -116,7 +117,7 @@ pub struct StreamItemsIdsResponse {
 #[serde(rename_all = "camelCase")]
 pub struct ItemRef {
     pub id: ItemId,
-    pub timestamp_usec: String,
+    pub timestamp_usec: TimestampUSec,
     pub direct_stream_ids: Vec<StreamId>,
 }
 
