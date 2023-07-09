@@ -11,6 +11,7 @@ use crate::greader::request::*;
 use crate::greader::response::*;
 use crate::models::feed::Feed as DbFeed;
 use crate::models::group::Group as DbGroup;
+use crate::models::item::Item as DbItem;
 
 type DataResult<T> = Result<T, Error<diesel::result::Error>>;
 
@@ -197,6 +198,48 @@ fn load_item_ids(query: ItemsQuery, conn: &mut PgConnection) -> DataResult<Strea
     })
 }
 
+fn load_items_for_ids(ids: &[ItemId], conn: &mut PgConnection) -> DataResult<StreamItemsContentsResponse> {
+    use crate::schema::item;
+
+    let db_ids: Vec<i32> = ids.iter().map(|&i| i.0 as i32).collect();
+
+    let db_items = item::table.filter(item::id.eq_any(db_ids))
+        .load::<DbItem>(conn)
+        .map_err(fill_err!("Error loading items"))?;
+
+    let api_items = db_items.into_iter()
+        .map(|item| {
+            Item {
+                origin: ItemOrigin {
+                    stream_id: StreamId::Feed(item.feed_id.to_string()),
+                },
+                updated: item.published,
+                id: ItemId(item.id as u64),
+                categories: vec![],
+                author: "".to_owned(),
+                alternate: vec![
+                    Link {
+                        href: item.url,
+                        link_type: None,
+                    },
+                ],
+                timestamp: item.published,
+                summary: ItemSummary {
+                    direction: "ltr".to_owned(),
+                    content: item.content,
+                },
+                crawl_time: item.published,
+                published: item.published,
+                title: item.title,
+            }
+        })
+        .collect();
+
+    Ok(StreamItemsContentsResponse {
+        items: api_items,
+    })
+}
+
 pub fn handle_api_request(
     request: &RequestType,
     conn: &mut PgConnection,
@@ -231,6 +274,7 @@ pub fn handle_api_request(
             );
             load_item_ids(query, conn)?.into()
         }
+        StreamItemsContents(params) => load_items_for_ids(&params.item_ids, conn)?.into(),
         _ => "OK".to_owned().into(),
     };
 
