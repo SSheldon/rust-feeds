@@ -5,7 +5,7 @@ use chrono::NaiveDateTime;
 use serde::{self, Deserialize, Serialize};
 use serde_derive::{Deserialize, Serialize};
 
-use super::timestamp;
+use super::timestamp::{self, Convert};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParseError {
@@ -277,9 +277,9 @@ pub struct StreamContentsParams {
     continuation: Option<String>,
     #[serde(rename = "xt", default)]
     exclude: Option<StreamTag>,
-    #[serde(rename = "ot", default, with = "timestamp::opt_sec")]
+    #[serde(rename = "ot", default, with = "timestamp::OptSec")]
     exclude_older_than: Option<NaiveDateTime>,
-    #[serde(rename = "nt", default, with = "timestamp::opt_sec")]
+    #[serde(rename = "nt", default, with = "timestamp::OptSec")]
     exclude_newer_than: Option<NaiveDateTime>,
 }
 
@@ -296,9 +296,9 @@ pub struct StreamItemsIdsParams {
     continuation: Option<String>,
     #[serde(rename = "xt", default)]
     exclude: Option<StreamTag>,
-    #[serde(rename = "ot", default, with = "timestamp::opt_sec")]
+    #[serde(rename = "ot", default, with = "timestamp::OptSec")]
     exclude_older_than: Option<NaiveDateTime>,
-    #[serde(rename = "nt", default, with = "timestamp::opt_sec")]
+    #[serde(rename = "nt", default, with = "timestamp::OptSec")]
     exclude_newer_than: Option<NaiveDateTime>,
 }
 
@@ -332,7 +332,7 @@ pub struct EditTagParams {
 pub struct MarkAllAsReadParams {
     #[serde(rename = "s")]
     stream_id: StreamId,
-    #[serde(rename = "ts", default, with = "timestamp::opt_usec")]
+    #[serde(rename = "ts", default, with = "timestamp::OptUSec")]
     older_than: Option<NaiveDateTime>,
 }
 

@@ -1,143 +1,93 @@
+use std::marker::PhantomData;
 use std::str::FromStr;
 
 use chrono::NaiveDateTime;
+use serde::{self, Deserialize, Serialize};
 
 use super::request::ParseError;
 
-fn to_timestamp_sec(i: i64) -> Result<NaiveDateTime, ParseError> {
-    NaiveDateTime::from_timestamp_opt(i, 0)
-        .ok_or_else(|| ParseError { type_name: "TimestampSec", value: i.to_string() })
-}
+pub trait Convert<T> {
+    type Value: Serialize + for<'a> Deserialize<'a>;
 
-fn parse_timestamp_msec(s: String) -> Result<NaiveDateTime, ParseError> {
-    i64::from_str(&s).ok()
-        .and_then(NaiveDateTime::from_timestamp_millis)
-        .ok_or_else(|| ParseError { type_name: "TimestampMSec", value: s })
-}
+    fn timestamp_from_value(value: Self::Value) -> Result<T, ParseError>;
+    fn timestamp_as_value(timestamp: &T) -> Self::Value;
 
-fn parse_timestamp_usec(s: String) -> Result<NaiveDateTime, ParseError> {
-    i64::from_str(&s).ok()
-        .and_then(NaiveDateTime::from_timestamp_micros)
-        .ok_or_else(|| ParseError { type_name: "TimestampMSec", value: s })
-}
-
-pub mod sec {
-    use chrono::NaiveDateTime;
-    use serde::{self, Deserialize, Serialize};
-
-    pub fn serialize<S>(value: &NaiveDateTime, serializer: S)
+    fn serialize<S>(timestamp: &T, serializer: S)
     -> Result<S::Ok, S::Error> where S: serde::Serializer {
-        let t = value.timestamp();
-        t.serialize(serializer)
+        Self::timestamp_as_value(timestamp).serialize(serializer)
     }
 
-    pub fn deserialize<'de, D>(deserializer: D)
-    -> Result<NaiveDateTime, D::Error> where D: serde::Deserializer<'de> {
-        i64::deserialize(deserializer).and_then(|i| {
-            super::to_timestamp_sec(i)
+    fn deserialize<'de, D>(deserializer: D)
+    -> Result<T, D::Error> where D: serde::Deserializer<'de> {
+        Self::Value::deserialize(deserializer).and_then(|v| {
+            Self::timestamp_from_value(v)
                 .map_err(serde::de::Error::custom)
         })
     }
 }
 
-pub mod msec {
-    use chrono::NaiveDateTime;
-    use serde::{self, Deserialize};
+pub enum Sec {}
 
-    pub fn serialize<S>(value: &NaiveDateTime, serializer: S)
-    -> Result<S::Ok, S::Error> where S: serde::Serializer {
-        let t = value.timestamp_millis();
-        serializer.collect_str(&t)
+impl Convert<NaiveDateTime> for Sec {
+    type Value = i64;
+
+    fn timestamp_from_value(i: i64) -> Result<NaiveDateTime, ParseError> {
+        NaiveDateTime::from_timestamp_opt(i, 0)
+            .ok_or_else(|| ParseError { type_name: "Sec", value: i.to_string() })
     }
 
-    pub fn deserialize<'de, D>(deserializer: D)
-    -> Result<NaiveDateTime, D::Error> where D: serde::Deserializer<'de> {
-        String::deserialize(deserializer).and_then(|s| {
-            super::parse_timestamp_msec(s)
-                .map_err(serde::de::Error::custom)
-        })
+    fn timestamp_as_value(timestamp: &NaiveDateTime) -> i64 {
+        timestamp.timestamp()
     }
 }
 
-pub mod usec {
-    use chrono::NaiveDateTime;
-    use serde::{self, Deserialize};
+pub enum MSec {}
 
-    pub fn serialize<S>(value: &NaiveDateTime, serializer: S)
-    -> Result<S::Ok, S::Error> where S: serde::Serializer {
-        let t = value.timestamp_micros();
-        serializer.collect_str(&t)
+impl Convert<NaiveDateTime> for MSec {
+    type Value = String;
+
+    fn timestamp_from_value(s: String) -> Result<NaiveDateTime, ParseError> {
+        i64::from_str(&s).ok()
+            .and_then(NaiveDateTime::from_timestamp_millis)
+            .ok_or_else(|| ParseError { type_name: "MSec", value: s })
     }
 
-    pub fn deserialize<'de, D>(deserializer: D)
-    -> Result<NaiveDateTime, D::Error> where D: serde::Deserializer<'de> {
-        String::deserialize(deserializer).and_then(|s| {
-            super::parse_timestamp_usec(s)
-                .map_err(serde::de::Error::custom)
-        })
+    fn timestamp_as_value(timestamp: &NaiveDateTime) -> String {
+        timestamp.timestamp_millis().to_string()
     }
 }
 
-pub mod opt_sec {
-    use chrono::NaiveDateTime;
-    use serde::{self, Deserialize, Serialize};
+pub enum USec {}
 
-    pub fn serialize<S>(value: &Option<NaiveDateTime>, serializer: S)
-    -> Result<S::Ok, S::Error> where S: serde::Serializer {
-        let t = value.as_ref().map(NaiveDateTime::timestamp);
-        t.serialize(serializer)
+impl Convert<NaiveDateTime> for USec {
+    type Value = String;
+
+    fn timestamp_from_value(s: String) -> Result<NaiveDateTime, ParseError> {
+        i64::from_str(&s).ok()
+            .and_then(NaiveDateTime::from_timestamp_micros)
+            .ok_or_else(|| ParseError { type_name: "USec", value: s })
     }
 
-    pub fn deserialize<'de, D>(deserializer: D)
-    -> Result<Option<NaiveDateTime>, D::Error> where D: serde::Deserializer<'de> {
-        Option::<i64>::deserialize(deserializer).and_then(|i| {
-            i.map(super::to_timestamp_sec)
-                .transpose()
-                .map_err(serde::de::Error::custom)
-        })
+    fn timestamp_as_value(timestamp: &NaiveDateTime) -> String {
+        timestamp.timestamp_micros().to_string()
     }
 }
 
-pub mod opt_msec {
-    use chrono::NaiveDateTime;
-    use serde::{self, Deserialize, Serialize};
+pub struct Opt<T>(PhantomData<T>);
 
-    pub fn serialize<S>(value: &Option<NaiveDateTime>, serializer: S)
-    -> Result<S::Ok, S::Error> where S: serde::Serializer {
-        let s = value.as_ref()
-            .map(NaiveDateTime::timestamp_millis)
-            .map(|i| i.to_string());
-        s.serialize(serializer)
+impl<T> Convert<Option<NaiveDateTime>> for Opt<T>
+where T: Convert<NaiveDateTime> {
+    type Value = Option<T::Value>;
+
+    fn timestamp_from_value(v: Self::Value) -> Result<Option<NaiveDateTime>, ParseError> {
+        v.map(T::timestamp_from_value).transpose()
     }
 
-    pub fn deserialize<'de, D>(deserializer: D)
-    -> Result<Option<NaiveDateTime>, D::Error> where D: serde::Deserializer<'de> {
-        Option::<String>::deserialize(deserializer).and_then(|s| {
-            s.map(super::parse_timestamp_msec)
-                .transpose()
-                .map_err(serde::de::Error::custom)
-        })
+    fn timestamp_as_value(timestamp: &Option<NaiveDateTime>) -> Self::Value {
+        timestamp.as_ref().map(T::timestamp_as_value)
     }
 }
 
-pub mod opt_usec {
-    use chrono::NaiveDateTime;
-    use serde::{self, Deserialize, Serialize};
-
-    pub fn serialize<S>(value: &Option<NaiveDateTime>, serializer: S)
-    -> Result<S::Ok, S::Error> where S: serde::Serializer {
-        let s = value.as_ref()
-            .map(NaiveDateTime::timestamp_micros)
-            .map(|i| i.to_string());
-        s.serialize(serializer)
-    }
-
-    pub fn deserialize<'de, D>(deserializer: D)
-    -> Result<Option<NaiveDateTime>, D::Error> where D: serde::Deserializer<'de> {
-        Option::<String>::deserialize(deserializer).and_then(|s| {
-            s.map(super::parse_timestamp_usec)
-                .transpose()
-                .map_err(serde::de::Error::custom)
-        })
-    }
-}
+pub type OptSec = Opt<Sec>;
+pub type OptMSec = Opt<MSec>;
+pub type OptUSec = Opt<USec>;
