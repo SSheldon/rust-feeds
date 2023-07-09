@@ -60,6 +60,22 @@ fn load_subscriptions(conn: &mut PgConnection) -> DataResult<Vec<Subscription>> 
     Ok(subs)
 }
 
+type BoxedItemFilter = Box<dyn diesel::expression::BoxableExpression<
+    crate::schema::item::table,
+    diesel::pg::Pg,
+    SqlType = diesel::sql_types::Bool
+>>;
+
+macro_rules! filter_and {
+    ($base:expr, $new:expr) => {
+        if let Some(e) = $base.take() {
+            $base = Some(Box::new(e.and($new)));
+        } else {
+            $base = Some(Box::new($new));
+        }
+    };
+}
+
 #[derive(Clone, Debug)]
 struct ItemsQuery {
     count: u32,
@@ -121,12 +137,63 @@ impl ItemsQuery {
             max_time: newest_time,
         }
     }
+
+    fn expr(&self) -> Option<BoxedItemFilter> {
+        use crate::schema::item;
+
+        let mut expr: Option<BoxedItemFilter> = None;
+
+        if let Some(id) = self.continuing_from_id {
+            if self.descending {
+                filter_and!(expr, item::id.lt(id));
+            } else {
+                filter_and!(expr, item::id.gt(id));
+            }
+        }
+        if let Some(feed_id) = self.feed_id_filter {
+            filter_and!(expr, item::feed_id.eq(feed_id));
+        }
+        if let Some(is_read) = self.read_state_filter {
+            filter_and!(expr, item::is_read.eq(is_read));
+        }
+        if let Some(is_saved) = self.saved_state_filter {
+            filter_and!(expr, item::is_saved.eq(is_saved));
+        }
+        if let Some(min_time) = self.min_time {
+            filter_and!(expr, item::published.ge(min_time));
+        }
+        if let Some(max_time) = self.max_time {
+            filter_and!(expr, item::published.le(max_time));
+        }
+
+        expr
+    }
 }
 
+fn load_item_ids(query: ItemsQuery, conn: &mut PgConnection) -> DataResult<StreamItemsIdsResponse> {
+    use crate::schema::item;
 
-fn load_item_ids(query: ItemsQuery) -> DataResult<StreamItemsIdsResponse> {
+    let ids = if let Some(expr) = query.expr() {
+        item::table.filter(expr)
+            .select((item::id, item::published))
+            .load::<(i32, NaiveDateTime)>(conn)
+    } else {
+        item::table.select((item::id, item::published))
+            .load::<(i32, NaiveDateTime)>(conn)
+    }.map_err(fill_err!("Error loading item ids"))?;
+
+    let refs = ids.into_iter()
+        .map(|(id, published)| {
+            ItemRef {
+                id: ItemId(id as u64),
+                timestamp: published,
+                direct_stream_ids: vec![],
+            }
+        })
+        .collect();
+
     Ok(StreamItemsIdsResponse {
-        item_refs: vec![],
+        item_refs: refs,
     })
 }
 
@@ -162,7 +229,7 @@ pub fn handle_api_request(
                 params.oldest_time,
                 params.newest_time,
             );
-            load_item_ids(query)?.into()
+            load_item_ids(query, conn)?.into()
         }
         _ => "OK".to_owned().into(),
     };
