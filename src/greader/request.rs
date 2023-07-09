@@ -8,8 +8,8 @@ use super::timestamp::{TimestampSec, TimestampUSec};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParseError {
-    type_name: &'static str,
-    value: String,
+    pub(super) type_name: &'static str,
+    pub(super) value: String,
 }
 
 impl fmt::Display for ParseError {

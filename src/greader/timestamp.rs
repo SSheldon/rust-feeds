@@ -8,7 +8,7 @@ use serde::{self, Deserialize, Serialize};
 use super::request::ParseError;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct TimestampSec(NaiveDateTime);
+pub struct TimestampSec(pub NaiveDateTime);
 
 impl TryFrom<i64> for TimestampSec {
     type Error = ParseError;
@@ -38,7 +38,7 @@ impl Serialize for TimestampSec {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct TimestampMSec(NaiveDateTime);
+pub struct TimestampMSec(pub NaiveDateTime);
 
 impl fmt::Display for TimestampMSec {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -75,7 +75,7 @@ impl Serialize for TimestampMSec {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct TimestampUSec(NaiveDateTime);
+pub struct TimestampUSec(pub NaiveDateTime);
 
 impl fmt::Display for TimestampUSec {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
