@@ -128,70 +128,12 @@ impl warp::Reply for GReaderResponse {
 
 async fn handle_greader_request(
     request: GReaderRequestType,
+    mut conn: PooledPgConnection,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     println!("{:?}", request);
-    let response: GReaderResponse = match request {
-        GReaderRequestType::UserInfo => crate::greader::response::UserInfoResponse {
-            user_id: "123".to_owned(),
-            user_name: "Name".to_owned(),
-            user_profile_id: "123".to_owned(),
-            user_email: "username@gmail.com".to_owned(),
-            is_blogger_user: true,
-            signup_time: chrono::NaiveDateTime::from_timestamp_opt(0, 0).unwrap(),
-            public_user_name: "username".to_owned(),
-        }.into(),
-        GReaderRequestType::TagList => crate::greader::response::TagListResponse {
-            tags: vec![],
-        }.into(),
-        GReaderRequestType::SubscriptionList => crate::greader::response::SubscriptionListResponse {
-            subscriptions: vec![
-                crate::greader::response::Subscription {
-                    title: "xkcd".to_owned(),
-                    first_item_time: chrono::NaiveDateTime::from_timestamp_opt(1373999174, 0).unwrap(),
-                    html_url: "https://xkcd.com/".to_owned(),
-                    sort_id: "A1".to_owned(),
-                    id: crate::greader::request::StreamId::Feed("1".to_owned()),
-                    categories: vec![],
-                },
-            ],
-        }.into(),
-        GReaderRequestType::StreamItemsIds(_) => crate::greader::response::StreamItemsIdsResponse {
-            item_refs: vec![
-                crate::greader::response::ItemRef {
-                    id: crate::greader::request::ItemId(1),
-                    timestamp: chrono::NaiveDateTime::from_timestamp_opt(1405538280, 0).unwrap(),
-                    direct_stream_ids: vec![],
-                },
-            ],
-        }.into(),
-        GReaderRequestType::StreamItemsContents(_) => crate::greader::response::StreamItemsContentsResponse {
-            items: vec![
-                crate::greader::response::Item {
-                    updated: chrono::NaiveDateTime::from_timestamp_opt(1405538866, 0).unwrap(),
-                    id: crate::greader::request::ItemId(1),
-                    categories: vec![],
-                    author: "Author".to_owned(),
-                    alternate: vec![
-                        crate::greader::response::Link {
-                            href: "http://example.com".to_owned(),
-                            link_type: Some("text/html".to_owned()),
-                        },
-                    ],
-                    timestamp: chrono::NaiveDateTime::from_timestamp_opt(1405538280, 0).unwrap(),
-                    content: crate::greader::response::ItemContent {
-                        direction: "ltr".to_owned(),
-                        content: "Hello world!".to_owned(),
-                    },
-                    crawl_time: chrono::NaiveDateTime::from_timestamp_opt(1405538280, 0).unwrap(),
-                    published: chrono::NaiveDateTime::from_timestamp_opt(1405538280, 0).unwrap(),
-                    title: "Title".to_owned(),
-                },
-            ],
-        }.into(),
-        _ => "OK".to_owned().into(),
-    };
+    let response = crate::greader_handling::handle_api_request(&request, &mut conn);
     println!("{:?}", response);
-    Ok(response)
+    response.map_err(|err| warp::reject::custom(err))
 }
 
 pub async fn serve(
@@ -233,12 +175,14 @@ pub async fn serve(
         .and(warp::get())
         .and(warp::query::raw())
         .and_then(parse_greader_request)
+        .and(connect_db(pool.clone()))
         .and_then(handle_greader_request);
 
     let greader_api_post = greader_api_base
         .and(warp::post())
         .and(body_string())
         .and_then(parse_greader_request)
+        .and(connect_db(pool.clone()))
         .and_then(handle_greader_request);
 
     let greader_api = greader_api_get.or(greader_api_post);
