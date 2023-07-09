@@ -194,39 +194,6 @@ async fn handle_greader_request(
     Ok(response)
 }
 
-fn greader_api() -> impl Filter<Extract=(impl warp::Reply,), Error=warp::Rejection> + Clone {
-    let api = warp::path("reader")
-        .and(warp::path("api"))
-        .and(warp::path("0"))
-        .and(warp::path::tail());
-
-    let api_get = api
-        .and(warp::get())
-        .and(warp::query::raw())
-        .and_then(parse_greader_request)
-        .and_then(handle_greader_request);
-
-    let api_post = api
-        .and(warp::post())
-        .and(body_string())
-        .and_then(parse_greader_request)
-        .and_then(handle_greader_request);
-
-    api_get.or(api_post)
-}
-
-fn greader_auth() -> impl Filter<Extract=(impl warp::Reply,), Error=warp::Rejection> + Clone {
-    warp::path("accounts")
-        .and(warp::path("ClientLogin"))
-        .map(|| "SID=...\nLSID=...\nAuth=<token>")
-}
-
-fn greader() -> impl Filter<Extract=(impl warp::Reply,), Error=warp::Rejection> + Clone {
-    warp::path("api")
-        .and(warp::path("greader.php"))
-        .and(greader_auth().or(greader_api()))
-}
-
 pub async fn serve(
     port: u16,
     creds: Option<(String, String)>,
@@ -249,7 +216,38 @@ pub async fn serve(
         .and(connect_db(pool.clone()))
         .and_then(handle_refresh);
 
-    let route = greader().or(api).or(refresh).with(warp::log("feeds"));
+    let fever = warp::path::end()
+        .and(api.or(refresh));
+
+    let greader_auth = warp::path("accounts")
+        .and(warp::path("ClientLogin"))
+        .and(warp::path::end())
+        .map(|| "SID=...\nLSID=...\nAuth=<token>");
+
+    let greader_api_base = warp::path("reader")
+        .and(warp::path("api"))
+        .and(warp::path("0"))
+        .and(warp::path::tail());
+
+    let greader_api_get = greader_api_base
+        .and(warp::get())
+        .and(warp::query::raw())
+        .and_then(parse_greader_request)
+        .and_then(handle_greader_request);
+
+    let greader_api_post = greader_api_base
+        .and(warp::post())
+        .and(body_string())
+        .and_then(parse_greader_request)
+        .and_then(handle_greader_request);
+
+    let greader_api = greader_api_get.or(greader_api_post);
+
+    let greader = warp::path("api")
+        .and(warp::path("greader.php"))
+        .and(greader_auth.or(greader_api));
+
+    let route = fever.or(greader).with(warp::log("feeds"));
 
     warp::serve(route).run(([0, 0, 0, 0], port)).await;
 }
