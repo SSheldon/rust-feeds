@@ -1,11 +1,11 @@
 use chrono::NaiveDateTime;
-use serde_derive::Serialize;
+use serde_derive::{Deserialize, Serialize};
 
 use super::request::{ItemId, StreamId, StreamTag};
 use super::timestamp;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UserInfoResponse {
     pub user_id: String,
@@ -19,7 +19,7 @@ pub struct UserInfoResponse {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct UnreadCountResponse {
     pub max: u32,
     #[serde(rename = "unreadcounts")]
@@ -27,7 +27,7 @@ pub struct UnreadCountResponse {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct UnreadCount {
     pub count: u32,
     pub id: StreamId,
@@ -36,13 +36,13 @@ pub struct UnreadCount {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct SubscriptionListResponse {
     pub subscriptions: Vec<Subscription>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Subscription {
     pub title: String,
     #[serde(rename = "firstitemmsec", with = "timestamp::msec")]
@@ -56,14 +56,14 @@ pub struct Subscription {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct SubscriptionCategories {
     pub id: StreamTag,
     pub label: String,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct StreamContentsResponse {
     pub direction: String,
     pub author: String,
@@ -78,7 +78,7 @@ pub struct StreamContentsResponse {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Link {
     pub href: String,
     #[serde(rename = "type")]
@@ -86,7 +86,7 @@ pub struct Link {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Item {
     #[serde(with = "timestamp::sec")]
     pub updated: NaiveDateTime,
@@ -105,21 +105,21 @@ pub struct Item {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct ItemContent {
     pub direction: String,
     pub content: String,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StreamItemsIdsResponse {
     pub item_refs: Vec<ItemRef>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemRef {
     pub id: ItemId,
@@ -129,19 +129,19 @@ pub struct ItemRef {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct StreamItemsContentsResponse {
     pub items: Vec<Item>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct TagListResponse {
     pub tags: Vec<Tag>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Tag {
     pub id: StreamTag,
     #[serde(rename = "sortid")]
