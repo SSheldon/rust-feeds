@@ -1,7 +1,8 @@
+use chrono::NaiveDateTime;
 use serde_derive::Serialize;
 
 use super::request::{ItemId, StreamId, StreamTag};
-use super::timestamp::{TimestampMSec, TimestampSec, TimestampUSec};
+use super::timestamp;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Serialize)]
@@ -12,8 +13,8 @@ pub struct UserInfoResponse {
     pub user_profile_id: String,
     pub user_email: String,
     pub is_blogger_user: bool,
-    #[serde(rename = "signupTimeSec")]
-    pub signup_time: TimestampSec,
+    #[serde(rename = "signupTimeSec", with = "timestamp::sec")]
+    pub signup_time: NaiveDateTime,
     pub public_user_name: String,
 }
 
@@ -30,8 +31,8 @@ pub struct UnreadCountResponse {
 pub struct UnreadCount {
     pub count: u32,
     pub id: StreamId,
-    #[serde(rename = "newestItemTimestampUsec")]
-    pub newest_item_time: TimestampUSec,
+    #[serde(rename = "newestItemTimestampUsec", with = "timestamp::usec")]
+    pub newest_item_time: NaiveDateTime,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -44,8 +45,8 @@ pub struct SubscriptionListResponse {
 #[derive(Serialize)]
 pub struct Subscription {
     pub title: String,
-    #[serde(rename = "firstitemmsec")]
-    pub first_item_time: TimestampMSec,
+    #[serde(rename = "firstitemmsec", with = "timestamp::msec")]
+    pub first_item_time: NaiveDateTime,
     #[serde(rename = "htmlUrl")]
     pub html_url: String,
     #[serde(rename = "sortid")]
@@ -67,7 +68,8 @@ pub struct StreamContentsResponse {
     pub direction: String,
     pub author: String,
     pub title: String,
-    pub updated: TimestampSec,
+    #[serde(with = "timestamp::sec")]
+    pub updated: NaiveDateTime,
     pub continuation: String,
     pub id: StreamId,
     #[serde(rename = "self")]
@@ -86,17 +88,19 @@ pub struct Link {
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Serialize)]
 pub struct Item {
-    pub updated: TimestampSec,
+    #[serde(with = "timestamp::sec")]
+    pub updated: NaiveDateTime,
     pub id: ItemId,
     pub categories: Vec<StreamTag>,
     pub author: String,
     pub alternate: Vec<Link>,
-    #[serde(rename = "timestampUsec")]
-    pub timestamp: TimestampUSec,
+    #[serde(rename = "timestampUsec", with = "timestamp::usec")]
+    pub timestamp: NaiveDateTime,
     pub content: ItemContent,
-    #[serde(rename = "crawlTimeMsec")]
-    pub crawl_time: TimestampMSec,
-    pub published: TimestampSec,
+    #[serde(rename = "crawlTimeMsec", with = "timestamp::msec")]
+    pub crawl_time: NaiveDateTime,
+    #[serde(with = "timestamp::sec")]
+    pub published: NaiveDateTime,
     pub title: String,
 }
 
@@ -119,8 +123,8 @@ pub struct StreamItemsIdsResponse {
 #[serde(rename_all = "camelCase")]
 pub struct ItemRef {
     pub id: ItemId,
-    #[serde(rename = "timestampUsec")]
-    pub timestamp: TimestampUSec,
+    #[serde(rename = "timestampUsec", with = "timestamp::usec")]
+    pub timestamp: NaiveDateTime,
     pub direct_stream_ids: Vec<StreamId>,
 }
 

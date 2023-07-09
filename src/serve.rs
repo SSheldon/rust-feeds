@@ -137,9 +137,7 @@ async fn handle_greader_request(
             user_profile_id: "123".to_owned(),
             user_email: "username@gmail.com".to_owned(),
             is_blogger_user: true,
-            signup_time_sec: crate::greader::timestamp::TimestampSec(
-                chrono::NaiveDateTime::from_timestamp_opt(0, 0).unwrap()
-            ),
+            signup_time: chrono::NaiveDateTime::from_timestamp_opt(0, 0).unwrap(),
             public_user_name: "username".to_owned(),
         }.into(),
         GReaderRequestType::TagList => crate::greader::response::TagListResponse {
@@ -149,9 +147,7 @@ async fn handle_greader_request(
             subscriptions: vec![
                 crate::greader::response::Subscription {
                     title: "xkcd".to_owned(),
-                    first_item_msec: crate::greader::timestamp::TimestampMSec(
-                        chrono::NaiveDateTime::from_timestamp_opt(1373999174, 0).unwrap()
-                    ),
+                    first_item_time: chrono::NaiveDateTime::from_timestamp_opt(1373999174, 0).unwrap(),
                     html_url: "https://xkcd.com/".to_owned(),
                     sort_id: "A1".to_owned(),
                     id: crate::greader::request::StreamId::Feed("1".to_owned()),
@@ -163,9 +159,7 @@ async fn handle_greader_request(
             item_refs: vec![
                 crate::greader::response::ItemRef {
                     id: crate::greader::request::ItemId(1),
-                    timestamp_usec: crate::greader::timestamp::TimestampUSec(
-                        chrono::NaiveDateTime::from_timestamp_opt(1405538280, 0).unwrap()
-                    ),
+                    timestamp: chrono::NaiveDateTime::from_timestamp_opt(1405538280, 0).unwrap(),
                     direct_stream_ids: vec![],
                 },
             ],
@@ -173,9 +167,7 @@ async fn handle_greader_request(
         GReaderRequestType::StreamItemsContents(_) => crate::greader::response::StreamItemsContentsResponse {
             items: vec![
                 crate::greader::response::Item {
-                    updated: crate::greader::timestamp::TimestampSec(
-                        chrono::NaiveDateTime::from_timestamp_opt(1405538866, 0).unwrap()
-                    ),
+                    updated: chrono::NaiveDateTime::from_timestamp_opt(1405538866, 0).unwrap(),
                     id: crate::greader::request::ItemId(1),
                     categories: vec![],
                     author: "Author".to_owned(),
@@ -185,19 +177,13 @@ async fn handle_greader_request(
                             link_type: Some("text/html".to_owned()),
                         },
                     ],
-                    timestamp_usec: crate::greader::timestamp::TimestampUSec(
-                        chrono::NaiveDateTime::from_timestamp_opt(1405538280, 0).unwrap()
-                    ),
+                    timestamp: chrono::NaiveDateTime::from_timestamp_opt(1405538280, 0).unwrap(),
                     content: crate::greader::response::ItemContent {
                         direction: "ltr".to_owned(),
                         content: "Hello world!".to_owned(),
                     },
-                    crawl_time_msec: crate::greader::timestamp::TimestampMSec(
-                        chrono::NaiveDateTime::from_timestamp_opt(1405538280, 0).unwrap()
-                    ),
-                    published: crate::greader::timestamp::TimestampSec(
-                        chrono::NaiveDateTime::from_timestamp_opt(1405538280, 0).unwrap()
-                    ),
+                    crawl_time: chrono::NaiveDateTime::from_timestamp_opt(1405538280, 0).unwrap(),
+                    published: chrono::NaiveDateTime::from_timestamp_opt(1405538280, 0).unwrap(),
                     title: "Title".to_owned(),
                 },
             ],

@@ -1,113 +1,143 @@
-use std::convert::TryFrom;
-use std::fmt;
 use std::str::FromStr;
 
 use chrono::NaiveDateTime;
-use serde::{self, Deserialize, Serialize};
 
 use super::request::ParseError;
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct TimestampSec(pub NaiveDateTime);
+fn to_timestamp_sec(i: i64) -> Result<NaiveDateTime, ParseError> {
+    NaiveDateTime::from_timestamp_opt(i, 0)
+        .ok_or_else(|| ParseError { type_name: "TimestampSec", value: i.to_string() })
+}
 
-impl TryFrom<i64> for TimestampSec {
-    type Error = ParseError;
+fn parse_timestamp_msec(s: String) -> Result<NaiveDateTime, ParseError> {
+    i64::from_str(&s).ok()
+        .and_then(NaiveDateTime::from_timestamp_millis)
+        .ok_or_else(|| ParseError { type_name: "TimestampMSec", value: s })
+}
 
-    fn try_from(i: i64) -> Result<Self, Self::Error> {
-        NaiveDateTime::from_timestamp_opt(i, 0)
-            .map(TimestampSec)
-            .ok_or_else(|| ParseError { type_name: "TimestampSec", value: i.to_string() })
+fn parse_timestamp_usec(s: String) -> Result<NaiveDateTime, ParseError> {
+    i64::from_str(&s).ok()
+        .and_then(NaiveDateTime::from_timestamp_micros)
+        .ok_or_else(|| ParseError { type_name: "TimestampMSec", value: s })
+}
+
+pub mod sec {
+    use chrono::NaiveDateTime;
+    use serde::{self, Deserialize, Serialize};
+
+    pub fn serialize<S>(value: &NaiveDateTime, serializer: S)
+    -> Result<S::Ok, S::Error> where S: serde::Serializer {
+        let t = value.timestamp();
+        t.serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D)
+    -> Result<NaiveDateTime, D::Error> where D: serde::Deserializer<'de> {
+        i64::deserialize(deserializer).and_then(|i| {
+            super::to_timestamp_sec(i)
+                .map_err(serde::de::Error::custom)
+        })
     }
 }
 
-impl<'de> Deserialize<'de> for TimestampSec {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: serde::Deserializer<'de>
-    {
-        let i = i64::deserialize(deserializer)?;
-        TimestampSec::try_from(i).map_err(serde::de::Error::custom)
+pub mod msec {
+    use chrono::NaiveDateTime;
+    use serde::{self, Deserialize};
+
+    pub fn serialize<S>(value: &NaiveDateTime, serializer: S)
+    -> Result<S::Ok, S::Error> where S: serde::Serializer {
+        let t = value.timestamp_millis();
+        serializer.collect_str(&t)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D)
+    -> Result<NaiveDateTime, D::Error> where D: serde::Deserializer<'de> {
+        String::deserialize(deserializer).and_then(|s| {
+            super::parse_timestamp_msec(s)
+                .map_err(serde::de::Error::custom)
+        })
     }
 }
 
-impl Serialize for TimestampSec {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: serde::Serializer,
-    {
-        serializer.serialize_i64(self.0.timestamp())
+pub mod usec {
+    use chrono::NaiveDateTime;
+    use serde::{self, Deserialize};
+
+    pub fn serialize<S>(value: &NaiveDateTime, serializer: S)
+    -> Result<S::Ok, S::Error> where S: serde::Serializer {
+        let t = value.timestamp_micros();
+        serializer.collect_str(&t)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D)
+    -> Result<NaiveDateTime, D::Error> where D: serde::Deserializer<'de> {
+        String::deserialize(deserializer).and_then(|s| {
+            super::parse_timestamp_usec(s)
+                .map_err(serde::de::Error::custom)
+        })
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct TimestampMSec(pub NaiveDateTime);
+pub mod opt_sec {
+    use chrono::NaiveDateTime;
+    use serde::{self, Deserialize, Serialize};
 
-impl fmt::Display for TimestampMSec {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.timestamp_millis().fmt(f)
+    pub fn serialize<S>(value: &Option<NaiveDateTime>, serializer: S)
+    -> Result<S::Ok, S::Error> where S: serde::Serializer {
+        let t = value.as_ref().map(NaiveDateTime::timestamp);
+        t.serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D)
+    -> Result<Option<NaiveDateTime>, D::Error> where D: serde::Deserializer<'de> {
+        Option::<i64>::deserialize(deserializer).and_then(|i| {
+            i.map(super::to_timestamp_sec)
+                .transpose()
+                .map_err(serde::de::Error::custom)
+        })
     }
 }
 
-impl FromStr for TimestampMSec {
-    type Err = ParseError;
+pub mod opt_msec {
+    use chrono::NaiveDateTime;
+    use serde::{self, Deserialize, Serialize};
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        i64::from_str(s).ok()
-            .and_then(NaiveDateTime::from_timestamp_millis)
-            .map(TimestampMSec)
-            .ok_or_else(|| ParseError { type_name: "TimestampMSec", value: s.to_owned() })
+    pub fn serialize<S>(value: &Option<NaiveDateTime>, serializer: S)
+    -> Result<S::Ok, S::Error> where S: serde::Serializer {
+        let s = value.as_ref()
+            .map(NaiveDateTime::timestamp_millis)
+            .map(|i| i.to_string());
+        s.serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D)
+    -> Result<Option<NaiveDateTime>, D::Error> where D: serde::Deserializer<'de> {
+        Option::<String>::deserialize(deserializer).and_then(|s| {
+            s.map(super::parse_timestamp_msec)
+                .transpose()
+                .map_err(serde::de::Error::custom)
+        })
     }
 }
 
-impl<'de> Deserialize<'de> for TimestampMSec {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: serde::Deserializer<'de>
-    {
-        let s = String::deserialize(deserializer)?;
-        FromStr::from_str(&s).map_err(serde::de::Error::custom)
+pub mod opt_usec {
+    use chrono::NaiveDateTime;
+    use serde::{self, Deserialize, Serialize};
+
+    pub fn serialize<S>(value: &Option<NaiveDateTime>, serializer: S)
+    -> Result<S::Ok, S::Error> where S: serde::Serializer {
+        let s = value.as_ref()
+            .map(NaiveDateTime::timestamp_micros)
+            .map(|i| i.to_string());
+        s.serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D)
+    -> Result<Option<NaiveDateTime>, D::Error> where D: serde::Deserializer<'de> {
+        Option::<String>::deserialize(deserializer).and_then(|s| {
+            s.map(super::parse_timestamp_usec)
+                .transpose()
+                .map_err(serde::de::Error::custom)
+        })
     }
 }
-
-impl Serialize for TimestampMSec {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: serde::Serializer,
-    {
-        serializer.collect_str(self)
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct TimestampUSec(pub NaiveDateTime);
-
-impl fmt::Display for TimestampUSec {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.timestamp_micros().fmt(f)
-    }
-}
-
-impl FromStr for TimestampUSec {
-    type Err = ParseError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        i64::from_str(s).ok()
-            .and_then(NaiveDateTime::from_timestamp_micros)
-            .map(TimestampUSec)
-            .ok_or_else(|| ParseError { type_name: "TimestampUSec", value: s.to_owned() })
-    }
-}
-
-impl<'de> Deserialize<'de> for TimestampUSec {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: serde::Deserializer<'de>
-    {
-        let s = String::deserialize(deserializer)?;
-        FromStr::from_str(&s).map_err(serde::de::Error::custom)
-    }
-}
-
-impl Serialize for TimestampUSec {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: serde::Serializer,
-    {
-        serializer.collect_str(self)
-    }
-}
-
