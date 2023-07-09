@@ -12,7 +12,8 @@ pub struct UserInfoResponse {
     pub user_profile_id: String,
     pub user_email: String,
     pub is_blogger_user: bool,
-    pub signup_time_sec: TimestampSec,
+    #[serde(rename = "signupTimeSec")]
+    pub signup_time: TimestampSec,
     pub public_user_name: String,
 }
 
@@ -26,11 +27,11 @@ pub struct UnreadCountResponse {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct UnreadCount {
     pub count: u32,
     pub id: StreamId,
-    pub newest_item_timestamp_usec: TimestampUSec,
+    #[serde(rename = "newestItemTimestampUsec")]
+    pub newest_item_time: TimestampUSec,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -44,7 +45,7 @@ pub struct SubscriptionListResponse {
 pub struct Subscription {
     pub title: String,
     #[serde(rename = "firstitemmsec")]
-    pub first_item_msec: TimestampMSec,
+    pub first_item_time: TimestampMSec,
     #[serde(rename = "htmlUrl")]
     pub html_url: String,
     #[serde(rename = "sortid")]
@@ -84,16 +85,17 @@ pub struct Link {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct Item {
     pub updated: TimestampSec,
     pub id: ItemId,
     pub categories: Vec<StreamTag>,
     pub author: String,
     pub alternate: Vec<Link>,
-    pub timestamp_usec: TimestampUSec,
+    #[serde(rename = "timestampUsec")]
+    pub timestamp: TimestampUSec,
     pub content: ItemContent,
-    pub crawl_time_msec: TimestampMSec,
+    #[serde(rename = "crawlTimeMsec")]
+    pub crawl_time: TimestampMSec,
     pub published: TimestampSec,
     pub title: String,
 }
@@ -117,7 +119,8 @@ pub struct StreamItemsIdsResponse {
 #[serde(rename_all = "camelCase")]
 pub struct ItemRef {
     pub id: ItemId,
-    pub timestamp_usec: TimestampUSec,
+    #[serde(rename = "timestampUsec")]
+    pub timestamp: TimestampUSec,
     pub direct_stream_ids: Vec<StreamId>,
 }
 
