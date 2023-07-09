@@ -88,6 +88,7 @@ pub struct Link {
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize, Serialize)]
 pub struct Item {
+    pub origin: ItemOrigin,
     #[serde(with = "timestamp::Sec")]
     pub updated: NaiveDateTime,
     pub id: ItemId,
@@ -96,7 +97,7 @@ pub struct Item {
     pub alternate: Vec<Link>,
     #[serde(rename = "timestampUsec", with = "timestamp::USec")]
     pub timestamp: NaiveDateTime,
-    pub content: ItemContent,
+    pub summary: ItemSummary,
     #[serde(rename = "crawlTimeMsec", with = "timestamp::MSec")]
     pub crawl_time: NaiveDateTime,
     #[serde(with = "timestamp::Sec")]
@@ -106,7 +107,14 @@ pub struct Item {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize, Serialize)]
-pub struct ItemContent {
+#[serde(rename_all = "camelCase")]
+pub struct ItemOrigin {
+    pub stream_id: StreamId,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Deserialize, Serialize)]
+pub struct ItemSummary {
     pub direction: String,
     pub content: String,
 }
