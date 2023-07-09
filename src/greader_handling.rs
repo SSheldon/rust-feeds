@@ -1,3 +1,6 @@
+use std::str::FromStr;
+
+use chrono::NaiveDateTime;
 use diesel;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
@@ -57,6 +60,76 @@ fn load_subscriptions(conn: &mut PgConnection) -> DataResult<Vec<Subscription>> 
     Ok(subs)
 }
 
+#[derive(Clone, Debug)]
+struct ItemsQuery {
+    count: u32,
+    descending: bool,
+    continuing_from_id: Option<i32>,
+    feed_id_filter: Option<i32>,
+    read_state_filter: Option<bool>,
+    saved_state_filter: Option<bool>,
+    min_time: Option<NaiveDateTime>,
+    max_time: Option<NaiveDateTime>,
+}
+
+impl ItemsQuery {
+    fn new(
+        stream_id: &StreamId,
+        ranking: StreamRanking,
+        number: u32,
+        continuation: Option<&str>,
+        exclude: Option<&StreamTag>,
+        oldest_time: Option<NaiveDateTime>,
+        newest_time: Option<NaiveDateTime>,
+    ) -> Self {
+        let feed_id_filter = match stream_id {
+            StreamId::Feed(feed_id) => i32::from_str(feed_id).ok(),
+            StreamId::Tag(_) => None,
+        };
+
+        let read_state_filter = match (stream_id, exclude) {
+            (_, Some(StreamTag::State(_, StreamState::Read))) => Some(false),
+            (_, Some(StreamTag::State(_, StreamState::KeptUnread))) => Some(true),
+            (StreamId::Tag(StreamTag::State(_, StreamState::Read)), _) => Some(true),
+            (StreamId::Tag(StreamTag::State(_, StreamState::KeptUnread)), _) => Some(false),
+            _ => None,
+        };
+
+        let saved_state_filter = match (stream_id, exclude) {
+            (_, Some(StreamTag::State(_, StreamState::Starred))) => Some(false),
+            (StreamId::Tag(StreamTag::State(_, StreamState::Starred)), _) => Some(true),
+            _ => None,
+        };
+
+        let count = if number == 0 { 20 } else { number };
+
+        let descending = match ranking {
+            StreamRanking::NewestFirst => true,
+            StreamRanking::OldestFirst => false,
+        };
+
+        let continuing_from_id = continuation.and_then(|s| i32::from_str(&s).ok());
+
+        ItemsQuery {
+            count,
+            descending,
+            continuing_from_id,
+            feed_id_filter,
+            read_state_filter,
+            saved_state_filter,
+            min_time: oldest_time,
+            max_time: newest_time,
+        }
+    }
+}
+
+
+fn load_item_ids(query: ItemsQuery) -> DataResult<StreamItemsIdsResponse> {
+    Ok(StreamItemsIdsResponse {
+        item_refs: vec![],
+    })
+}
+
 pub fn handle_api_request(
     request: &RequestType,
     conn: &mut PgConnection,
@@ -79,6 +152,18 @@ pub fn handle_api_request(
         SubscriptionList => SubscriptionListResponse {
             subscriptions: load_subscriptions(conn)?,
         }.into(),
+        StreamItemsIds(params) => {
+            let query = ItemsQuery::new(
+                &params.stream_id,
+                params.ranking,
+                params.number,
+                params.continuation.as_ref().map(String::as_str),
+                params.exclude.as_ref(),
+                params.oldest_time,
+                params.newest_time,
+            );
+            load_item_ids(query)?.into()
+        }
         _ => "OK".to_owned().into(),
     };
 
