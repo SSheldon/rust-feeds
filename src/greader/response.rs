@@ -52,12 +52,12 @@ pub struct Subscription {
     #[serde(rename = "sortid")]
     pub sort_id: String,
     pub id: StreamId,
-    pub categories: Vec<SubscriptionCategories>,
+    pub categories: Vec<SubscriptionCategory>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize, Serialize)]
-pub struct SubscriptionCategories {
+pub struct SubscriptionCategory {
     pub id: StreamTag,
     pub label: String,
 }
