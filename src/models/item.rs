@@ -3,7 +3,7 @@ use chrono::NaiveDateTime;
 use crate::schema::item;
 use super::feed::Feed;
 
-#[derive(Identifiable, Queryable, Associations)]
+#[derive(Identifiable, Queryable, Selectable, Associations)]
 #[diesel(belongs_to(Feed))]
 #[diesel(table_name = item)]
 pub struct Item {

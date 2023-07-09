@@ -1,7 +1,7 @@
 use crate::schema::feed;
 use super::group::Group;
 
-#[derive(Identifiable, Queryable, Associations)]
+#[derive(Identifiable, Queryable, Selectable, Associations)]
 #[diesel(belongs_to(Group))]
 #[diesel(table_name = feed)]
 pub struct Feed {
