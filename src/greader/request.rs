@@ -270,70 +270,70 @@ impl Serialize for ItemId {
 #[derive(Deserialize)]
 pub struct StreamContentsParams {
     #[serde(rename = "r", default)]
-    ranking: StreamRanking,
+    pub ranking: StreamRanking,
     #[serde(rename = "n", default)]
-    number: u32,
+    pub number: u32,
     #[serde(rename = "c", default)]
-    continuation: Option<String>,
+    pub continuation: Option<String>,
     #[serde(rename = "xt", default)]
-    exclude: Option<StreamTag>,
+    pub exclude: Option<StreamTag>,
     #[serde(rename = "ot", default, with = "timestamp::OptSec")]
-    exclude_older_than: Option<NaiveDateTime>,
+    pub oldest_time: Option<NaiveDateTime>,
     #[serde(rename = "nt", default, with = "timestamp::OptSec")]
-    exclude_newer_than: Option<NaiveDateTime>,
+    pub newest_time: Option<NaiveDateTime>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize)]
 pub struct StreamItemsIdsParams {
     #[serde(rename = "s")]
-    stream_id: StreamId,
+    pub stream_id: StreamId,
     #[serde(rename = "r", default)]
-    ranking: StreamRanking,
+    pub ranking: StreamRanking,
     #[serde(rename = "n", default)]
-    number: u32,
+    pub number: u32,
     #[serde(rename = "c", default)]
-    continuation: Option<String>,
+    pub continuation: Option<String>,
     #[serde(rename = "xt", default)]
-    exclude: Option<StreamTag>,
+    pub exclude: Option<StreamTag>,
     #[serde(rename = "ot", default, with = "timestamp::OptSec")]
-    exclude_older_than: Option<NaiveDateTime>,
+    pub oldest_time: Option<NaiveDateTime>,
     #[serde(rename = "nt", default, with = "timestamp::OptSec")]
-    exclude_newer_than: Option<NaiveDateTime>,
+    pub newest_time: Option<NaiveDateTime>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize)]
 pub struct StreamItemsCountParams {
     #[serde(rename = "s")]
-    stream_id: StreamId,
+    pub stream_id: StreamId,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize)]
 pub struct StreamItemsContentsParams {
     #[serde(rename = "i")]
-    item_ids: Vec<ItemId>,
+    pub item_ids: Vec<ItemId>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize)]
 pub struct EditTagParams {
     #[serde(rename = "i")]
-    item_ids: Vec<ItemId>,
+    pub item_ids: Vec<ItemId>,
     #[serde(rename = "a", default)]
-    add_tags: Vec<StreamTag>,
+    pub add_tags: Vec<StreamTag>,
     #[serde(rename = "r", default)]
-    remove_tags: Vec<StreamTag>,
+    pub remove_tags: Vec<StreamTag>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize)]
 pub struct MarkAllAsReadParams {
     #[serde(rename = "s")]
-    stream_id: StreamId,
+    pub stream_id: StreamId,
     #[serde(rename = "ts", default, with = "timestamp::OptUSec")]
-    older_than: Option<NaiveDateTime>,
+    pub older_than: Option<NaiveDateTime>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
