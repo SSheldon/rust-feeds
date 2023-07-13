@@ -337,7 +337,7 @@ pub struct MarkAllAsReadParams {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub enum RequestType {
+pub enum Request {
     Token,
     UserInfo,
     UnreadCount,
@@ -360,8 +360,8 @@ pub struct LoginParams {
     pub password: String,
 }
 
-impl RequestType {
-    pub fn parse(path: &str, params: &str) -> Option<RequestType> {
+impl Request {
+    pub fn parse(path: &str, params: &str) -> Option<Request> {
         Some(match path {
             "token" => Self::Token,
             "user-info" => Self::UserInfo,

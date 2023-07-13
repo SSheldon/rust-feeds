@@ -241,10 +241,10 @@ fn load_items_for_ids(ids: &[ItemId], conn: &mut PgConnection) -> DataResult<Str
 }
 
 pub fn handle_api_request(
-    request: &RequestType,
+    request: &Request,
     conn: &mut PgConnection,
 ) -> DataResult<Response> {
-    use RequestType::*;
+    use Request::*;
 
     let response: Response = match request {
         UserInfo => UserInfoResponse {

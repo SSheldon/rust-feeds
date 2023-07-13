@@ -13,7 +13,7 @@ use fever_api::{
 use crate::config::{PgConnectionPool, PooledPgConnection};
 use crate::error::Error;
 use crate::fetch;
-use crate::greader::request::{LoginParams as GReaderLoginParams, RequestType as GReaderRequestType};
+use crate::greader::request::{LoginParams as GReaderLoginParams, Request as GReaderRequest};
 use crate::greader::response::Response as GReaderResponse;
 use crate::handling;
 
@@ -121,8 +121,8 @@ async fn check_greader_auth(
 async fn parse_greader_request(
     path: warp::filters::path::Tail,
     params: String,
-) -> Result<GReaderRequestType, warp::Rejection> {
-    GReaderRequestType::parse(path.as_str(), &params)
+) -> Result<GReaderRequest, warp::Rejection> {
+    GReaderRequest::parse(path.as_str(), &params)
         .ok_or(warp::reject::not_found())
 }
 
@@ -142,7 +142,7 @@ impl warp::Reply for GReaderResponse {
 }
 
 async fn handle_greader_request(
-    request: GReaderRequestType,
+    request: GReaderRequest,
     mut conn: PooledPgConnection,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     println!("{:?}", request);
