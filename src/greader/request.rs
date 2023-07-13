@@ -367,14 +367,23 @@ impl Request {
             "user-info" => Self::UserInfo,
             "unread-count" => Self::UnreadCount,
             "subscription/list" => Self::SubscriptionList,
-            // stream/contents
             "stream/items/ids" => Self::StreamItemsIds(serde_html_form::from_str(params).ok()?),
             "stream/items/count" => Self::StreamItemsCount(serde_html_form::from_str(params).ok()?),
             "stream/items/contents" => Self::StreamItemsContents(serde_html_form::from_str(params).ok()?),
             "tag/list" => Self::TagList,
             "edit-tag" => Self::EditTag(serde_html_form::from_str(params).ok()?),
             "mark-all-as-read" => Self::MarkAllAsRead(serde_html_form::from_str(params).ok()?),
-            _ => return None,
+            path => {
+                if let Some(stream_id) = path.strip_prefix("stream/contents/") {
+                    Self::StreamContents(
+                        // TODO: should be url decoded
+                        StreamId::from_str(stream_id).ok()?,
+                        serde_html_form::from_str(params).ok()?,
+                    )
+                } else {
+                    return None
+                }
+            },
         })
     }
 }
