@@ -351,6 +351,15 @@ pub enum RequestType {
     MarkAllAsRead(MarkAllAsReadParams),
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Deserialize)]
+pub struct LoginParams {
+    #[serde(rename = "Email")]
+    pub email: String,
+    #[serde(rename = "Passwd")]
+    pub password: String,
+}
+
 impl RequestType {
     pub fn parse(path: &str, params: &str) -> Option<RequestType> {
         Some(match path {

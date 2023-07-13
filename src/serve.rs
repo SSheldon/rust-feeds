@@ -13,7 +13,7 @@ use fever_api::{
 use crate::config::{PgConnectionPool, PooledPgConnection};
 use crate::error::Error;
 use crate::fetch;
-use crate::greader::request::RequestType as GReaderRequestType;
+use crate::greader::request::{LoginParams as GReaderLoginParams, RequestType as GReaderRequestType};
 use crate::greader::response::Response as GReaderResponse;
 use crate::handling;
 
@@ -103,6 +103,21 @@ fn body_string() -> impl Filter<Extract=(String,), Error=warp::Rejection> + Clon
         .and_then(read_string)
 }
 
+async fn handle_greader_login(
+    params: GReaderLoginParams,
+) -> Result<impl warp::Reply, warp::Rejection> {
+    println!("{:?}", params);
+    Ok("SID=...\nLSID=...\nAuth=<token>")
+}
+
+async fn check_greader_auth(
+    header: String,
+) -> Result<(), warp::Rejection> {
+    let token = header.strip_prefix("GoogleLogin auth=");
+    println!("{:?}", token);
+    Ok(())
+}
+
 async fn parse_greader_request(
     path: warp::filters::path::Tail,
     params: String,
@@ -161,14 +176,19 @@ pub async fn serve(
     let fever = warp::path::end()
         .and(api.or(refresh));
 
-    let greader_auth = warp::path("accounts")
+    let greader_login = warp::path("accounts")
         .and(warp::path("ClientLogin"))
         .and(warp::path::end())
-        .map(|| "SID=...\nLSID=...\nAuth=<token>");
+        .and(warp::post())
+        .and(warp::body::form())
+        .and_then(handle_greader_login);
 
     let greader_api_base = warp::path("reader")
         .and(warp::path("api"))
         .and(warp::path("0"))
+        .and(warp::header("Authorization"))
+        .and_then(check_greader_auth)
+        .untuple_one()
         .and(warp::path::tail());
 
     let greader_api_get = greader_api_base
@@ -189,7 +209,7 @@ pub async fn serve(
 
     let greader = warp::path("api")
         .and(warp::path("greader.php"))
-        .and(greader_auth.or(greader_api));
+        .and(greader_login.or(greader_api));
 
     let route = fever.or(greader).with(warp::log("feeds"));
 
