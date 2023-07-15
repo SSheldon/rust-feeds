@@ -177,9 +177,11 @@ fn load_item_ids(query: ItemsQuery, conn: &mut PgConnection) -> DataResult<Strea
     let ids = if let Some(expr) = query.expr() {
         item::table.filter(expr)
             .select((item::id, item::published))
+            .limit(query.count as i64)
             .load::<(i32, NaiveDateTime)>(conn)
     } else {
         item::table.select((item::id, item::published))
+            .limit(query.count as i64)
             .load::<(i32, NaiveDateTime)>(conn)
     }.map_err(fill_err!("Error loading item ids"))?;
 
