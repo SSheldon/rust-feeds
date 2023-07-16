@@ -310,6 +310,12 @@ pub struct StreamItemsIdsParams {
 pub struct StreamItemsCountParams {
     #[serde(rename = "s")]
     pub stream_id: StreamId,
+    #[serde(rename = "xt", default)]
+    pub exclude: Option<StreamTag>,
+    #[serde(rename = "ot", default, with = "timestamp::OptSec")]
+    pub oldest_time: Option<NaiveDateTime>,
+    #[serde(rename = "nt", default, with = "timestamp::OptSec")]
+    pub newest_time: Option<NaiveDateTime>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

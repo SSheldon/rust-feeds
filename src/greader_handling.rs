@@ -150,15 +150,22 @@ impl ItemsQuery {
     fn query(&self) -> crate::schema::item::BoxedQuery<diesel::pg::Pg> {
         use crate::schema::item;
 
-        let mut query = item::table
-            .limit(self.count as i64)
-            .into_boxed();
+        let mut query = self.filter_query()
+            .limit(self.count as i64);
 
         if self.descending {
             query = query.order(item::id.desc());
         } else {
             query = query.order(item::id.asc());
         }
+
+        query
+    }
+
+    fn filter_query(&self) -> crate::schema::item::BoxedQuery<diesel::pg::Pg> {
+        use crate::schema::item;
+
+        let mut query = item::table.into_boxed();
 
         if let Some(id) = self.continuing_from_id {
             if self.descending {
@@ -284,6 +291,14 @@ fn load_items_for_stream(
     })
 }
 
+fn load_item_count(query: ItemsQuery, conn: &mut PgConnection) -> DataResult<u32> {
+    query.filter_query()
+        .count()
+        .get_result::<i64>(conn)
+        .map_err(fill_err!("Error counting items"))
+        .map(|i| i as u32)
+}
+
 pub fn handle_api_request(
     request: &Request,
     conn: &mut PgConnection,
@@ -327,6 +342,18 @@ pub fn handle_api_request(
                 params.newest_time,
             );
             load_items_for_stream(stream_id, query, conn)?.into()
+        }
+        StreamItemsCount(params) => {
+            let query = ItemsQuery::new(
+                &params.stream_id,
+                StreamRanking::NewestFirst,
+                0,
+                None,
+                params.exclude.as_ref(),
+                params.oldest_time,
+                params.newest_time,
+            );
+            load_item_count(query, conn)?.to_string().into()
         }
         _ => "OK".to_owned().into(),
     };
