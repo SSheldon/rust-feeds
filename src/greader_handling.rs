@@ -352,6 +352,59 @@ fn load_unread_counts(conn: &mut PgConnection) -> DataResult<UnreadCountResponse
     })
 }
 
+fn update_items_tags(params: &EditTagParams, conn: &mut PgConnection) -> DataResult<()> {
+    use crate::schema::item;
+
+    let db_ids: Vec<i32> = params.item_ids.iter().map(|&i| i.0 as i32).collect();
+
+    let mut read_state: Option<bool> = None;
+    let mut saved_state: Option<bool> = None;
+
+    for tag in &params.add_tags {
+        match tag {
+            StreamTag::State(_, StreamState::Read) => read_state = Some(true),
+            StreamTag::State(_, StreamState::KeptUnread) => read_state = Some(false),
+            StreamTag::State(_, StreamState::Starred) => saved_state = Some(true),
+            StreamTag::State(_, StreamState::ReadingList) => (),
+            StreamTag::Label(_, _) => (),
+        }
+    }
+
+    for tag in &params.remove_tags {
+        match tag {
+            StreamTag::State(_, StreamState::Read) => read_state = Some(false),
+            StreamTag::State(_, StreamState::KeptUnread) => read_state = Some(true),
+            StreamTag::State(_, StreamState::Starred) => saved_state = Some(false),
+            StreamTag::State(_, StreamState::ReadingList) => (),
+            StreamTag::Label(_, _) => (),
+        }
+    }
+
+    let query = diesel::update(item::table)
+        .filter(item::id.eq_any(db_ids));
+
+    match (read_state, saved_state) {
+        (Some(is_read), Some(is_saved)) => {
+            query.set((item::is_read.eq(is_read), item::is_saved.eq(is_saved)))
+                .execute(conn)
+                .map_err(fill_err!("Error updating items"))?;
+        }
+        (Some(is_read), None) => {
+            query.set(item::is_read.eq(is_read))
+                .execute(conn)
+                .map_err(fill_err!("Error updating items"))?;
+        }
+        (None, Some(is_saved)) => {
+            query.set(item::is_saved.eq(is_saved))
+                .execute(conn)
+                .map_err(fill_err!("Error updating items"))?;
+        }
+        (None, None) => (),
+    }
+
+    Ok(())
+}
+
 pub fn handle_api_request(
     request: &Request,
     conn: &mut PgConnection,
@@ -407,7 +460,10 @@ pub fn handle_api_request(
             load_item_count(filter, conn)?.to_string().into()
         }
         UnreadCount => load_unread_counts(conn)?.into(),
-        EditTag(_) => "OK".to_owned().into(),
+        EditTag(params) => {
+            update_items_tags(params, conn)?;
+            "OK".to_owned().into()
+        }
         MarkAllAsRead(_) => "OK".to_owned().into(),
     };
 
