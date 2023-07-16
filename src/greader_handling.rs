@@ -43,7 +43,10 @@ fn format_item(item: DbItem) -> Item {
         origin: ItemOrigin {
             stream_id: StreamId::Feed(item.feed_id.to_string()),
         },
-        categories: vec![],
+        categories: [
+            if item.is_read { Some(StreamTag::State(None, StreamState::Read)) } else { None },
+            if item.is_saved { Some(StreamTag::State(None, StreamState::Starred)) } else { None },
+        ].into_iter().filter_map(|t| t).collect(),
         alternate: vec![
             Link { href: item.url },
         ],
