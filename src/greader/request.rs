@@ -229,7 +229,7 @@ impl Serialize for StreamId {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct ItemId(pub u64);
+pub struct ItemId(pub i64);
 
 impl fmt::Display for ItemId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -242,8 +242,11 @@ impl FromStr for ItemId {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         s.strip_prefix("tag:google.com,2005:reader/item/")
-            .map(|s| u64::from_str_radix(s, 16))
-            .unwrap_or_else(|| u64::from_str(s))
+            .map(|s| {
+                u64::from_str_radix(s, 16)
+                    .map(|i| i64::from_ne_bytes(i.to_ne_bytes()))
+            })
+            .unwrap_or_else(|| i64::from_str(s))
             .map(ItemId)
             .map_err(|_| ParseError { type_name: "ItemId", value: s.to_owned() })
     }

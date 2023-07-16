@@ -39,7 +39,7 @@ fn format_subscription(feed: DbFeed, group: Option<DbGroup>) -> Subscription {
 
 fn format_item(item: DbItem) -> Item {
     Item {
-        id: ItemId(item.id as u64),
+        id: ItemId(item.id as i64),
         origin: ItemOrigin {
             stream_id: StreamId::Feed(item.feed_id.to_string()),
         },
@@ -204,7 +204,7 @@ fn load_item_ids(query: ItemsQuery, conn: &mut PgConnection) -> DataResult<Strea
     let refs = ids.into_iter()
         .map(|(id, published)| {
             ItemRef {
-                id: ItemId(id as u64),
+                id: ItemId(id as i64),
                 timestamp: published,
                 direct_stream_ids: vec![],
             }
