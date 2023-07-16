@@ -86,15 +86,80 @@ fn load_subscriptions(conn: &mut PgConnection) -> DataResult<Vec<Subscription>> 
 }
 
 #[derive(Clone, Debug)]
+struct ItemsFilter {
+    feed_id: Option<i32>,
+    read_state: Option<bool>,
+    saved_state: Option<bool>,
+    min_time: Option<NaiveDateTime>,
+    max_time: Option<NaiveDateTime>,
+}
+
+impl ItemsFilter {
+    fn new(
+        stream_id: &StreamId,
+        exclude: Option<&StreamTag>,
+        oldest_time: Option<NaiveDateTime>,
+        newest_time: Option<NaiveDateTime>,
+    ) -> Self {
+        let feed_id = match stream_id {
+            StreamId::Feed(feed_id) => i32::from_str(feed_id).ok(),
+            StreamId::Tag(_) => None,
+        };
+
+        let read_state = match (stream_id, exclude) {
+            (_, Some(StreamTag::State(_, StreamState::Read))) => Some(false),
+            (_, Some(StreamTag::State(_, StreamState::KeptUnread))) => Some(true),
+            (StreamId::Tag(StreamTag::State(_, StreamState::Read)), _) => Some(true),
+            (StreamId::Tag(StreamTag::State(_, StreamState::KeptUnread)), _) => Some(false),
+            _ => None,
+        };
+
+        let saved_state = match (stream_id, exclude) {
+            (_, Some(StreamTag::State(_, StreamState::Starred))) => Some(false),
+            (StreamId::Tag(StreamTag::State(_, StreamState::Starred)), _) => Some(true),
+            _ => None,
+        };
+
+        ItemsFilter {
+            feed_id,
+            read_state,
+            saved_state,
+            min_time: oldest_time,
+            max_time: newest_time,
+        }
+    }
+
+    fn query(&self) -> crate::schema::item::BoxedQuery<diesel::pg::Pg> {
+        use crate::schema::item;
+
+        let mut query = item::table.into_boxed();
+
+        if let Some(feed_id) = self.feed_id {
+            query = query.filter(item::feed_id.eq(feed_id));
+        }
+        if let Some(is_read) = self.read_state {
+            query = query.filter(item::is_read.eq(is_read));
+        }
+        if let Some(is_saved) = self.saved_state {
+            query = query.filter(item::is_saved.eq(is_saved));
+        }
+        if let Some(min_time) = self.min_time {
+            query = query.filter(item::published.ge(min_time));
+        }
+        if let Some(max_time) = self.max_time {
+            query = query.filter(item::published.le(max_time));
+        }
+
+        query
+    }
+}
+
+#[derive(Clone, Debug)]
 struct ItemsQuery {
     count: u32,
     descending: bool,
     continuing_from_id: Option<i32>,
-    feed_id_filter: Option<i32>,
-    read_state_filter: Option<bool>,
-    saved_state_filter: Option<bool>,
-    min_time: Option<NaiveDateTime>,
-    max_time: Option<NaiveDateTime>,
+    filter: ItemsFilter,
 }
 
 impl ItemsQuery {
@@ -107,24 +172,12 @@ impl ItemsQuery {
         oldest_time: Option<NaiveDateTime>,
         newest_time: Option<NaiveDateTime>,
     ) -> Self {
-        let feed_id_filter = match stream_id {
-            StreamId::Feed(feed_id) => i32::from_str(feed_id).ok(),
-            StreamId::Tag(_) => None,
-        };
-
-        let read_state_filter = match (stream_id, exclude) {
-            (_, Some(StreamTag::State(_, StreamState::Read))) => Some(false),
-            (_, Some(StreamTag::State(_, StreamState::KeptUnread))) => Some(true),
-            (StreamId::Tag(StreamTag::State(_, StreamState::Read)), _) => Some(true),
-            (StreamId::Tag(StreamTag::State(_, StreamState::KeptUnread)), _) => Some(false),
-            _ => None,
-        };
-
-        let saved_state_filter = match (stream_id, exclude) {
-            (_, Some(StreamTag::State(_, StreamState::Starred))) => Some(false),
-            (StreamId::Tag(StreamTag::State(_, StreamState::Starred)), _) => Some(true),
-            _ => None,
-        };
+        let filter = ItemsFilter::new(
+            stream_id,
+            exclude,
+            oldest_time,
+            newest_time,
+        );
 
         let count = if number == 0 { 20 } else { number };
 
@@ -139,18 +192,14 @@ impl ItemsQuery {
             count,
             descending,
             continuing_from_id,
-            feed_id_filter,
-            read_state_filter,
-            saved_state_filter,
-            min_time: oldest_time,
-            max_time: newest_time,
+            filter,
         }
     }
 
     fn query(&self) -> crate::schema::item::BoxedQuery<diesel::pg::Pg> {
         use crate::schema::item;
 
-        let mut query = self.filter_query()
+        let mut query = self.filter.query()
             .limit(self.count as i64);
 
         if self.descending {
@@ -159,35 +208,12 @@ impl ItemsQuery {
             query = query.order(item::id.asc());
         }
 
-        query
-    }
-
-    fn filter_query(&self) -> crate::schema::item::BoxedQuery<diesel::pg::Pg> {
-        use crate::schema::item;
-
-        let mut query = item::table.into_boxed();
-
         if let Some(id) = self.continuing_from_id {
             if self.descending {
                 query = query.filter(item::id.le(id));
             } else {
                 query = query.filter(item::id.ge(id));
             }
-        }
-        if let Some(feed_id) = self.feed_id_filter {
-            query = query.filter(item::feed_id.eq(feed_id));
-        }
-        if let Some(is_read) = self.read_state_filter {
-            query = query.filter(item::is_read.eq(is_read));
-        }
-        if let Some(is_saved) = self.saved_state_filter {
-            query = query.filter(item::is_saved.eq(is_saved));
-        }
-        if let Some(min_time) = self.min_time {
-            query = query.filter(item::published.ge(min_time));
-        }
-        if let Some(max_time) = self.max_time {
-            query = query.filter(item::published.le(max_time));
         }
 
         query
@@ -252,7 +278,7 @@ fn load_items_for_stream(
 ) -> DataResult<StreamContentsResponse> {
     use crate::schema::{feed, item};
 
-    let feed = if let Some(feed_id) = query.feed_id_filter {
+    let feed = if let Some(feed_id) = query.filter.feed_id {
         feed::table.filter(feed::id.eq(feed_id))
             .get_result::<DbFeed>(conn)
             .optional()
@@ -291,8 +317,8 @@ fn load_items_for_stream(
     })
 }
 
-fn load_item_count(query: ItemsQuery, conn: &mut PgConnection) -> DataResult<u32> {
-    query.filter_query()
+fn load_item_count(filter: ItemsFilter, conn: &mut PgConnection) -> DataResult<u32> {
+    filter.query()
         .count()
         .get_result::<i64>(conn)
         .map_err(fill_err!("Error counting items"))
@@ -372,16 +398,13 @@ pub fn handle_api_request(
             load_items_for_stream(stream_id, query, conn)?.into()
         }
         StreamItemsCount(params) => {
-            let query = ItemsQuery::new(
+            let filter = ItemsFilter::new(
                 &params.stream_id,
-                StreamRanking::NewestFirst,
-                0,
-                None,
                 params.exclude.as_ref(),
                 params.oldest_time,
                 params.newest_time,
             );
-            load_item_count(query, conn)?.to_string().into()
+            load_item_count(filter, conn)?.to_string().into()
         }
         UnreadCount => load_unread_counts(conn)?.into(),
         EditTag(_) => "OK".to_owned().into(),
