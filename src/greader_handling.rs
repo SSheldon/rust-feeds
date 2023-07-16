@@ -333,6 +333,7 @@ pub fn handle_api_request(
     use Request::*;
 
     let response: Response = match request {
+        Token => "TOKEN".to_owned().into(),
         UserInfo => UserInfoResponse {
             user_id: "1".to_owned(),
             user_profile_id: "1".to_owned(),
@@ -383,7 +384,8 @@ pub fn handle_api_request(
             load_item_count(query, conn)?.to_string().into()
         }
         UnreadCount => load_unread_counts(conn)?.into(),
-        _ => "OK".to_owned().into(),
+        EditTag(_) => "OK".to_owned().into(),
+        MarkAllAsRead(_) => "OK".to_owned().into(),
     };
 
     Ok(response)
