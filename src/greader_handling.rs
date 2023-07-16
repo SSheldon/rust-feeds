@@ -24,11 +24,10 @@ fn format_tag(group: DbGroup) -> Tag {
 
 fn format_subscription(feed: DbFeed, group: Option<DbGroup>) -> Subscription {
     Subscription {
-        title: feed.title,
-        first_item_time: chrono::NaiveDateTime::from_timestamp_opt(0, 0).unwrap(),
-        html_url: feed.site_url.unwrap(),
-        sort_id: "".to_owned(),
         id: StreamId::Feed(feed.id.to_string()),
+        title: feed.title,
+        html_url: feed.site_url,
+        sort_id: None,
         categories: group.map(|group| {
             SubscriptionCategory {
                 id: StreamTag::Label(None, group.title),

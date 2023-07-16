@@ -21,7 +21,6 @@ pub struct UserInfoResponse {
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize, Serialize)]
 pub struct UnreadCountResponse {
-    pub max: u32,
     #[serde(rename = "unreadcounts")]
     pub unread_counts: Vec<UnreadCount>,
 }
@@ -44,14 +43,13 @@ pub struct SubscriptionListResponse {
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize, Serialize)]
 pub struct Subscription {
-    pub title: String,
-    #[serde(rename = "firstitemmsec", with = "timestamp::MSec")]
-    pub first_item_time: NaiveDateTime,
-    #[serde(rename = "htmlUrl")]
-    pub html_url: String,
-    #[serde(rename = "sortid")]
-    pub sort_id: String,
     pub id: StreamId,
+    pub title: String,
+    #[serde(rename = "htmlUrl", default, skip_serializing_if = "Option::is_none")]
+    pub html_url: Option<String>,
+    #[serde(rename = "sortid", default, skip_serializing_if = "Option::is_none")]
+    pub sort_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub categories: Vec<SubscriptionCategory>,
 }
 
@@ -65,16 +63,15 @@ pub struct SubscriptionCategory {
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize, Serialize)]
 pub struct StreamContentsResponse {
-    pub direction: String,
-    pub author: String,
-    pub title: String,
-    #[serde(with = "timestamp::Sec")]
-    pub updated: NaiveDateTime,
-    pub continuation: String,
     pub id: StreamId,
-    #[serde(rename = "self")]
-    pub self_links: Vec<Link>,
+    pub title: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub alternate: Vec<Link>,
+    #[serde(with = "timestamp::OptSec", default, skip_serializing_if = "Option::is_none")]
+    pub updated: Option<NaiveDateTime>,
     pub items: Vec<Item>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub continuation: Option<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
