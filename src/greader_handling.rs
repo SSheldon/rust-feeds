@@ -192,6 +192,15 @@ fn load_item_ids(query: ItemsQuery, conn: &mut PgConnection) -> DataResult<Strea
         .load::<(i32, NaiveDateTime)>(conn)
         .map_err(fill_err!("Error loading item ids"))?;
 
+    let continuation = query.query()
+        .offset(query.count as i64)
+        .limit(1)
+        .select(item::id)
+        .get_result::<i32>(conn)
+        .optional()
+        .map_err(fill_err!("Error loading item ids continuation"))?
+        .map(|id| id.to_string());
+
     let refs = ids.into_iter()
         .map(|(id, published)| {
             ItemRef {
@@ -204,6 +213,7 @@ fn load_item_ids(query: ItemsQuery, conn: &mut PgConnection) -> DataResult<Strea
 
     Ok(StreamItemsIdsResponse {
         item_refs: refs,
+        continuation: continuation,
     })
 }
 

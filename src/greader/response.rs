@@ -121,6 +121,8 @@ pub struct ItemSummary {
 #[serde(rename_all = "camelCase")]
 pub struct StreamItemsIdsResponse {
     pub item_refs: Vec<ItemRef>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub continuation: Option<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
