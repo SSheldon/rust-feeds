@@ -17,7 +17,7 @@ type DataResult<T> = Result<T, Error<diesel::result::Error>>;
 
 fn format_tag(group: DbGroup) -> Tag {
     Tag {
-        id: StreamTag::Label(None, group.id.to_string()),
+        id: StreamTag::Label(None, group.title.clone()),
         sort_id: None,
     }
 }
@@ -31,7 +31,7 @@ fn format_subscription(feed: DbFeed, group: Option<DbGroup>) -> Subscription {
         id: StreamId::Feed(feed.id.to_string()),
         categories: group.map(|group| {
             SubscriptionCategory {
-                id: StreamTag::Label(None, group.id.to_string()),
+                id: StreamTag::Label(None, group.title),
                 label: None,
             }
         }).into_iter().collect(),
