@@ -159,9 +159,9 @@ impl ItemsQuery {
 
         if let Some(id) = self.continuing_from_id {
             if self.descending {
-                query = query.filter(item::id.lt(id));
+                query = query.filter(item::id.le(id));
             } else {
-                query = query.filter(item::id.gt(id));
+                query = query.filter(item::id.ge(id));
             }
         }
         if let Some(feed_id) = self.feed_id_filter {
