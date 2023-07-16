@@ -289,13 +289,10 @@ pub fn handle_api_request(
 
     let response: Response = match request {
         UserInfo => UserInfoResponse {
-            user_id: "123".to_owned(),
-            user_name: "Name".to_owned(),
-            user_profile_id: "123".to_owned(),
-            user_email: "username@gmail.com".to_owned(),
-            is_blogger_user: true,
-            signup_time: chrono::NaiveDateTime::from_timestamp_opt(0, 0).unwrap(),
-            public_user_name: "username".to_owned(),
+            user_id: "1".to_owned(),
+            user_profile_id: "1".to_owned(),
+            user_name: "user".to_owned(),
+            user_email: None,
         }.into(),
         TagList => TagListResponse {
             tags: load_labels(conn)?,

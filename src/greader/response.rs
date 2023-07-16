@@ -9,13 +9,10 @@ use super::timestamp::{self, Convert};
 #[serde(rename_all = "camelCase")]
 pub struct UserInfoResponse {
     pub user_id: String,
-    pub user_name: String,
     pub user_profile_id: String,
-    pub user_email: String,
-    pub is_blogger_user: bool,
-    #[serde(rename = "signupTimeSec", with = "timestamp::Sec")]
-    pub signup_time: NaiveDateTime,
-    pub public_user_name: String,
+    pub user_name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub user_email: Option<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
