@@ -37,6 +37,28 @@ fn format_subscription(feed: DbFeed, group: Option<DbGroup>) -> Subscription {
     }
 }
 
+fn format_item(item: DbItem) -> Item {
+    Item {
+        id: ItemId(item.id as u64),
+        origin: ItemOrigin {
+            stream_id: StreamId::Feed(item.feed_id.to_string()),
+        },
+        categories: vec![],
+        alternate: vec![
+            Link { href: item.url },
+        ],
+        author: None,
+        title: item.title,
+        summary: ItemSummary {
+            content: item.content,
+        },
+        timestamp: item.published,
+        published: item.published,
+        updated: None,
+        crawl_time: None,
+    }
+}
+
 fn load_labels(conn: &mut PgConnection) -> DataResult<Vec<Tag>> {
     let labels = data::load_groups(conn)
         .map_err(fill_err!("Error loading groups"))?
@@ -195,27 +217,7 @@ fn load_items_for_ids(ids: &[ItemId], conn: &mut PgConnection) -> DataResult<Str
         .map_err(fill_err!("Error loading items"))?;
 
     let api_items = db_items.into_iter()
-        .map(|item| {
-            Item {
-                id: ItemId(item.id as u64),
-                origin: ItemOrigin {
-                    stream_id: StreamId::Feed(item.feed_id.to_string()),
-                },
-                categories: vec![],
-                alternate: vec![
-                    Link { href: item.url },
-                ],
-                author: None,
-                title: item.title,
-                summary: ItemSummary {
-                    content: item.content,
-                },
-                timestamp: item.published,
-                published: item.published,
-                updated: None,
-                crawl_time: None,
-            }
-        })
+        .map(format_item)
         .collect();
 
     Ok(StreamItemsContentsResponse {
