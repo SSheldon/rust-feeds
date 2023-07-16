@@ -299,6 +299,33 @@ fn load_item_count(query: ItemsQuery, conn: &mut PgConnection) -> DataResult<u32
         .map(|i| i as u32)
 }
 
+fn load_unread_counts(conn: &mut PgConnection) -> DataResult<UnreadCountResponse> {
+    use crate::schema::{feed, item};
+    use diesel::dsl::{count, max};
+
+    let counts = feed::table.inner_join(item::table)
+        .filter(item::is_read.eq(false))
+        .group_by(feed::id)
+        .select((feed::id, count(item::id), max(item::published)))
+        .load::<(i32, i64, Option<NaiveDateTime>)>(conn)
+        .map_err(fill_err!("Error counting unread items"))?;
+
+    let counts = counts
+        .into_iter()
+        .map(|(id, count, latest)| {
+            UnreadCount {
+                id: StreamId::Feed(id.to_string()),
+                count: count as u32,
+                newest_item_time: latest,
+            }
+        })
+        .collect();
+
+    Ok(UnreadCountResponse {
+        unread_counts: counts,
+    })
+}
+
 pub fn handle_api_request(
     request: &Request,
     conn: &mut PgConnection,
@@ -355,6 +382,7 @@ pub fn handle_api_request(
             );
             load_item_count(query, conn)?.to_string().into()
         }
+        UnreadCount => load_unread_counts(conn)?.into(),
         _ => "OK".to_owned().into(),
     };
 

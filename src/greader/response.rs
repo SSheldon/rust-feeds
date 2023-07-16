@@ -27,8 +27,8 @@ pub struct UnreadCountResponse {
 pub struct UnreadCount {
     pub count: u32,
     pub id: StreamId,
-    #[serde(rename = "newestItemTimestampUsec", with = "timestamp::USec")]
-    pub newest_item_time: NaiveDateTime,
+    #[serde(rename = "newestItemTimestampUsec", with = "timestamp::OptUSec", default, skip_serializing_if = "Option::is_none")]
+    pub newest_item_time: Option<NaiveDateTime>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
