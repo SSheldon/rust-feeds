@@ -235,6 +235,52 @@ fn load_items_for_ids(ids: &[ItemId], conn: &mut PgConnection) -> DataResult<Str
     })
 }
 
+fn load_items_for_stream(
+    stream_id: &StreamId,
+    query: ItemsQuery,
+    conn: &mut PgConnection,
+) -> DataResult<StreamContentsResponse> {
+    use crate::schema::{feed, item};
+
+    let feed = if let Some(feed_id) = query.feed_id_filter {
+        feed::table.filter(feed::id.eq(feed_id))
+            .get_result::<DbFeed>(conn)
+            .optional()
+            .map_err(fill_err!("Error loading feed"))?
+    } else { None };
+
+    let (feed_title, feed_url) = match feed {
+        Some(feed) => (Some(feed.title), feed.site_url),
+        None => (None, None),
+    };
+
+    let db_items = query.query()
+        .load::<DbItem>(conn)
+        .map_err(fill_err!("Error loading items"))?;
+
+    let continuation = query.query()
+        .offset(query.count as i64)
+        .limit(1)
+        .select(item::id)
+        .get_result::<i32>(conn)
+        .optional()
+        .map_err(fill_err!("Error loading item ids continuation"))?
+        .map(|id| id.to_string());
+
+    let api_items = db_items.into_iter()
+        .map(format_item)
+        .collect();
+
+    Ok(StreamContentsResponse {
+        id: stream_id.clone(),
+        title: feed_title,
+        alternate: feed_url.map(|url| Link { href: url }).into_iter().collect(),
+        updated: None,
+        items: api_items,
+        continuation: continuation,
+    })
+}
+
 pub fn handle_api_request(
     request: &Request,
     conn: &mut PgConnection,
@@ -270,6 +316,18 @@ pub fn handle_api_request(
             load_item_ids(query, conn)?.into()
         }
         StreamItemsContents(params) => load_items_for_ids(&params.item_ids, conn)?.into(),
+        StreamContents(stream_id, params) => {
+            let query = ItemsQuery::new(
+                &stream_id,
+                params.ranking,
+                params.number,
+                params.continuation.as_ref().map(String::as_str),
+                params.exclude.as_ref(),
+                params.oldest_time,
+                params.newest_time,
+            );
+            load_items_for_stream(stream_id, query, conn)?.into()
+        }
         _ => "OK".to_owned().into(),
     };
 
