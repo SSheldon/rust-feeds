@@ -18,7 +18,7 @@ type DataResult<T> = Result<T, Error<diesel::result::Error>>;
 fn format_tag(group: DbGroup) -> Tag {
     Tag {
         id: StreamTag::Label(None, group.id.to_string()),
-        sort_id: group.title,
+        sort_id: None,
     }
 }
 
@@ -32,7 +32,7 @@ fn format_subscription(feed: DbFeed, group: Option<DbGroup>) -> Subscription {
         categories: group.map(|group| {
             SubscriptionCategory {
                 id: StreamTag::Label(None, group.id.to_string()),
-                label: group.title,
+                label: None,
             }
         }).into_iter().collect(),
     }
@@ -198,27 +198,23 @@ fn load_items_for_ids(ids: &[ItemId], conn: &mut PgConnection) -> DataResult<Str
     let api_items = db_items.into_iter()
         .map(|item| {
             Item {
+                id: ItemId(item.id as u64),
                 origin: ItemOrigin {
                     stream_id: StreamId::Feed(item.feed_id.to_string()),
                 },
-                updated: item.published,
-                id: ItemId(item.id as u64),
                 categories: vec![],
-                author: "".to_owned(),
                 alternate: vec![
-                    Link {
-                        href: item.url,
-                        link_type: None,
-                    },
+                    Link { href: item.url },
                 ],
-                timestamp: item.published,
+                author: None,
+                title: item.title,
                 summary: ItemSummary {
-                    direction: "ltr".to_owned(),
                     content: item.content,
                 },
-                crawl_time: item.published,
+                timestamp: item.published,
                 published: item.published,
-                title: item.title,
+                updated: None,
+                crawl_time: None,
             }
         })
         .collect();

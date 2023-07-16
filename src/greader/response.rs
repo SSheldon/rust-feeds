@@ -59,7 +59,7 @@ pub struct Subscription {
 #[derive(Deserialize, Serialize)]
 pub struct SubscriptionCategory {
     pub id: StreamTag,
-    pub label: String,
+    pub label: Option<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -81,28 +81,29 @@ pub struct StreamContentsResponse {
 #[derive(Deserialize, Serialize)]
 pub struct Link {
     pub href: String,
-    #[serde(rename = "type")]
-    pub link_type: Option<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize, Serialize)]
 pub struct Item {
-    pub origin: ItemOrigin,
-    #[serde(with = "timestamp::Sec")]
-    pub updated: NaiveDateTime,
     pub id: ItemId,
+    pub origin: ItemOrigin,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub categories: Vec<StreamTag>,
-    pub author: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub alternate: Vec<Link>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub author: Option<String>,
+    pub title: String,
+    pub summary: ItemSummary,
     #[serde(rename = "timestampUsec", with = "timestamp::USec")]
     pub timestamp: NaiveDateTime,
-    pub summary: ItemSummary,
-    #[serde(rename = "crawlTimeMsec", with = "timestamp::MSec")]
-    pub crawl_time: NaiveDateTime,
     #[serde(with = "timestamp::Sec")]
     pub published: NaiveDateTime,
-    pub title: String,
+    #[serde(with = "timestamp::OptSec", default, skip_serializing_if = "Option::is_none")]
+    pub updated: Option<NaiveDateTime>,
+    #[serde(rename = "crawlTimeMsec", with = "timestamp::OptMSec", default, skip_serializing_if = "Option::is_none")]
+    pub crawl_time: Option<NaiveDateTime>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -115,7 +116,6 @@ pub struct ItemOrigin {
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize, Serialize)]
 pub struct ItemSummary {
-    pub direction: String,
     pub content: String,
 }
 
@@ -133,6 +133,7 @@ pub struct ItemRef {
     pub id: ItemId,
     #[serde(rename = "timestampUsec", with = "timestamp::USec")]
     pub timestamp: NaiveDateTime,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub direct_stream_ids: Vec<StreamId>,
 }
 
@@ -152,8 +153,8 @@ pub struct TagListResponse {
 #[derive(Deserialize, Serialize)]
 pub struct Tag {
     pub id: StreamTag,
-    #[serde(rename = "sortid")]
-    pub sort_id: String,
+    #[serde(rename = "sortid", default, skip_serializing_if = "Option::is_none")]
+    pub sort_id: Option<String>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
