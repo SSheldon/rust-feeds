@@ -85,7 +85,7 @@ fn load_subscriptions(conn: &mut PgConnection) -> DataResult<Vec<Subscription>> 
     Ok(subs)
 }
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug, Default)]
 struct ItemsFilter {
     feed_id: Option<i32>,
     read_state: Option<bool>,
@@ -95,38 +95,93 @@ struct ItemsFilter {
 }
 
 impl ItemsFilter {
+    fn stream(stream_id: &StreamId) -> Self {
+        match stream_id {
+            StreamId::Tag(tag) => Self::tag(tag),
+            StreamId::Feed(feed_id) => Self::feed(feed_id),
+        }
+    }
+
+    fn feed(feed_id: &str) -> Self {
+        ItemsFilter {
+            feed_id: i32::from_str(feed_id).ok(),
+            ..Self::default()
+        }
+    }
+
+    fn tag(tag: &StreamTag) -> Self {
+        match *tag {
+            StreamTag::State(_, state) => Self::state(state),
+            StreamTag::Label(_, _) => Self::default(),
+        }
+    }
+
+    fn state(state: StreamState) -> Self {
+        match state {
+            StreamState::Read => ItemsFilter {
+                read_state: Some(true),
+                ..Self::default()
+            },
+            StreamState::KeptUnread => ItemsFilter {
+                read_state: Some(false),
+                ..Self::default()
+            },
+            StreamState::Starred => ItemsFilter {
+                saved_state: Some(true),
+                ..Self::default()
+            },
+            StreamState::ReadingList => Self::default(),
+        }
+    }
+
+    fn exclude_tag(tag: &StreamTag) -> Self {
+        match *tag {
+            StreamTag::State(_, state) => Self::exclude_state(state),
+            StreamTag::Label(_, _) => Self::default(),
+        }
+    }
+
+    fn exclude_state(state: StreamState) -> Self {
+        match state {
+            StreamState::Read => ItemsFilter {
+                read_state: Some(false),
+                ..Self::default()
+            },
+            StreamState::KeptUnread => ItemsFilter {
+                read_state: Some(true),
+                ..Self::default()
+            },
+            StreamState::Starred => ItemsFilter {
+                saved_state: Some(false),
+                ..Self::default()
+            },
+            StreamState::ReadingList => Self::default(),
+        }
+    }
+
+    fn and(&self, other: ItemsFilter) -> Self {
+        ItemsFilter {
+            feed_id: other.feed_id.or(self.feed_id),
+            read_state: other.read_state.or(self.read_state),
+            saved_state: other.saved_state.or(self.saved_state),
+            min_time: [other.min_time, self.min_time].into_iter().filter_map(|t| t).max(),
+            max_time: [other.min_time, self.min_time].into_iter().filter_map(|t| t).min(),
+        }
+    }
+
     fn new(
         stream_id: &StreamId,
         exclude: Option<&StreamTag>,
         oldest_time: Option<NaiveDateTime>,
         newest_time: Option<NaiveDateTime>,
     ) -> Self {
-        let feed_id = match stream_id {
-            StreamId::Feed(feed_id) => i32::from_str(feed_id).ok(),
-            StreamId::Tag(_) => None,
-        };
-
-        let read_state = match (stream_id, exclude) {
-            (_, Some(StreamTag::State(_, StreamState::Read))) => Some(false),
-            (_, Some(StreamTag::State(_, StreamState::KeptUnread))) => Some(true),
-            (StreamId::Tag(StreamTag::State(_, StreamState::Read)), _) => Some(true),
-            (StreamId::Tag(StreamTag::State(_, StreamState::KeptUnread)), _) => Some(false),
-            _ => None,
-        };
-
-        let saved_state = match (stream_id, exclude) {
-            (_, Some(StreamTag::State(_, StreamState::Starred))) => Some(false),
-            (StreamId::Tag(StreamTag::State(_, StreamState::Starred)), _) => Some(true),
-            _ => None,
-        };
-
-        ItemsFilter {
-            feed_id,
-            read_state,
-            saved_state,
-            min_time: oldest_time,
-            max_time: newest_time,
+        let mut filter = Self::stream(stream_id);
+        if let Some(tag) = exclude {
+            filter = filter.and(Self::exclude_tag(tag));
         }
+        filter.min_time = oldest_time;
+        filter.max_time = newest_time;
+        filter
     }
 
     fn query(&self) -> crate::schema::item::BoxedQuery<diesel::pg::Pg> {
