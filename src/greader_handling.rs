@@ -85,6 +85,20 @@ fn load_subscriptions(conn: &mut PgConnection) -> DataResult<Vec<Subscription>> 
     Ok(subs)
 }
 
+type BoxedItemExpr = Box<dyn diesel::expression::BoxableExpression<
+    crate::schema::item::table,
+    diesel::pg::Pg,
+    SqlType = diesel::sql_types::Bool
+>>;
+
+fn merge<T, F>(x: Option<T>, y: Option<T>, f: F) -> Option<T>
+where F: FnOnce(T, T) -> T {
+    match (x, y) {
+        (Some(x), Some(y)) => Some(f(x, y)),
+        (x, y) => x.or(y)
+    }
+}
+
 #[derive(Copy, Clone, Debug, Default)]
 struct ItemsFilter {
     feed_id: Option<i32>,
@@ -164,8 +178,8 @@ impl ItemsFilter {
             feed_id: other.feed_id.or(self.feed_id),
             read_state: other.read_state.or(self.read_state),
             saved_state: other.saved_state.or(self.saved_state),
-            min_time: [other.min_time, self.min_time].into_iter().filter_map(|t| t).max(),
-            max_time: [other.min_time, self.min_time].into_iter().filter_map(|t| t).min(),
+            min_time: merge(other.min_time, self.min_time, std::cmp::max),
+            max_time: merge(other.max_time, self.max_time, std::cmp::min),
         }
     }
 
@@ -184,25 +198,37 @@ impl ItemsFilter {
         filter
     }
 
+    fn expr(&self) -> Option<BoxedItemExpr> {
+        use crate::schema::item;
+
+        [
+            self.feed_id.map::<BoxedItemExpr, _>(|feed_id| {
+                Box::new(item::feed_id.eq(feed_id))
+            }),
+            self.read_state.map::<BoxedItemExpr, _>(|is_read| {
+                Box::new(item::is_read.eq(is_read))
+            }),
+            self.saved_state.map::<BoxedItemExpr, _>(|is_saved| {
+                Box::new(item::is_saved.eq(is_saved))
+            }),
+            self.min_time.map::<BoxedItemExpr, _>(|min_time| {
+                Box::new(item::published.ge(min_time))
+            }),
+            self.max_time.map::<BoxedItemExpr, _>(|max_time| {
+                Box::new(item::published.le(max_time))
+            }),
+        ].into_iter().fold(None, |x, y| {
+            merge(x, y, |a, b| Box::new(a.and(b)))
+        })
+    }
+
     fn query(&self) -> crate::schema::item::BoxedQuery<diesel::pg::Pg> {
         use crate::schema::item;
 
         let mut query = item::table.into_boxed();
 
-        if let Some(feed_id) = self.feed_id {
-            query = query.filter(item::feed_id.eq(feed_id));
-        }
-        if let Some(is_read) = self.read_state {
-            query = query.filter(item::is_read.eq(is_read));
-        }
-        if let Some(is_saved) = self.saved_state {
-            query = query.filter(item::is_saved.eq(is_saved));
-        }
-        if let Some(min_time) = self.min_time {
-            query = query.filter(item::published.ge(min_time));
-        }
-        if let Some(max_time) = self.max_time {
-            query = query.filter(item::published.le(max_time));
+        if let Some(expr) = self.expr() {
+            query = query.filter(expr);
         }
 
         query
@@ -460,6 +486,27 @@ fn update_items_tags(params: &EditTagParams, conn: &mut PgConnection) -> DataRes
     Ok(())
 }
 
+fn update_stream_read(params: &MarkAllAsReadParams, conn: &mut PgConnection) -> DataResult<()> {
+    use crate::schema::item;
+
+    let mut filter = ItemsFilter::stream(&params.stream_id);
+    filter.max_time = params.older_than;
+
+    let mut query = diesel::update(item::table)
+        .set(item::is_read.eq(true))
+        .into_boxed();
+
+    if let Some(expr) = filter.expr() {
+        query = query.filter(expr);
+    }
+
+    query
+        .execute(conn)
+        .map_err(fill_err!("Error marking stream read"))?;
+
+    Ok(())
+}
+
 pub fn handle_api_request(
     request: &Request,
     conn: &mut PgConnection,
@@ -519,7 +566,10 @@ pub fn handle_api_request(
             update_items_tags(params, conn)?;
             "OK".to_owned().into()
         }
-        MarkAllAsRead(_) => "OK".to_owned().into(),
+        MarkAllAsRead(params) => {
+            update_stream_read(params, conn)?;
+            "OK".to_owned().into()
+        },
     };
 
     Ok(response)
