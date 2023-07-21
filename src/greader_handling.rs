@@ -12,6 +12,7 @@ use crate::greader::response::*;
 use crate::models::feed::Feed as DbFeed;
 use crate::models::group::Group as DbGroup;
 use crate::models::item::Item as DbItem;
+use crate::schema::{feed, feed_group, item};
 
 type DataResult<T> = Result<T, Error<diesel::result::Error>>;
 
@@ -72,8 +73,6 @@ fn load_labels(conn: &mut PgConnection) -> DataResult<Vec<Tag>> {
 }
 
 fn load_subscriptions(conn: &mut PgConnection) -> DataResult<Vec<Subscription>> {
-    use crate::schema::{feed, feed_group};
-
     let subs = feed::table
         .left_join(feed_group::table)
         .select((DbFeed::as_select(), Option::<DbGroup>::as_select()))
@@ -86,7 +85,7 @@ fn load_subscriptions(conn: &mut PgConnection) -> DataResult<Vec<Subscription>> 
 }
 
 type BoxedItemExpr = Box<dyn diesel::expression::BoxableExpression<
-    crate::schema::item::table,
+    item::table,
     diesel::pg::Pg,
     SqlType = diesel::sql_types::Bool
 >>;
@@ -199,8 +198,6 @@ impl ItemsFilter {
     }
 
     fn expr(&self) -> Option<BoxedItemExpr> {
-        use crate::schema::item;
-
         [
             self.feed_id.map::<BoxedItemExpr, _>(|feed_id| {
                 Box::new(item::feed_id.eq(feed_id))
@@ -222,9 +219,7 @@ impl ItemsFilter {
         })
     }
 
-    fn query(&self) -> crate::schema::item::BoxedQuery<diesel::pg::Pg> {
-        use crate::schema::item;
-
+    fn query(&self) -> item::BoxedQuery<diesel::pg::Pg> {
         let mut query = item::table.into_boxed();
 
         if let Some(expr) = self.expr() {
@@ -277,9 +272,7 @@ impl ItemsQuery {
         }
     }
 
-    fn query(&self) -> crate::schema::item::BoxedQuery<diesel::pg::Pg> {
-        use crate::schema::item;
-
+    fn query(&self) -> item::BoxedQuery<diesel::pg::Pg> {
         let mut query = self.filter.query()
             .limit(self.count as i64);
 
@@ -302,8 +295,6 @@ impl ItemsQuery {
 }
 
 fn load_item_ids(query: ItemsQuery, conn: &mut PgConnection) -> DataResult<StreamItemsIdsResponse> {
-    use crate::schema::item;
-
     let ids = query.query()
         .select((item::id, item::published))
         .load::<(i32, NaiveDateTime)>(conn)
@@ -335,8 +326,6 @@ fn load_item_ids(query: ItemsQuery, conn: &mut PgConnection) -> DataResult<Strea
 }
 
 fn load_items_for_ids(ids: &[ItemId], conn: &mut PgConnection) -> DataResult<StreamItemsContentsResponse> {
-    use crate::schema::item;
-
     let db_ids: Vec<i32> = ids.iter().map(|&i| i.0 as i32).collect();
 
     let db_items = item::table.filter(item::id.eq_any(db_ids))
@@ -357,8 +346,6 @@ fn load_items_for_stream(
     query: ItemsQuery,
     conn: &mut PgConnection,
 ) -> DataResult<StreamContentsResponse> {
-    use crate::schema::{feed, item};
-
     let feed = if let Some(feed_id) = query.filter.feed_id {
         feed::table.filter(feed::id.eq(feed_id))
             .get_result::<DbFeed>(conn)
@@ -407,7 +394,6 @@ fn load_item_count(filter: ItemsFilter, conn: &mut PgConnection) -> DataResult<u
 }
 
 fn load_unread_counts(conn: &mut PgConnection) -> DataResult<UnreadCountResponse> {
-    use crate::schema::{feed, item};
     use diesel::dsl::{count, max};
 
     let counts = feed::table.inner_join(item::table)
@@ -434,8 +420,6 @@ fn load_unread_counts(conn: &mut PgConnection) -> DataResult<UnreadCountResponse
 }
 
 fn update_items_tags(params: &EditTagParams, conn: &mut PgConnection) -> DataResult<()> {
-    use crate::schema::item;
-
     let db_ids: Vec<i32> = params.item_ids.iter().map(|&i| i.0 as i32).collect();
 
     let mut read_state: Option<bool> = None;
@@ -487,8 +471,6 @@ fn update_items_tags(params: &EditTagParams, conn: &mut PgConnection) -> DataRes
 }
 
 fn update_stream_read(params: &MarkAllAsReadParams, conn: &mut PgConnection) -> DataResult<()> {
-    use crate::schema::item;
-
     let mut filter = ItemsFilter::stream(&params.stream_id);
     filter.max_time = params.older_than;
 
