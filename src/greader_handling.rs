@@ -3,7 +3,7 @@ use std::str::FromStr;
 use chrono::NaiveDateTime;
 use diesel;
 use diesel::prelude::*;
-use diesel::pg::PgConnection;
+use diesel::pg::{Pg, PgConnection};
 
 use crate::data;
 use crate::error::Error;
@@ -84,11 +84,7 @@ fn load_subscriptions(conn: &mut PgConnection) -> DataResult<Vec<Subscription>> 
     Ok(subs)
 }
 
-type BoxedItemExpr = Box<dyn diesel::expression::BoxableExpression<
-    item::table,
-    diesel::pg::Pg,
-    SqlType = diesel::sql_types::Bool
->>;
+type BoxedItemExpr = Box<dyn BoxableExpression<item::table, Pg, SqlType = diesel::sql_types::Bool>>;
 
 fn merge<T, F>(x: Option<T>, y: Option<T>, f: F) -> Option<T>
 where F: FnOnce(T, T) -> T {
@@ -219,7 +215,7 @@ impl ItemsFilter {
         })
     }
 
-    fn query(&self) -> item::BoxedQuery<diesel::pg::Pg> {
+    fn query(&self) -> item::BoxedQuery<Pg> {
         let mut query = item::table.into_boxed();
 
         if let Some(expr) = self.expr() {
@@ -272,7 +268,7 @@ impl ItemsQuery {
         }
     }
 
-    fn query(&self) -> item::BoxedQuery<diesel::pg::Pg> {
+    fn query(&self) -> item::BoxedQuery<Pg> {
         let mut query = self.filter.query()
             .limit(self.count as i64);
 
