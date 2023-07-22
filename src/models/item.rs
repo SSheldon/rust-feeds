@@ -15,6 +15,8 @@ pub struct Item {
     pub feed_id: i32,
     pub is_read: bool,
     pub is_saved: bool,
+    pub author: Option<String>,
+    pub fetched: NaiveDateTime,
 }
 
 #[derive(Insertable)]
@@ -25,4 +27,5 @@ pub struct NewItem<'a> {
     pub content: &'a str,
     pub published: Option<NaiveDateTime>,
     pub feed_id: i32,
+    pub author: Option<&'a str>,
 }
