@@ -8,7 +8,7 @@ pub struct Entry {
     pub content: String,
     pub link: Option<String>,
     pub published: Option<DateTime<FixedOffset>>,
-    pub authors: Vec<String>,
+    pub author: Option<String>,
     pub id: Option<String>,
 }
 
@@ -44,14 +44,13 @@ impl Entry {
         let published = item.pub_date()
             .and_then(|s| DateTime::parse_from_rfc2822(s).ok());
 
-        let authors = item.author()
-            .map(str::to_owned)
-            .map_or(Vec::new(), |s| vec![s]);
+        let author = item.author()
+            .map(str::to_owned);
 
         let id = item.guid()
             .map(|id| id.value().to_owned());
 
-        Entry { title, content, link, published, authors, id }
+        Entry { title, content, link, published, author, id }
     }
 
     pub(super) fn from_atom(entry: &AtomEntry) -> Entry {
@@ -77,20 +76,15 @@ impl Entry {
             .clone();
         let published = Some(published);
 
-        let authors = entry.authors().iter()
-            .map(|author| {
-                if let Some(email) = author.email() {
-                    format!("{} ({})", author.name(), email)
-                } else {
-                    author.name().to_owned()
-                }
-            })
-            .collect();
+        let author = entry.authors()
+            .first()
+            .map(|author| author.name())
+            .map(str::to_owned);
 
         let id = entry.id().to_owned();
         let id = Some(id);
 
-        Entry { title, content, link, published, authors, id }
+        Entry { title, content, link, published, author, id }
     }
 
     pub(crate) fn expand_link(&mut self, base_url: &Url) {

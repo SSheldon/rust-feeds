@@ -1,4 +1,6 @@
-table! {
+// @generated automatically by Diesel CLI.
+
+diesel::table! {
     feed (id) {
         id -> Int4,
         url -> Varchar,
@@ -8,14 +10,14 @@ table! {
     }
 }
 
-table! {
+diesel::table! {
     feed_group (id) {
         id -> Int4,
         title -> Varchar,
     }
 }
 
-table! {
+diesel::table! {
     item (id) {
         id -> Int4,
         url -> Varchar,
@@ -25,13 +27,15 @@ table! {
         feed_id -> Int4,
         is_read -> Bool,
         is_saved -> Bool,
+        author -> Nullable<Varchar>,
+        fetched -> Timestamp,
     }
 }
 
-joinable!(feed -> feed_group (group_id));
-joinable!(item -> feed (feed_id));
+diesel::joinable!(feed -> feed_group (group_id));
+diesel::joinable!(item -> feed (feed_id));
 
-allow_tables_to_appear_in_same_query!(
+diesel::allow_tables_to_appear_in_same_query!(
     feed,
     feed_group,
     item,
