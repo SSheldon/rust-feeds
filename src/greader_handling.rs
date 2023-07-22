@@ -51,7 +51,7 @@ fn format_item(item: DbItem) -> Item {
         alternate: vec![
             Link { href: item.url },
         ],
-        author: None,
+        author: item.author,
         title: item.title,
         summary: ItemSummary {
             content: item.content,
