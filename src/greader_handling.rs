@@ -56,7 +56,7 @@ fn format_item(item: DbItem) -> Item {
         summary: ItemSummary {
             content: item.content,
         },
-        timestamp: item.published,
+        timestamp: item.fetched,
         published: item.published,
         updated: None,
         crawl_time: None,
@@ -205,10 +205,10 @@ impl ItemsFilter {
                 Box::new(item::is_saved.eq(is_saved))
             }),
             self.min_time.map::<BoxedItemExpr, _>(|min_time| {
-                Box::new(item::published.ge(min_time))
+                Box::new(item::fetched.ge(min_time))
             }),
             self.max_time.map::<BoxedItemExpr, _>(|max_time| {
-                Box::new(item::published.le(max_time))
+                Box::new(item::fetched.le(max_time))
             }),
         ].into_iter().fold(None, |x, y| {
             merge(x, y, |a, b| Box::new(a.and(b)))
@@ -292,7 +292,7 @@ impl ItemsQuery {
 
 fn load_item_ids(query: ItemsQuery, conn: &mut PgConnection) -> DataResult<StreamItemsIdsResponse> {
     let ids = query.query()
-        .select((item::id, item::published))
+        .select((item::id, item::fetched))
         .load::<(i32, NaiveDateTime)>(conn)
         .map_err(fill_err!("Error loading item ids"))?;
 
@@ -306,10 +306,10 @@ fn load_item_ids(query: ItemsQuery, conn: &mut PgConnection) -> DataResult<Strea
         .map(|id| id.to_string());
 
     let refs = ids.into_iter()
-        .map(|(id, published)| {
+        .map(|(id, fetched)| {
             ItemRef {
                 id: ItemId(id as i64),
-                timestamp: published,
+                timestamp: fetched,
                 direct_stream_ids: vec![],
             }
         })
@@ -395,7 +395,7 @@ fn load_unread_counts(conn: &mut PgConnection) -> DataResult<UnreadCountResponse
     let counts = feed::table.inner_join(item::table)
         .filter(item::is_read.eq(false))
         .group_by(feed::id)
-        .select((feed::id, count(item::id), max(item::published)))
+        .select((feed::id, count(item::id), max(item::fetched)))
         .load::<(i32, i64, Option<NaiveDateTime>)>(conn)
         .map_err(fill_err!("Error counting unread items"))?;
 
