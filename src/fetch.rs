@@ -24,7 +24,7 @@ fn item_to_insert_for_entry<'a>(entry: &'a Entry, feed: &Feed) -> NewItem<'a> {
         content: &entry.content,
         published: entry.published.as_ref().map(|d| d.naive_utc()),
         feed_id: feed.id,
-        author: None,
+        author: entry.author.as_deref(),
     }
 }
 

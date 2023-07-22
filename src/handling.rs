@@ -58,7 +58,7 @@ fn format_item(item: DbItem) -> fever_api::Item {
         id: item.id as u32,
         feed_id: item.feed_id as u32,
         title: item.title,
-        author: None,
+        author: item.author,
         url: item.url,
         html: item.content,
         is_saved: item.is_saved,
