@@ -352,6 +352,7 @@ name = "feeds"
 version = "0.0.0"
 dependencies = [
  "atom_syndication",
+ "base64 0.21.2",
  "bytes",
  "chrono",
  "clap",
@@ -365,6 +366,7 @@ dependencies = [
  "serde_derive",
  "serde_html_form",
  "serde_json",
+ "sha2",
  "tokio",
  "url",
  "warp",
@@ -1238,6 +1240,17 @@ name = "sha1"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f04293dc80c3993519f2d7f6f511707ee7094fe0c6d3406feb330cdb3540eba3"
+dependencies = [
+ "cfg-if",
+ "cpufeatures",
+ "digest",
+]
+
+[[package]]
+name = "sha2"
+version = "0.10.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "479fb9d862239e610720565ca91403019f2f00410f1864c5aa7479b950a76ed8"
 dependencies = [
  "cfg-if",
  "cpufeatures",
