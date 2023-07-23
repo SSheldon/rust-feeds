@@ -1,9 +1,18 @@
 use std::str::FromStr;
 
+use base64::prelude::*;
+use sha2::{Digest, Sha384};
+
 use crate::greader::auth::{AuthHeader, LoginParams, LoginResponse};
 
 pub fn generate_token(username: &str, password: &str) -> String {
-    "<token>".to_owned()
+    let mut hasher = Sha384::new();
+    hasher.update(username);
+    hasher.update(b"\0");
+    hasher.update(password);
+    let result = hasher.finalize();
+
+    BASE64_URL_SAFE_NO_PAD.encode(result)
 }
 
 pub fn handle_login(
