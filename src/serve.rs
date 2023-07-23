@@ -109,17 +109,28 @@ fn body_string() -> impl Filter<Extract=(String,), Error=warp::Rejection> + Clon
         .and_then(read_string)
 }
 
+fn generate_greader_token(username: &str, password: &str) -> String {
+    "<token>".to_owned()
+}
+
 async fn handle_greader_login(
     params: GReaderLoginParams,
     creds: Option<(String, String)>,
-) -> Result<impl warp::Reply, warp::Rejection> {
+) -> Result<warp::reply::Response, warp::Rejection> {
     println!("{:?}", params);
+
+    if let Some((username, password)) = creds {
+        if params.email != username || params.password != password {
+            return Ok(warp::Reply::into_response(StatusCode::UNAUTHORIZED));
+        }
+    }
+
     let response = GReaderLoginResponse {
         sid: "...".to_owned(),
         lsid: "...".to_owned(),
-        auth_token: "<token>".to_owned(),
+        auth_token: generate_greader_token(&params.email, &params.password),
     };
-    Ok(response.to_string())
+    Ok(warp::Reply::into_response(response.to_string()))
 }
 
 async fn check_greader_auth(
