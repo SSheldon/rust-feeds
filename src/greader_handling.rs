@@ -27,6 +27,7 @@ fn format_subscription(feed: DbFeed, group: Option<DbGroup>) -> Subscription {
     Subscription {
         id: StreamId::Feed(feed.id.to_string()),
         title: feed.title,
+        url: Some(feed.url),
         html_url: feed.site_url,
         sort_id: None,
         categories: group.map(|group| {

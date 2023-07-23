@@ -42,6 +42,8 @@ pub struct SubscriptionListResponse {
 pub struct Subscription {
     pub id: StreamId,
     pub title: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
     #[serde(rename = "htmlUrl", default, skip_serializing_if = "Option::is_none")]
     pub html_url: Option<String>,
     #[serde(rename = "sortid", default, skip_serializing_if = "Option::is_none")]
