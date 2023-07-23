@@ -111,6 +111,7 @@ fn body_string() -> impl Filter<Extract=(String,), Error=warp::Rejection> + Clon
 
 async fn handle_greader_login(
     params: GReaderLoginParams,
+    creds: Option<(String, String)>,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     println!("{:?}", params);
     let response = GReaderLoginResponse {
@@ -123,6 +124,7 @@ async fn handle_greader_login(
 
 async fn check_greader_auth(
     header: String,
+    creds: Option<(String, String)>,
 ) -> Result<(), warp::Rejection> {
     let auth = GReaderAuthHeader::from_str(&header)
         .map_err(fill_err!("Error parsing authorization header"))
@@ -169,7 +171,10 @@ pub async fn serve(
     creds: Option<(String, String)>,
     pool: PgConnectionPool,
 ) {
-    let key = creds.map(|(user, pass)| ApiKey::new(&user, &pass));
+    let key = creds.as_ref()
+        .map(deref_str_pair)
+        .map(|(user, pass)| ApiKey::new(user, pass));
+
     let api = warp::post()
         .and(warp::query::<Vec<(String, String)>>())
         .and(warp::body::form::<HashMap<String, String>>())
@@ -189,26 +194,28 @@ pub async fn serve(
     let fever = warp::path::end()
         .and(api.or(refresh));
 
+    let login_creds = creds.clone();
     let greader_login = warp::path("accounts")
         .and(warp::path("ClientLogin"))
         .and(warp::path::end())
         .and(warp::post())
         .and(warp::body::form())
-        .and_then(handle_greader_login);
+        .and_then(move |params| handle_greader_login(params, login_creds.clone()));
 
+    let check_creds = creds.clone();
     let greader_api_base = warp::path("reader")
         .and(warp::path("api"))
         .and(warp::path("0"))
         .and(warp::header("Authorization"))
-        .and_then(check_greader_auth)
+        .and_then(move |header| check_greader_auth(header, check_creds.clone()))
         .untuple_one()
         .and(warp::path::tail());
 
-    let greader_api_get = greader_api_base
+    let greader_api_get = greader_api_base.clone()
         .and(warp::get())
         .and(warp::query::raw());
 
-    let greader_api_post = greader_api_base
+    let greader_api_post = greader_api_base.clone()
         .and(warp::post())
         .and(body_string());
 
