@@ -206,19 +206,18 @@ pub async fn serve(
 
     let greader_api_get = greader_api_base
         .and(warp::get())
-        .and(warp::query::raw())
-        .and_then(parse_greader_request)
-        .and(connect_db(pool.clone()))
-        .and_then(handle_greader_request);
+        .and(warp::query::raw());
 
     let greader_api_post = greader_api_base
         .and(warp::post())
-        .and(body_string())
+        .and(body_string());
+
+    let greader_api = greader_api_get
+        .or(greader_api_post)
+        .unify()
         .and_then(parse_greader_request)
         .and(connect_db(pool.clone()))
         .and_then(handle_greader_request);
-
-    let greader_api = greader_api_get.or(greader_api_post);
 
     let greader = warp::path("api")
         .and(warp::path("greader.php"))
