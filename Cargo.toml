@@ -8,7 +8,7 @@ edition = "2021"
 atom_syndication = { version = "0.12", default-features = false }
 base64 = "0.21"
 bytes = "1.0"
-chrono = { version = "0.4", features = ["serde"] }
+chrono = "0.4"
 clap = "4.3"
 env_logger = "0.10"
 fever-api = { path = "fever-api" }

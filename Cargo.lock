@@ -165,7 +165,6 @@ dependencies = [
  "iana-time-zone",
  "js-sys",
  "num-traits",
- "serde",
  "time",
  "wasm-bindgen",
  "winapi",
