@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::str::FromStr;
 
 use futures::future;
 use warp::{Filter, self};
@@ -14,11 +13,7 @@ use fever_api::{
 use crate::config::{PgConnectionPool, PooledPgConnection};
 use crate::error::Error;
 use crate::fetch;
-use crate::greader::auth::{
-    AuthHeader as GReaderAuthHeader,
-    LoginParams as GReaderLoginParams,
-    LoginResponse as GReaderLoginResponse,
-};
+use crate::greader::auth::LoginParams as GReaderLoginParams;
 use crate::greader::request::Request as GReaderRequest;
 use crate::greader::response::Response as GReaderResponse;
 use crate::handling;
@@ -109,39 +104,36 @@ fn body_string() -> impl Filter<Extract=(String,), Error=warp::Rejection> + Clon
         .and_then(read_string)
 }
 
-fn generate_greader_token(username: &str, password: &str) -> String {
-    "<token>".to_owned()
-}
-
 async fn handle_greader_login(
     params: GReaderLoginParams,
     creds: Option<(String, String)>,
 ) -> Result<warp::reply::Response, warp::Rejection> {
     println!("{:?}", params);
 
-    if let Some((username, password)) = creds {
-        if params.email != username || params.password != password {
-            return Ok(warp::Reply::into_response(StatusCode::UNAUTHORIZED));
-        }
-    }
+    let creds = creds.as_ref().map(deref_str_pair);
+    let response = crate::greader_auth::handle_login(&params, creds)
+        .map(|response| response.to_string())
+        .map(warp::Reply::into_response)
+        .unwrap_or_else(|| warp::Reply::into_response(StatusCode::UNAUTHORIZED));
 
-    let response = GReaderLoginResponse {
-        sid: "...".to_owned(),
-        lsid: "...".to_owned(),
-        auth_token: generate_greader_token(&params.email, &params.password),
-    };
-    Ok(warp::Reply::into_response(response.to_string()))
+    Ok(response)
 }
 
 async fn check_greader_auth(
     header: String,
-    creds: Option<(String, String)>,
+    token: Option<String>,
 ) -> Result<(), warp::Rejection> {
-    let auth = GReaderAuthHeader::from_str(&header)
+    println!("{:?}", header);
+
+    let token_accepted = crate::greader_auth::check(&header, token.as_deref())
         .map_err(fill_err!("Error parsing authorization header"))
         .map_err(warp::reject::custom)?;
-    println!("{:?}", auth.token);
-    Ok(())
+
+    if !token_accepted {
+        Err(warp::reject())
+    } else {
+        Ok(())
+    }
 }
 
 async fn parse_greader_request(
@@ -213,12 +205,14 @@ pub async fn serve(
         .and(warp::body::form())
         .and_then(move |params| handle_greader_login(params, login_creds.clone()));
 
-    let check_creds = creds.clone();
+    let greader_token = creds.as_ref()
+        .map(deref_str_pair)
+        .map(|(user, pass)| crate::greader_auth::generate_token(user, pass));
     let greader_api_base = warp::path("reader")
         .and(warp::path("api"))
         .and(warp::path("0"))
         .and(warp::header("Authorization"))
-        .and_then(move |header| check_greader_auth(header, check_creds.clone()))
+        .and_then(move |header| check_greader_auth(header, greader_token.clone()))
         .untuple_one()
         .and(warp::path::tail());
 

@@ -7,6 +7,7 @@ mod data;
 mod error;
 mod fetch;
 mod greader;
+mod greader_auth;
 mod greader_handling;
 mod handling;
 mod models;
