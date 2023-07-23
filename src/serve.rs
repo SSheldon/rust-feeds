@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::str::FromStr;
 
 use futures::future;
 use warp::{Filter, self};
@@ -13,7 +14,12 @@ use fever_api::{
 use crate::config::{PgConnectionPool, PooledPgConnection};
 use crate::error::Error;
 use crate::fetch;
-use crate::greader::request::{LoginParams as GReaderLoginParams, Request as GReaderRequest};
+use crate::greader::auth::{
+    AuthHeader as GReaderAuthHeader,
+    LoginParams as GReaderLoginParams,
+    LoginResponse as GReaderLoginResponse,
+};
+use crate::greader::request::Request as GReaderRequest;
 use crate::greader::response::Response as GReaderResponse;
 use crate::handling;
 
@@ -107,14 +113,21 @@ async fn handle_greader_login(
     params: GReaderLoginParams,
 ) -> Result<impl warp::Reply, warp::Rejection> {
     println!("{:?}", params);
-    Ok("SID=...\nLSID=...\nAuth=<token>")
+    let response = GReaderLoginResponse {
+        sid: "...".to_owned(),
+        lsid: "...".to_owned(),
+        auth_token: "<token>".to_owned(),
+    };
+    Ok(response.to_string())
 }
 
 async fn check_greader_auth(
     header: String,
 ) -> Result<(), warp::Rejection> {
-    let token = header.strip_prefix("GoogleLogin auth=");
-    println!("{:?}", token);
+    let auth = GReaderAuthHeader::from_str(&header)
+        .map_err(fill_err!("Error parsing authorization header"))
+        .map_err(warp::reject::custom)?;
+    println!("{:?}", auth.token);
     Ok(())
 }
 

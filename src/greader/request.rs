@@ -360,15 +360,6 @@ pub enum Request {
     MarkAllAsRead(MarkAllAsReadParams),
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-#[derive(Deserialize)]
-pub struct LoginParams {
-    #[serde(rename = "Email")]
-    pub email: String,
-    #[serde(rename = "Passwd")]
-    pub password: String,
-}
-
 impl Request {
     pub fn parse(path: &str, params: &str) -> Option<Request> {
         Some(match path {
