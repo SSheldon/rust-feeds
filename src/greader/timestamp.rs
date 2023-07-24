@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::marker::PhantomData;
 use std::str::FromStr;
 
@@ -8,8 +9,9 @@ use super::request::ParseError;
 
 pub trait Convert<T> {
     type Value: Serialize + for<'a> Deserialize<'a>;
+    type Error: Display;
 
-    fn timestamp_from_value(value: Self::Value) -> Result<T, ParseError>;
+    fn timestamp_from_value(value: Self::Value) -> Result<T, Self::Error>;
     fn timestamp_as_value(timestamp: &T) -> Self::Value;
 
     fn serialize<S>(timestamp: &T, serializer: S)
@@ -30,6 +32,7 @@ pub enum Sec {}
 
 impl Convert<NaiveDateTime> for Sec {
     type Value = i64;
+    type Error = ParseError;
 
     fn timestamp_from_value(i: i64) -> Result<NaiveDateTime, ParseError> {
         NaiveDateTime::from_timestamp_opt(i, 0)
@@ -45,6 +48,7 @@ pub enum MSec {}
 
 impl Convert<NaiveDateTime> for MSec {
     type Value = String;
+    type Error = ParseError;
 
     fn timestamp_from_value(s: String) -> Result<NaiveDateTime, ParseError> {
         i64::from_str(&s).ok()
@@ -61,6 +65,7 @@ pub enum USec {}
 
 impl Convert<NaiveDateTime> for USec {
     type Value = String;
+    type Error = ParseError;
 
     fn timestamp_from_value(s: String) -> Result<NaiveDateTime, ParseError> {
         i64::from_str(&s).ok()
@@ -78,8 +83,9 @@ pub struct Opt<T>(PhantomData<T>);
 impl<T> Convert<Option<NaiveDateTime>> for Opt<T>
 where T: Convert<NaiveDateTime> {
     type Value = Option<T::Value>;
+    type Error = T::Error;
 
-    fn timestamp_from_value(v: Self::Value) -> Result<Option<NaiveDateTime>, ParseError> {
+    fn timestamp_from_value(v: Self::Value) -> Result<Option<NaiveDateTime>, Self::Error> {
         v.map(T::timestamp_from_value).transpose()
     }
 
