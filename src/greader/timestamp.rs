@@ -11,18 +11,18 @@ pub trait Convert<T> {
     type Raw: Serialize + for<'a> Deserialize<'a>;
     type Error: Display;
 
-    fn timestamp_from_value(value: Self::Raw) -> Result<T, Self::Error>;
-    fn timestamp_as_value(timestamp: &T) -> Self::Raw;
+    fn from_raw(raw: Self::Raw) -> Result<T, Self::Error>;
+    fn to_raw(value: &T) -> Self::Raw;
 
-    fn serialize<S>(timestamp: &T, serializer: S)
+    fn serialize<S>(value: &T, serializer: S)
     -> Result<S::Ok, S::Error> where S: serde::Serializer {
-        Self::timestamp_as_value(timestamp).serialize(serializer)
+        Self::to_raw(value).serialize(serializer)
     }
 
     fn deserialize<'de, D>(deserializer: D)
     -> Result<T, D::Error> where D: serde::Deserializer<'de> {
-        Self::Raw::deserialize(deserializer).and_then(|v| {
-            Self::timestamp_from_value(v)
+        Self::Raw::deserialize(deserializer).and_then(|raw| {
+            Self::from_raw(raw)
                 .map_err(serde::de::Error::custom)
         })
     }
@@ -34,12 +34,12 @@ impl Convert<NaiveDateTime> for Sec {
     type Raw = i64;
     type Error = ParseError;
 
-    fn timestamp_from_value(i: i64) -> Result<NaiveDateTime, ParseError> {
+    fn from_raw(i: i64) -> Result<NaiveDateTime, ParseError> {
         NaiveDateTime::from_timestamp_opt(i, 0)
             .ok_or_else(|| ParseError { type_name: "Sec", value: i.to_string() })
     }
 
-    fn timestamp_as_value(timestamp: &NaiveDateTime) -> i64 {
+    fn to_raw(timestamp: &NaiveDateTime) -> i64 {
         timestamp.timestamp()
     }
 }
@@ -50,13 +50,13 @@ impl Convert<NaiveDateTime> for MSec {
     type Raw = String;
     type Error = ParseError;
 
-    fn timestamp_from_value(s: String) -> Result<NaiveDateTime, ParseError> {
+    fn from_raw(s: String) -> Result<NaiveDateTime, ParseError> {
         i64::from_str(&s).ok()
             .and_then(NaiveDateTime::from_timestamp_millis)
             .ok_or_else(|| ParseError { type_name: "MSec", value: s })
     }
 
-    fn timestamp_as_value(timestamp: &NaiveDateTime) -> String {
+    fn to_raw(timestamp: &NaiveDateTime) -> String {
         timestamp.timestamp_millis().to_string()
     }
 }
@@ -67,13 +67,13 @@ impl Convert<NaiveDateTime> for USec {
     type Raw = String;
     type Error = ParseError;
 
-    fn timestamp_from_value(s: String) -> Result<NaiveDateTime, ParseError> {
+    fn from_raw(s: String) -> Result<NaiveDateTime, ParseError> {
         i64::from_str(&s).ok()
             .and_then(NaiveDateTime::from_timestamp_micros)
             .ok_or_else(|| ParseError { type_name: "USec", value: s })
     }
 
-    fn timestamp_as_value(timestamp: &NaiveDateTime) -> String {
+    fn to_raw(timestamp: &NaiveDateTime) -> String {
         timestamp.timestamp_micros().to_string()
     }
 }
@@ -85,12 +85,12 @@ where T: Convert<NaiveDateTime> {
     type Raw = Option<T::Raw>;
     type Error = T::Error;
 
-    fn timestamp_from_value(v: Self::Raw) -> Result<Option<NaiveDateTime>, Self::Error> {
-        v.map(T::timestamp_from_value).transpose()
+    fn from_raw(raw: Self::Raw) -> Result<Option<NaiveDateTime>, Self::Error> {
+        raw.map(T::from_raw).transpose()
     }
 
-    fn timestamp_as_value(timestamp: &Option<NaiveDateTime>) -> Self::Raw {
-        timestamp.as_ref().map(T::timestamp_as_value)
+    fn to_raw(value: &Option<NaiveDateTime>) -> Self::Raw {
+        value.as_ref().map(T::to_raw)
     }
 }
 
