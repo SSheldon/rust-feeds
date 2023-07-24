@@ -7,20 +7,21 @@ use serde::{self, Deserialize, Serialize};
 
 use super::request::ParseError;
 
-pub trait Convert<T> {
+pub trait Convert {
+    type Value;
     type Raw: Serialize + for<'a> Deserialize<'a>;
     type Error: Display;
 
-    fn from_raw(raw: Self::Raw) -> Result<T, Self::Error>;
-    fn to_raw(value: &T) -> Self::Raw;
+    fn from_raw(raw: Self::Raw) -> Result<Self::Value, Self::Error>;
+    fn to_raw(value: &Self::Value) -> Self::Raw;
 
-    fn serialize<S>(value: &T, serializer: S)
+    fn serialize<S>(value: &Self::Value, serializer: S)
     -> Result<S::Ok, S::Error> where S: serde::Serializer {
         Self::to_raw(value).serialize(serializer)
     }
 
     fn deserialize<'de, D>(deserializer: D)
-    -> Result<T, D::Error> where D: serde::Deserializer<'de> {
+    -> Result<Self::Value, D::Error> where D: serde::Deserializer<'de> {
         Self::Raw::deserialize(deserializer).and_then(|raw| {
             Self::from_raw(raw)
                 .map_err(serde::de::Error::custom)
@@ -30,7 +31,8 @@ pub trait Convert<T> {
 
 pub enum Sec {}
 
-impl Convert<NaiveDateTime> for Sec {
+impl Convert for Sec {
+    type Value = NaiveDateTime;
     type Raw = i64;
     type Error = ParseError;
 
@@ -46,7 +48,8 @@ impl Convert<NaiveDateTime> for Sec {
 
 pub enum MSec {}
 
-impl Convert<NaiveDateTime> for MSec {
+impl Convert for MSec {
+    type Value = NaiveDateTime;
     type Raw = String;
     type Error = ParseError;
 
@@ -63,7 +66,8 @@ impl Convert<NaiveDateTime> for MSec {
 
 pub enum USec {}
 
-impl Convert<NaiveDateTime> for USec {
+impl Convert for USec {
+    type Value = NaiveDateTime;
     type Raw = String;
     type Error = ParseError;
 
@@ -80,16 +84,16 @@ impl Convert<NaiveDateTime> for USec {
 
 pub struct Opt<T>(PhantomData<T>);
 
-impl<T> Convert<Option<NaiveDateTime>> for Opt<T>
-where T: Convert<NaiveDateTime> {
+impl<T: Convert> Convert for Opt<T> {
+    type Value = Option<T::Value>;
     type Raw = Option<T::Raw>;
     type Error = T::Error;
 
-    fn from_raw(raw: Self::Raw) -> Result<Option<NaiveDateTime>, Self::Error> {
+    fn from_raw(raw: Self::Raw) -> Result<Self::Value, Self::Error> {
         raw.map(T::from_raw).transpose()
     }
 
-    fn to_raw(value: &Option<NaiveDateTime>) -> Self::Raw {
+    fn to_raw(value: &Self::Value) -> Self::Raw {
         value.as_ref().map(T::to_raw)
     }
 }
