@@ -5,7 +5,7 @@ use chrono::NaiveDateTime;
 use serde::{self, Deserialize, Serialize};
 use serde_derive::{Deserialize, Serialize};
 
-use super::timestamp::{self, Convert};
+use super::timestamp::{self, Transform};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ParseError {

@@ -2,7 +2,7 @@ use chrono::NaiveDateTime;
 use serde_derive::{Deserialize, Serialize};
 
 use super::request::{ItemId, StreamId, StreamTag};
-use super::timestamp::{self, Convert};
+use super::timestamp::{self, Transform};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize, Serialize)]

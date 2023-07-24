@@ -7,7 +7,7 @@ use serde::{self, Deserialize, Serialize};
 
 use super::request::ParseError;
 
-pub trait Convert {
+pub trait Transform {
     type Value;
     type Raw: Serialize + for<'a> Deserialize<'a>;
     type Error: Display;
@@ -31,7 +31,7 @@ pub trait Convert {
 
 pub enum Sec {}
 
-impl Convert for Sec {
+impl Transform for Sec {
     type Value = NaiveDateTime;
     type Raw = i64;
     type Error = ParseError;
@@ -48,7 +48,7 @@ impl Convert for Sec {
 
 pub enum MSec {}
 
-impl Convert for MSec {
+impl Transform for MSec {
     type Value = NaiveDateTime;
     type Raw = String;
     type Error = ParseError;
@@ -66,7 +66,7 @@ impl Convert for MSec {
 
 pub enum USec {}
 
-impl Convert for USec {
+impl Transform for USec {
     type Value = NaiveDateTime;
     type Raw = String;
     type Error = ParseError;
@@ -84,7 +84,7 @@ impl Convert for USec {
 
 pub struct Opt<T>(PhantomData<T>);
 
-impl<T: Convert> Convert for Opt<T> {
+impl<T: Transform> Transform for Opt<T> {
     type Value = Option<T::Value>;
     type Raw = Option<T::Raw>;
     type Error = T::Error;
