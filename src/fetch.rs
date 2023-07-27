@@ -72,7 +72,8 @@ fn parse_new_entries(
         })
         .collect();
 
-    let latest_seen_urls: Vec<String> = vec![];
+    let latest_seen_urls = data::load_latest_item_urls(conn)
+        .map_err(fill_err!("Error loading latest item urls"))?;
 
     if !latest_seen_urls.is_empty() {
         // If this feed has more entries than the 10 latest we guarantee are not pruned,
