@@ -61,25 +61,44 @@ fn parse_new_entries(
         }
     };
 
-    for entry in parsed_feed.entries() {
-        let mut entry = Entry::from_ref(entry);
+    let parsed_entries: Vec<_> = parsed_feed.entries()
+        // Currently we require entries to have links
+        .filter(|entry| entry.link().is_some())
+        .map(|entry_ref| {
+            let mut entry = Entry::from_ref(entry_ref);
+            // Some bad feeds use relative links...
+            entry.expand_link(&base_url);
+            entry
+        })
+        .collect();
 
-        // Some bad feeds use relative links...
-        entry.expand_link(&base_url);
+    let latest_seen_urls: Vec<String> = vec![];
 
-        let exists = match entry.link.as_ref() {
-            Some(link) => {
-                data::item_already_exists(link, feed, conn)
-                    .map_err(fill_err!("Error querying if item exists"))?
+    if !latest_seen_urls.is_empty() {
+        // If this feed has more entries than the 10 latest we guarantee are not pruned,
+        // some of them may be ones that we already saw but have since pruned.
+        // Find the last entry that we have seen and assume anything after was seen.
+        let maybe_unseen_count = if parsed_entries.len() > latest_seen_urls.len() {
+            parsed_entries.iter()
+                .rposition(|entry| entry.link_in(&latest_seen_urls))
+        } else {
+            None
+        }.unwrap_or(parsed_entries.len());
+
+        let maybe_unseen_entries = parsed_entries.into_iter()
+            .take(maybe_unseen_count)
+            .filter(|entry| !entry.link_in(&latest_seen_urls));
+
+        for entry in maybe_unseen_entries {
+            let exists = data::item_already_exists(entry.link.as_ref().unwrap(), feed, conn)
+                .map_err(fill_err!("Error querying if item exists"))?;
+
+            if !exists {
+                entries.push(entry);
             }
-            // Currently we require entries to have links
-            None => continue,
-        };
-        // If we've reached an item that we've already seen, stop parsing
-        if exists {
-            break;
         }
-        entries.push(entry);
+    } else {
+        entries = parsed_entries;
     }
 
     println!("Found {} new items of {} for {}",

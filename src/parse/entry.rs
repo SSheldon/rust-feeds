@@ -3,6 +3,12 @@ use chrono::{DateTime, FixedOffset};
 use rss::{Item as RssItem};
 use url::Url;
 
+fn eq_ignoring_scheme(a: &str, b: &str) -> bool {
+    a == b
+        || a.strip_prefix("https://").map_or(false, |a| Some(a) == b.strip_prefix("http://"))
+        || a.strip_prefix("http://").map_or(false, |a| Some(a) == b.strip_prefix("https://"))
+}
+
 pub struct Entry {
     pub title: String,
     pub content: String,
@@ -29,6 +35,12 @@ impl Entry {
             .and_then(|link| base_url.join(link).ok());
 
         self.link = link_url.map(Into::into).or(self.link.take());
+    }
+
+    pub fn link_in(&self, urls: &[String]) -> bool {
+        self.link.as_ref().map_or(false, |link| {
+            urls.iter().any(|url| eq_ignoring_scheme(link, url))
+        })
     }
 }
 
