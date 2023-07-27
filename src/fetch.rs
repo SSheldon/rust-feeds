@@ -61,7 +61,9 @@ fn parse_new_entries(
         }
     };
 
-    for mut entry in parsed_feed.entries() {
+    for entry in parsed_feed.entries() {
+        let mut entry = Entry::from_ref(entry);
+
         // Some bad feeds use relative links...
         entry.expand_link(&base_url);
 
@@ -166,7 +168,7 @@ pub async fn subscribe(url: &str, conn: &mut PgConnection)
 
     let feed = insert_feed(&parsed_feed, url, conn)?;
 
-    let entries: Vec<_> = parsed_feed.entries().collect();
+    let entries: Vec<_> = parsed_feed.entries().map(Entry::from_ref).collect();
     println!("Found {} items", entries.len());
     let iter = entries.iter().rev().map(|entry| (&feed, entry));
     insert_items(iter, conn)?;
