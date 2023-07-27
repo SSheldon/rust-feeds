@@ -72,7 +72,7 @@ fn parse_new_entries(
         })
         .collect();
 
-    let latest_seen_urls = data::load_latest_item_urls(conn)
+    let latest_seen_urls = data::load_latest_item_urls(feed, conn)
         .map_err(fill_err!("Error loading latest item urls"))?;
 
     if !latest_seen_urls.is_empty() {
