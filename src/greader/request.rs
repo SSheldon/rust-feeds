@@ -270,6 +270,70 @@ impl Serialize for ItemId {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
+pub enum Endpoint {
+    Token,
+    UserInfo,
+    UnreadCount,
+    SubscriptionList,
+    StreamContents(StreamId),
+    StreamItemsIds,
+    StreamItemsCount,
+    StreamItemsContents,
+    TagList,
+    EditTag,
+    MarkAllAsRead,
+}
+
+impl fmt::Display for Endpoint {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match self {
+            Self::Token => "token",
+            Self::UserInfo => "user-info",
+            Self::UnreadCount => "unread-count",
+            Self::SubscriptionList => "subscription/list",
+            Self::StreamItemsIds => "stream/items/ids",
+            Self::StreamItemsCount => "stream/items/count",
+            Self::StreamItemsContents => "stream/items/contents",
+            Self::TagList => "tag/list",
+            Self::EditTag => "edit-tag",
+            Self::MarkAllAsRead => "mark-all-as-read",
+            Self::StreamContents(stream_id) => {
+                return write!(f, "stream/contents/{}", stream_id);
+            }
+        };
+        s.fmt(f)
+    }
+}
+
+impl FromStr for Endpoint {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "token" => Self::Token,
+            "user-info" => Self::UserInfo,
+            "unread-count" => Self::UnreadCount,
+            "subscription/list" => Self::SubscriptionList,
+            "stream/items/ids" => Self::StreamItemsIds,
+            "stream/items/count" => Self::StreamItemsCount,
+            "stream/items/contents" => Self::StreamItemsContents,
+            "tag/list" => Self::TagList,
+            "edit-tag" => Self::EditTag,
+            "mark-all-as-read" => Self::MarkAllAsRead,
+            path => {
+                if let Some(stream_id) = path.strip_prefix("stream/contents/") {
+                    // TODO: should be url decoded
+                    let stream_id = StreamId::from_str(stream_id)?;
+                    Self::StreamContents(stream_id)
+                } else {
+                    return Err(ParseError { type_name: "Endpoint", value: s.to_owned() })
+                }
+            },
+        })
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize)]
 pub struct StreamContentsParams {
     #[serde(rename = "r", default)]
@@ -362,28 +426,23 @@ pub enum Request {
 
 impl Request {
     pub fn parse(path: &str, params: &str) -> Option<Request> {
-        Some(match path {
-            "token" => Self::Token,
-            "user-info" => Self::UserInfo,
-            "unread-count" => Self::UnreadCount,
-            "subscription/list" => Self::SubscriptionList,
-            "stream/items/ids" => Self::StreamItemsIds(serde_html_form::from_str(params).ok()?),
-            "stream/items/count" => Self::StreamItemsCount(serde_html_form::from_str(params).ok()?),
-            "stream/items/contents" => Self::StreamItemsContents(serde_html_form::from_str(params).ok()?),
-            "tag/list" => Self::TagList,
-            "edit-tag" => Self::EditTag(serde_html_form::from_str(params).ok()?),
-            "mark-all-as-read" => Self::MarkAllAsRead(serde_html_form::from_str(params).ok()?),
-            path => {
-                if let Some(stream_id) = path.strip_prefix("stream/contents/") {
-                    Self::StreamContents(
-                        // TODO: should be url decoded
-                        StreamId::from_str(stream_id).ok()?,
-                        serde_html_form::from_str(params).ok()?,
-                    )
-                } else {
-                    return None
-                }
-            },
+        Endpoint::from_str(path).ok()
+            .and_then(|endpoint| Self::parse_params(endpoint, params).ok())
+    }
+
+    pub fn parse_params(endpoint: Endpoint, params: &str) -> Result<Request, serde_html_form::de::Error> {
+        Ok(match endpoint {
+            Endpoint::Token => Self::Token,
+            Endpoint::UserInfo => Self::UserInfo,
+            Endpoint::UnreadCount => Self::UnreadCount,
+            Endpoint::SubscriptionList => Self::SubscriptionList,
+            Endpoint::StreamItemsIds => Self::StreamItemsIds(serde_html_form::from_str(params)?),
+            Endpoint::StreamItemsCount => Self::StreamItemsCount(serde_html_form::from_str(params)?),
+            Endpoint::StreamItemsContents => Self::StreamItemsContents(serde_html_form::from_str(params)?),
+            Endpoint::TagList => Self::TagList,
+            Endpoint::EditTag => Self::EditTag(serde_html_form::from_str(params)?),
+            Endpoint::MarkAllAsRead => Self::MarkAllAsRead(serde_html_form::from_str(params)?),
+            Endpoint::StreamContents(id) => Self::StreamContents(id, serde_html_form::from_str(params)?),
         })
     }
 }
