@@ -82,6 +82,17 @@ pub fn count_items(conn: &mut PgConnection) -> QueryResult<u32> {
     query.get_result::<i64>(conn).map(|i| i as u32)
 }
 
+pub fn load_latest_item_urls(feed: &Feed, conn: &mut PgConnection)
+-> QueryResult<Vec<String>> {
+    use crate::schema::item::dsl::*;
+
+    item.filter(feed_id.eq(feed.id))
+        .order(id.desc())
+        .limit(10)
+        .select(url)
+        .load(conn)
+}
+
 pub fn item_already_exists(link: &str, feed: &Feed, conn: &mut PgConnection)
 -> QueryResult<bool> {
     use diesel::dsl::{exists, select};

@@ -3,6 +3,12 @@ use chrono::{DateTime, FixedOffset};
 use rss::{Item as RssItem};
 use url::Url;
 
+fn eq_ignoring_scheme(a: &str, b: &str) -> bool {
+    a == b
+        || a.strip_prefix("https://").map_or(false, |a| Some(a) == b.strip_prefix("http://"))
+        || a.strip_prefix("http://").map_or(false, |a| Some(a) == b.strip_prefix("https://"))
+}
+
 pub struct Entry {
     pub title: String,
     pub content: String,
@@ -13,78 +19,15 @@ pub struct Entry {
 }
 
 impl Entry {
-    pub(super) fn from_rss(item: &RssItem) -> Entry {
-        let title = item.title()
-            .map(str::trim)
-            .map(str::to_owned)
-            .unwrap_or(String::new());
-
-        let content = item.content()
-            .or(item.description())
-            .map(str::trim)
-            .map(str::to_owned)
-            .unwrap_or(String::new());
-
-        let orig_link = item.extensions()
-            .get("feedburner")
-            .and_then(|ext| ext.get("origLink"))
-            .and_then(|exts| exts.first())
-            .and_then(|ext| ext.value());
-
-        let link = orig_link
-            .or(item.link())
-            .or_else(|| {
-                item.guid().and_then(|id| {
-                    if id.is_permalink() { Some(id.value()) }
-                    else { None }
-                })
-            })
-            .map(str::to_owned);
-
-        let published = item.pub_date()
-            .and_then(|s| DateTime::parse_from_rfc2822(s).ok());
-
-        let author = item.author()
-            .map(str::to_owned);
-
-        let id = item.guid()
-            .map(|id| id.value().to_owned());
-
-        Entry { title, content, link, published, author, id }
-    }
-
-    pub(super) fn from_atom(entry: &AtomEntry) -> Entry {
-        let title = entry.title()
-            .trim()
-            .to_owned();
-
-        let content = entry.content()
-            .and_then(|content| content.value())
-            .or(entry.summary().map(|summary| summary.as_str()))
-            .map(str::trim)
-            .map(str::to_owned)
-            .unwrap_or(String::new());
-
-        let link = entry.links()
-            .iter().filter(|link| link.rel() == "alternate").next()
-            .or(entry.links().first())
-            .map(|link| link.href())
-            .map(str::to_owned);
-
-        let published = entry.published()
-            .unwrap_or(entry.updated())
-            .clone();
-        let published = Some(published);
-
-        let author = entry.authors()
-            .first()
-            .map(|author| author.name())
-            .map(str::to_owned);
-
-        let id = entry.id().to_owned();
-        let id = Some(id);
-
-        Entry { title, content, link, published, author, id }
+    pub fn from_ref(entry_ref: EntryRef) -> Entry {
+        Entry {
+            title: entry_ref.title().to_owned(),
+            content: entry_ref.content().to_owned(),
+            link: entry_ref.link().map(str::to_owned),
+            published: entry_ref.published(),
+            author: entry_ref.author().map(str::to_owned),
+            id: entry_ref.id().map(str::to_owned),
+        }
     }
 
     pub(crate) fn expand_link(&mut self, base_url: &Url) {
@@ -92,5 +35,95 @@ impl Entry {
             .and_then(|link| base_url.join(link).ok());
 
         self.link = link_url.map(Into::into).or(self.link.take());
+    }
+
+    pub fn link_in(&self, urls: &[String]) -> bool {
+        self.link.as_ref().map_or(false, |link| {
+            urls.iter().any(|url| eq_ignoring_scheme(link, url))
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum EntryRef<'a> {
+    Rss(&'a RssItem),
+    Atom(&'a AtomEntry),
+}
+
+impl<'a> EntryRef<'a> {
+    pub fn title(self) -> &'a str {
+        match self {
+            Self::Rss(item) => item.title().unwrap_or(""),
+            Self::Atom(entry) => entry.title(),
+        }.trim()
+    }
+
+    pub fn content(self) -> &'a str {
+        match self {
+            Self::Rss(item) => {
+                item.content()
+                    .or(item.description())
+            }
+            Self::Atom(entry) => {
+                entry.content()
+                    .and_then(|content| content.value())
+                    .or(entry.summary().map(|summary| summary.as_str()))
+            }
+        }.unwrap_or("").trim()
+    }
+
+    pub fn link(self) -> Option<&'a str> {
+        match self {
+            Self::Rss(item) => {
+                item.extensions()
+                    .get("feedburner")
+                    .and_then(|ext| ext.get("origLink"))
+                    .and_then(|exts| exts.first())
+                    .and_then(|ext| ext.value())
+                    .or(item.link())
+                    .or_else(|| {
+                        item.guid().and_then(|id| {
+                            if id.is_permalink() { Some(id.value()) }
+                            else { None }
+                        })
+                    })
+            }
+            Self::Atom(entry) => {
+                entry.links()
+                    .iter().filter(|link| link.rel() == "alternate").next()
+                    .or(entry.links().first())
+                    .map(|link| link.href())
+            }
+        }
+    }
+
+    pub fn published(self) -> Option<DateTime<FixedOffset>> {
+        match self {
+            Self::Rss(item) => {
+                item.pub_date()
+                    .and_then(|s| DateTime::parse_from_rfc2822(s).ok())
+            }
+            Self::Atom(entry) => {
+                Some(*entry.published().unwrap_or(entry.updated()))
+            }
+        }
+    }
+
+    pub fn author(self) -> Option<&'a str> {
+        match self {
+            Self::Rss(item) => item.author(),
+            Self::Atom(entry) => {
+                entry.authors()
+                    .first()
+                    .map(|author| author.name())
+            }
+        }
+    }
+
+    pub fn id(self) -> Option<&'a str> {
+        match self {
+            Self::Rss(item) => item.guid().map(|id| id.value()),
+            Self::Atom(entry) => Some(entry.id()),
+        }
     }
 }
