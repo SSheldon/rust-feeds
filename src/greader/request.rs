@@ -425,11 +425,6 @@ pub enum Request {
 }
 
 impl Request {
-    pub fn parse(path: &str, params: &str) -> Option<Request> {
-        Endpoint::from_str(path).ok()
-            .and_then(|endpoint| Self::parse_params(endpoint, params).ok())
-    }
-
     pub fn parse_params(endpoint: Endpoint, params: &str) -> Result<Request, serde_html_form::de::Error> {
         Ok(match endpoint {
             Endpoint::Token => Self::Token,

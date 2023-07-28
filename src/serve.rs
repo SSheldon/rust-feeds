@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
+use std::str::FromStr;
 
 use futures::future;
 use warp::{Filter, self};
@@ -14,7 +15,10 @@ use crate::config::{PgConnectionPool, PooledPgConnection};
 use crate::error::Error;
 use crate::fetch;
 use crate::greader::auth::LoginParams as GReaderLoginParams;
-use crate::greader::request::Request as GReaderRequest;
+use crate::greader::request::{
+    Endpoint as GReaderEndpoint,
+    Request as GReaderRequest,
+};
 use crate::greader::response::Response as GReaderResponse;
 use crate::handling;
 
@@ -136,12 +140,22 @@ async fn check_greader_auth(
     }
 }
 
-async fn parse_greader_request(
+async fn parse_greader_endpoint(
     path: warp::filters::path::Tail,
+) -> Result<GReaderEndpoint, warp::Rejection> {
+    GReaderEndpoint::from_str(path.as_str())
+        .map_err(fill_err!("Error parsing greader endpoint"))
+        .map_err(warp::reject::custom)
+}
+
+
+async fn parse_greader_request(
+    endpoint: GReaderEndpoint,
     params: String,
 ) -> Result<GReaderRequest, warp::Rejection> {
-    GReaderRequest::parse(path.as_str(), &params)
-        .ok_or(warp::reject::not_found())
+    GReaderRequest::parse_params(endpoint, &params)
+        .map_err(fill_err!("Error parsing greader request params"))
+        .map_err(warp::reject::custom)
 }
 
 impl warp::Reply for GReaderResponse {
@@ -214,7 +228,8 @@ pub async fn serve(
         .and(warp::header("Authorization"))
         .and_then(move |header| check_greader_auth(header, greader_token.clone()))
         .untuple_one()
-        .and(warp::path::tail());
+        .and(warp::path::tail())
+        .and_then(parse_greader_endpoint);
 
     let greader_api_get = greader_api_base.clone()
         .and(warp::get())
