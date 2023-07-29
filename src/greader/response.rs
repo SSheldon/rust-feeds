@@ -124,10 +124,16 @@ pub struct StreamItemsIdsResponse {
     pub continuation: Option<String>,
 }
 
+fn serialize_decimal_str<S>(id: &ItemId, serializer: S)
+-> Result<S::Ok, S::Error> where S: serde::Serializer {
+    serializer.collect_str(&id.0)
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemRef {
+    #[serde(serialize_with = "serialize_decimal_str")]
     pub id: ItemId,
     #[serde(rename = "timestampUsec", with = "timestamp::USec")]
     pub timestamp: NaiveDateTime,

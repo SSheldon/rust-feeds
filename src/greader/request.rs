@@ -233,7 +233,8 @@ pub struct ItemId(pub i64);
 
 impl fmt::Display for ItemId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.0.fmt(f)
+        let i = u64::from_ne_bytes(self.0.to_ne_bytes());
+        write!(f, "tag:google.com,2005:reader/item/{:016x}", i)
     }
 }
 
@@ -241,7 +242,17 @@ impl FromStr for ItemId {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        s.strip_prefix("tag:google.com,2005:reader/item/")
+        s.rsplit_once('/')
+            .map(|(_, id)| id)
+            .or_else(|| {
+                // Bizarrely, some clients convert ids to hex with no prefix
+                // Use these heuristics to differentiate from decimal
+                if s.starts_with('0') || s.bytes().any(|b| !b.is_ascii_digit()) {
+                    Some(s)
+                } else {
+                    None
+                }
+            })
             .map(|s| {
                 u64::from_str_radix(s, 16)
                     .map(|i| i64::from_ne_bytes(i.to_ne_bytes()))
