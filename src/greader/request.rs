@@ -242,24 +242,18 @@ impl FromStr for ItemId {
     type Err = ParseError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        s.rsplit_once('/')
-            .map(|(_, id)| id)
+        // Bizarrely, some clients convert ids to hex with no prefix
+        // Use this heuristic to differentiate from decimal
+        if s.starts_with('0') { None } else { Some(s) }
+            .and_then(|s| i64::from_str(s).ok())
             .or_else(|| {
-                // Bizarrely, some clients convert ids to hex with no prefix
-                // Use these heuristics to differentiate from decimal
-                if s.starts_with('0') || s.bytes().any(|b| !b.is_ascii_digit()) {
-                    Some(s)
-                } else {
-                    None
-                }
-            })
-            .map(|s| {
-                u64::from_str_radix(s, 16)
+                // Remove any prefix (like the tag:google.com one)
+                let id = s.rsplit_once('/').map(|(_, id)| id).unwrap_or(s);
+                u64::from_str_radix(id, 16).ok()
                     .map(|i| i64::from_ne_bytes(i.to_ne_bytes()))
             })
-            .unwrap_or_else(|| i64::from_str(s))
             .map(ItemId)
-            .map_err(|_| ParseError { type_name: "ItemId", value: s.to_owned() })
+            .ok_or_else(|| ParseError { type_name: "ItemId", value: s.to_owned() })
     }
 }
 
@@ -483,6 +477,24 @@ mod tests {
             Ok(StreamId::Tag(StreamTag::State(None, StreamState::Starred))),
         );
         assert!(StreamTag::from_str("user/-/feed/foo").is_err());
+    }
+
+    #[test]
+    fn test_item_id_parse() {
+        assert_eq!(ItemId::from_str("10"), Ok(ItemId(10)));
+        assert_eq!(ItemId::from_str("010"), Ok(ItemId(16)));
+        assert_eq!(ItemId::from_str("f"), Ok(ItemId(15)));
+        assert_eq!(ItemId::from_str("foo/10"), Ok(ItemId(16)));
+        assert_eq!(ItemId::from_str("ff/ff"), Ok(ItemId(255)));
+        assert_eq!(
+            ItemId::from_str("tag:google.com,2005:reader/item/0000000000000010"),
+            Ok(ItemId(16)),
+        );
+        assert_eq!(ItemId::from_str("-1"), Ok(ItemId(-1)));
+        assert_eq!(
+            ItemId::from_str("ffffffffffffffff"),
+            Ok(ItemId(-1)),
+        );
     }
 
     #[test]
