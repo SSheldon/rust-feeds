@@ -63,9 +63,8 @@ fn parse_new_entries(
 
     let parsed_entries: Vec<_> = parsed_feed.entries()
         // Currently we require entries to have links
-        .filter(|entry| entry.link().is_some())
-        .map(|entry_ref| {
-            let mut entry = Entry::from_ref(entry_ref);
+        .filter(|entry| entry.link.is_some())
+        .map(|mut entry| {
             // Some bad feeds use relative links...
             entry.expand_link(&base_url);
             entry
@@ -188,7 +187,7 @@ pub async fn subscribe(url: &str, conn: &mut PgConnection)
 
     let feed = insert_feed(&parsed_feed, url, conn)?;
 
-    let entries: Vec<_> = parsed_feed.entries().map(Entry::from_ref).collect();
+    let entries: Vec<_> = parsed_feed.entries().collect();
     println!("Found {} items", entries.len());
     let iter = entries.iter().rev().map(|entry| (&feed, entry));
     insert_items(iter, conn)?;

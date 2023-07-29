@@ -5,7 +5,7 @@ use std::slice;
 use atom_syndication as atom;
 use rss;
 
-use super::entry::EntryRef;
+use super::entry::{Entry, EntryRef};
 
 pub enum Feed {
     Rss(rss::Channel),
@@ -51,7 +51,7 @@ impl Feed {
         }
     }
 
-    pub fn entries<'a>(&'a self) -> impl Iterator<Item=EntryRef<'a>> {
+    pub fn entries<'a>(&'a self) -> impl Iterator<Item=Entry> + 'a {
         match *self {
             Feed::Rss(ref channel) => {
                 Entries::Rss(channel.items().iter())
@@ -59,7 +59,7 @@ impl Feed {
             Feed::Atom(ref feed) => {
                 Entries::Atom(feed.entries().iter())
             }
-        }
+        }.map(Entry::from_ref)
     }
 }
 
