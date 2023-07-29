@@ -158,6 +158,21 @@ async fn parse_greader_request(
         .map_err(warp::reject::custom)
 }
 
+async fn parse_greader_request_without_params(
+    endpoint: GReaderEndpoint,
+) -> Result<GReaderRequest, warp::Rejection> {
+    Ok(match endpoint {
+        GReaderEndpoint::Token => GReaderRequest::Token,
+        GReaderEndpoint::UserInfo => GReaderRequest::UserInfo,
+        GReaderEndpoint::UnreadCount => GReaderRequest::UnreadCount,
+        GReaderEndpoint::SubscriptionList => GReaderRequest::SubscriptionList,
+        GReaderEndpoint::TagList => GReaderRequest::TagList,
+        _ => {
+            return Err(warp::reject());
+        }
+    })
+}
+
 impl warp::Reply for GReaderResponse {
     fn into_response(self) -> warp::reply::Response {
         match self {
@@ -231,18 +246,20 @@ pub async fn serve(
         .and(warp::path::tail())
         .and_then(parse_greader_endpoint);
 
-    let greader_api_get = greader_api_base.clone()
-        .and(warp::get())
-        .and(warp::query::raw());
+    let greader_get_params = warp::get().and(warp::query::raw());
+    let greader_post_params = warp::post().and(body_string());
+    let greader_params = greader_get_params.or(greader_post_params).unify();
 
-    let greader_api_post = greader_api_base.clone()
-        .and(warp::post())
-        .and(body_string());
+    let greader_api_without_params = greader_api_base.clone()
+        .and_then(parse_greader_request_without_params);
 
-    let greader_api = greader_api_get
-        .or(greader_api_post)
+    let greader_api_with_params = greader_api_base.clone()
+        .and(greader_params)
+        .and_then(parse_greader_request);
+
+    let greader_api = greader_api_without_params
+        .or(greader_api_with_params)
         .unify()
-        .and_then(parse_greader_request)
         .and(connect_db(pool.clone()))
         .and_then(handle_greader_request);
 
