@@ -491,6 +491,9 @@ mod tests {
             serde_html_form::from_str("s=user/-/state/com.google/reading-list"),
             Ok(StreamItemsCountParams {
                 stream_id: StreamId::Tag(StreamTag::State(None, StreamState::ReadingList)),
+                exclude: None,
+                oldest_time: None,
+                newest_time: None,
             }),
         );
     }
@@ -500,7 +503,7 @@ mod tests {
         assert_eq!(
             serde_html_form::from_str("i=1&i=2"),
             Ok(StreamItemsContentsParams {
-                item_ids: vec!["1".to_owned(), "2".to_owned()],
+                item_ids: vec![ItemId(1), ItemId(2)],
             }),
         );
     }
@@ -510,7 +513,7 @@ mod tests {
         assert_eq!(
             serde_html_form::from_str("i=1&r=user/-/state/com.google/starred"),
             Ok(EditTagParams {
-                item_ids: vec!["1".to_owned()],
+                item_ids: vec![ItemId(1)],
                 add_tags: vec![],
                 remove_tags: vec![StreamTag::State(None, StreamState::Starred)],
             }),
