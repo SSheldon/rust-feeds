@@ -111,7 +111,14 @@ impl<'a> EntryRef<'a> {
 
     pub fn author(self) -> Option<&'a str> {
         match self {
-            Self::Rss(item) => item.author(),
+            Self::Rss(item) => {
+                item.author()
+                    .or_else(|| {
+                        item.dublin_core_ext()
+                            .and_then(|ext| ext.creators().first())
+                            .map(String::as_str)
+                    })
+            }
             Self::Atom(entry) => {
                 entry.authors()
                     .first()
