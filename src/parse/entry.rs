@@ -15,7 +15,7 @@ pub struct Entry {
     pub link: Option<String>,
     pub published: Option<DateTime<FixedOffset>>,
     pub author: Option<String>,
-    pub id: Option<String>,
+    pub guid: Option<String>,
 }
 
 impl Entry {
@@ -26,7 +26,7 @@ impl Entry {
             link: entry_ref.link().map(str::to_owned),
             published: entry_ref.published(),
             author: entry_ref.author().map(str::to_owned),
-            id: entry_ref.id().map(str::to_owned),
+            guid: entry_ref.guid().map(str::to_owned),
         }
     }
 
@@ -127,7 +127,7 @@ impl<'a> EntryRef<'a> {
         }
     }
 
-    pub fn id(self) -> Option<&'a str> {
+    pub fn guid(self) -> Option<&'a str> {
         match self {
             Self::Rss(item) => item.guid().map(|id| id.value()),
             Self::Atom(entry) => Some(entry.id()),
