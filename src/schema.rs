@@ -29,6 +29,7 @@ diesel::table! {
         is_saved -> Bool,
         author -> Nullable<Varchar>,
         fetched -> Timestamp,
+        guid -> Nullable<Varchar>,
     }
 }
 
