@@ -85,17 +85,17 @@ pub fn count_items(conn: &mut PgConnection) -> QueryResult<u32> {
 
 pub fn load_latest_item_identifiers(feed: &Feed, conn: &mut PgConnection)
 -> QueryResult<Vec<ItemIdentifier<'static>>> {
-    use crate::schema::item::dsl::*;
+    use crate::schema::item;
 
-    let urls = item.filter(feed_id.eq(feed.id))
-        .order(id.desc())
+    let results = item::table.filter(item::feed_id.eq(feed.id))
+        .order(item::id.desc())
         .limit(10)
-        .select(url)
-        .load::<String>(conn)?;
+        .select((item::url, item::guid))
+        .load::<(String, Option<String>)>(conn)?;
 
-    let identifiers = urls
+    let identifiers = results
         .into_iter()
-        .map(ItemIdentifier::new_owned)
+        .map(|(url, guid)| ItemIdentifier::new_owned(url, guid))
         .collect();
 
     Ok(identifiers)
@@ -114,8 +114,11 @@ pub fn item_already_exists(
     let http_link = identifier.link().replace("http://", "https://");
     let https_link = identifier.link().replace("https://", "http://");
 
-    let link_expr = url.eq(http_link).or(url.eq(https_link));
-    let query = item.filter(feed_id.eq(feed.id).and(link_expr));
+    let identity_expr = url.eq(http_link)
+        .or(url.eq(https_link))
+        .or(guid.eq(identifier.guid()));
+
+    let query = item.filter(feed_id.eq(feed.id).and(identity_expr));
     select(exists(query))
         .get_result(conn)
 }

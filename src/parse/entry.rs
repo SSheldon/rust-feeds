@@ -40,7 +40,7 @@ impl Entry {
     }
 
     pub fn identifier(&self) -> Option<ItemIdentifier> {
-        ItemIdentifier::new(self.link.as_deref())
+        ItemIdentifier::new(self.link.as_deref(), self.guid.as_deref())
     }
 }
 
