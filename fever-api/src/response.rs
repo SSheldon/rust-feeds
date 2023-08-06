@@ -69,7 +69,8 @@ pub struct Item {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub author: Option<String>,
     pub html: String,
-    pub url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
     #[serde(serialize_with = "serialize_bool_as_number")]
     pub is_saved: bool,
     #[serde(serialize_with = "serialize_bool_as_number")]
