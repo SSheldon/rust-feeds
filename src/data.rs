@@ -91,11 +91,12 @@ pub fn load_latest_item_identifiers(feed: &Feed, conn: &mut PgConnection)
         .order(item::id.desc())
         .limit(10)
         .select((item::url, item::guid))
-        .load::<(String, Option<String>)>(conn)?;
+        .load::<(Option<String>, Option<String>)>(conn)?;
 
     let identifiers = results
         .into_iter()
-        .map(|(url, guid)| ItemIdentifier::new_owned(url, guid))
+        // Database ensures that both cannot be null, so this is safe
+        .map(|(url, guid)| ItemIdentifier::new_owned(url, guid).unwrap())
         .collect();
 
     Ok(identifiers)
@@ -111,8 +112,8 @@ pub fn item_already_exists(
 
     // Compare insensitive to http vs https
     // some feeds seem to alternate...
-    let http_link = identifier.link().replace("http://", "https://");
-    let https_link = identifier.link().replace("https://", "http://");
+    let http_link = identifier.link().map(|s| s.replace("https://", "http://"));
+    let https_link = identifier.link().map(|s| s.replace("http://", "https://"));
 
     let identity_expr = url.eq(http_link)
         .or(url.eq(https_link))

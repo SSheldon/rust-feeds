@@ -19,7 +19,7 @@ type DataResult<T> = Result<T, Error<diesel::result::Error>>;
 
 fn item_to_insert_for_entry<'a>(entry: &'a Entry, feed: &Feed) -> NewItem<'a> {
     NewItem {
-        url: entry.link.as_ref().unwrap(),
+        url: entry.link.as_deref(),
         title: &entry.title,
         content: &entry.content,
         published: entry.published.as_ref().map(|d| d.naive_utc()),
