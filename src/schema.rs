@@ -20,7 +20,7 @@ diesel::table! {
 diesel::table! {
     item (id) {
         id -> Int4,
-        url -> Varchar,
+        url -> Nullable<Varchar>,
         title -> Varchar,
         content -> Text,
         published -> Timestamp,
@@ -29,6 +29,7 @@ diesel::table! {
         is_saved -> Bool,
         author -> Nullable<Varchar>,
         fetched -> Timestamp,
+        guid -> Nullable<Varchar>,
     }
 }
 

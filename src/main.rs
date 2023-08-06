@@ -10,6 +10,7 @@ mod greader;
 mod greader_auth;
 mod greader_handling;
 mod handling;
+mod item_identity;
 mod models;
 mod parse;
 mod schema;

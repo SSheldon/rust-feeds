@@ -19,12 +19,13 @@ type DataResult<T> = Result<T, Error<diesel::result::Error>>;
 
 fn item_to_insert_for_entry<'a>(entry: &'a Entry, feed: &Feed) -> NewItem<'a> {
     NewItem {
-        url: entry.link.as_ref().unwrap(),
+        url: entry.link.as_deref(),
         title: &entry.title,
         content: &entry.content,
         published: entry.published.as_ref().map(|d| d.naive_utc()),
         feed_id: feed.id,
         author: entry.author.as_deref(),
+        guid: entry.guid.as_deref(),
     }
 }
 
@@ -62,35 +63,41 @@ fn parse_new_entries(
     };
 
     let parsed_entries: Vec<_> = parsed_feed.entries()
-        // Currently we require entries to have links
-        .filter(|entry| entry.link.is_some())
         .map(|mut entry| {
+            // ids are often the same as the link, which isn't very meaningful
+            entry.clear_redundant_guid();
             // Some bad feeds use relative links...
             entry.expand_link(&base_url);
             entry
         })
         .collect();
 
-    let latest_seen_urls = data::load_latest_item_urls(feed, conn)
-        .map_err(fill_err!("Error loading latest item urls"))?;
+    let latest_seen = data::load_latest_item_identifiers(feed, conn)
+        .map_err(fill_err!("Error loading latest item identifiers"))?;
 
-    if !latest_seen_urls.is_empty() {
+    if !latest_seen.is_empty() {
         // If this feed has more entries than the 10 latest we guarantee are not pruned,
         // some of them may be ones that we already saw but have since pruned.
         // Find the last entry that we have seen and assume anything after was seen.
-        let maybe_unseen_count = if parsed_entries.len() > latest_seen_urls.len() {
-            parsed_entries.iter()
-                .rposition(|entry| entry.link_in(&latest_seen_urls))
+        let maybe_unseen_count = if parsed_entries.len() > latest_seen.len() {
+            parsed_entries.iter().rposition(|entry| {
+                entry.identifier().map_or(false, |id| latest_seen.contains(&id))
+            })
         } else {
             None
         }.unwrap_or(parsed_entries.len());
 
-        let maybe_unseen_entries = parsed_entries.into_iter()
-            .take(maybe_unseen_count)
-            .filter(|entry| !entry.link_in(&latest_seen_urls));
+        for entry in parsed_entries.into_iter().take(maybe_unseen_count) {
+            let Some(identifier) = entry.identifier() else {
+                println!("Discarding unidentifiable entry from {}", feed.url);
+                continue;
+            };
 
-        for entry in maybe_unseen_entries {
-            let exists = data::item_already_exists(entry.link.as_ref().unwrap(), feed, conn)
+            if latest_seen.contains(&identifier) {
+                continue;
+            }
+
+            let exists = data::item_already_exists(&identifier, feed, conn)
                 .map_err(fill_err!("Error querying if item exists"))?;
 
             if !exists {

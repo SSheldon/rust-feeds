@@ -3,11 +3,7 @@ use chrono::{DateTime, FixedOffset};
 use rss::{Item as RssItem};
 use url::Url;
 
-fn eq_ignoring_scheme(a: &str, b: &str) -> bool {
-    a == b
-        || a.strip_prefix("https://").map_or(false, |a| Some(a) == b.strip_prefix("http://"))
-        || a.strip_prefix("http://").map_or(false, |a| Some(a) == b.strip_prefix("https://"))
-}
+use crate::item_identity::ItemIdentifier;
 
 pub struct Entry {
     pub title: String,
@@ -15,7 +11,7 @@ pub struct Entry {
     pub link: Option<String>,
     pub published: Option<DateTime<FixedOffset>>,
     pub author: Option<String>,
-    pub id: Option<String>,
+    pub guid: Option<String>,
 }
 
 impl Entry {
@@ -26,7 +22,13 @@ impl Entry {
             link: entry_ref.link().map(str::to_owned),
             published: entry_ref.published(),
             author: entry_ref.author().map(str::to_owned),
-            id: entry_ref.id().map(str::to_owned),
+            guid: entry_ref.guid().map(str::to_owned),
+        }
+    }
+
+    pub fn clear_redundant_guid(&mut self) {
+        if self.guid == self.link {
+            self.guid = None;
         }
     }
 
@@ -37,10 +39,8 @@ impl Entry {
         self.link = link_url.map(Into::into).or(self.link.take());
     }
 
-    pub fn link_in(&self, urls: &[String]) -> bool {
-        self.link.as_ref().map_or(false, |link| {
-            urls.iter().any(|url| eq_ignoring_scheme(link, url))
-        })
+    pub fn identifier(&self) -> Option<ItemIdentifier> {
+        ItemIdentifier::new(self.link.as_deref(), self.guid.as_deref())
     }
 }
 
@@ -111,7 +111,14 @@ impl<'a> EntryRef<'a> {
 
     pub fn author(self) -> Option<&'a str> {
         match self {
-            Self::Rss(item) => item.author(),
+            Self::Rss(item) => {
+                item.author()
+                    .or_else(|| {
+                        item.dublin_core_ext()
+                            .and_then(|ext| ext.creators().first())
+                            .map(String::as_str)
+                    })
+            }
             Self::Atom(entry) => {
                 entry.authors()
                     .first()
@@ -120,7 +127,7 @@ impl<'a> EntryRef<'a> {
         }
     }
 
-    pub fn id(self) -> Option<&'a str> {
+    pub fn guid(self) -> Option<&'a str> {
         match self {
             Self::Rss(item) => item.guid().map(|id| id.value()),
             Self::Atom(entry) => Some(entry.id()),
