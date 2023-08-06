@@ -49,9 +49,9 @@ fn format_item(item: DbItem) -> Item {
             if item.is_read { Some(StreamTag::State(None, StreamState::Read)) } else { None },
             if item.is_saved { Some(StreamTag::State(None, StreamState::Starred)) } else { None },
         ].into_iter().filter_map(|t| t).collect(),
-        alternate: vec![
-            Link { href: item.url },
-        ],
+        alternate: item.url.map(|url| {
+            Link { href: url }
+        }).into_iter().collect(),
         author: item.author,
         title: item.title,
         summary: ItemSummary {
