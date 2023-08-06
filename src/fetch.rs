@@ -66,6 +66,8 @@ fn parse_new_entries(
         // Currently we require entries to have links
         .filter(|entry| entry.link.is_some())
         .map(|mut entry| {
+            // ids are often the same as the link, which isn't very meaningful
+            entry.clear_redundant_guid();
             // Some bad feeds use relative links...
             entry.expand_link(&base_url);
             entry

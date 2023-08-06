@@ -30,6 +30,12 @@ impl Entry {
         }
     }
 
+    pub fn clear_redundant_guid(&mut self) {
+        if self.guid == self.link {
+            self.guid = None;
+        }
+    }
+
     pub(crate) fn expand_link(&mut self, base_url: &Url) {
         let link_url = self.link.as_ref()
             .and_then(|link| base_url.join(link).ok());
