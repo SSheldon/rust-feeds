@@ -7,6 +7,7 @@ mod data;
 mod error;
 mod fetch;
 mod handling;
+mod item_identity;
 mod models;
 mod parse;
 mod schema;

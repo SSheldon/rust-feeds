@@ -3,11 +3,7 @@ use chrono::{DateTime, FixedOffset};
 use rss::{Item as RssItem};
 use url::Url;
 
-fn eq_ignoring_scheme(a: &str, b: &str) -> bool {
-    a == b
-        || a.strip_prefix("https://").map_or(false, |a| Some(a) == b.strip_prefix("http://"))
-        || a.strip_prefix("http://").map_or(false, |a| Some(a) == b.strip_prefix("https://"))
-}
+use crate::item_identity::ItemIdentifier;
 
 pub struct Entry {
     pub title: String,
@@ -43,10 +39,8 @@ impl Entry {
         self.link = link_url.map(Into::into).or(self.link.take());
     }
 
-    pub fn link_in(&self, urls: &[String]) -> bool {
-        self.link.as_ref().map_or(false, |link| {
-            urls.iter().any(|url| eq_ignoring_scheme(link, url))
-        })
+    pub fn identifier(&self) -> Option<ItemIdentifier> {
+        ItemIdentifier::new(self.link.as_deref())
     }
 }
 

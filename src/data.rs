@@ -2,6 +2,7 @@ use diesel;
 use diesel::prelude::*;
 use diesel::pg::PgConnection;
 
+use crate::item_identity::ItemIdentifier;
 use crate::models::feed::Feed;
 use crate::models::group::Group;
 use crate::models::item::Item;
@@ -82,26 +83,36 @@ pub fn count_items(conn: &mut PgConnection) -> QueryResult<u32> {
     query.get_result::<i64>(conn).map(|i| i as u32)
 }
 
-pub fn load_latest_item_urls(feed: &Feed, conn: &mut PgConnection)
--> QueryResult<Vec<String>> {
+pub fn load_latest_item_identifiers(feed: &Feed, conn: &mut PgConnection)
+-> QueryResult<Vec<ItemIdentifier<'static>>> {
     use crate::schema::item::dsl::*;
 
-    item.filter(feed_id.eq(feed.id))
+    let urls = item.filter(feed_id.eq(feed.id))
         .order(id.desc())
         .limit(10)
         .select(url)
-        .load(conn)
+        .load::<String>(conn)?;
+
+    let identifiers = urls
+        .into_iter()
+        .map(ItemIdentifier::new_owned)
+        .collect();
+
+    Ok(identifiers)
 }
 
-pub fn item_already_exists(link: &str, feed: &Feed, conn: &mut PgConnection)
--> QueryResult<bool> {
+pub fn item_already_exists(
+    identifier: &ItemIdentifier,
+    feed: &Feed,
+    conn: &mut PgConnection,
+) -> QueryResult<bool> {
     use diesel::dsl::{exists, select};
     use crate::schema::item::dsl::*;
 
     // Compare insensitive to http vs https
     // some feeds seem to alternate...
-    let http_link = link.replace("http://", "https://");
-    let https_link = link.replace("https://", "http://");
+    let http_link = identifier.link().replace("http://", "https://");
+    let https_link = identifier.link().replace("https://", "http://");
 
     let link_expr = url.eq(http_link).or(url.eq(https_link));
     let query = item.filter(feed_id.eq(feed.id).and(link_expr));
