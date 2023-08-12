@@ -118,14 +118,6 @@ impl<'a> EntryRef<'a> {
                             .and_then(|ext| ext.creators().first())
                             .map(String::as_str)
                     })
-                    .or_else(|| {
-                        // Work around rust-syndication/rss#154
-                        item.extensions()
-                            .get("dc")
-                            .and_then(|ext| ext.get("creator"))
-                            .and_then(|exts| exts.first())
-                            .and_then(|ext| ext.value())
-                    })
             }
             Self::Atom(entry) => {
                 entry.authors()
