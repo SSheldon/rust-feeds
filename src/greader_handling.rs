@@ -32,8 +32,8 @@ fn format_subscription(feed: DbFeed, group: Option<DbGroup>) -> Subscription {
         sort_id: None,
         categories: group.map(|group| {
             SubscriptionCategory {
-                id: StreamTag::Label(None, group.title),
-                label: None,
+                id: StreamTag::Label(None, group.title.clone()),
+                label: group.title,
             }
         }).into_iter().collect(),
     }

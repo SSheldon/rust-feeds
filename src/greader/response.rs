@@ -56,7 +56,7 @@ pub struct Subscription {
 #[derive(Deserialize, Serialize)]
 pub struct SubscriptionCategory {
     pub id: StreamTag,
-    pub label: Option<String>,
+    pub label: String,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
