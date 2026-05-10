@@ -216,7 +216,7 @@ impl ItemsFilter {
         })
     }
 
-    fn query(&self) -> item::BoxedQuery<Pg> {
+    fn query(&self) -> item::BoxedQuery<'_, Pg> {
         let mut query = item::table.into_boxed();
 
         if let Some(expr) = self.expr() {
@@ -269,7 +269,7 @@ impl ItemsQuery {
         }
     }
 
-    fn query(&self) -> item::BoxedQuery<Pg> {
+    fn query(&self) -> item::BoxedQuery<'_, Pg> {
         let mut query = self.filter.query()
             .limit(self.count as i64);
 

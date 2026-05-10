@@ -39,7 +39,7 @@ impl Entry {
         self.link = link_url.map(Into::into).or(self.link.take());
     }
 
-    pub fn identifier(&self) -> Option<ItemIdentifier> {
+    pub fn identifier(&self) -> Option<ItemIdentifier<'_>> {
         ItemIdentifier::new(self.link.as_deref(), self.guid.as_deref())
     }
 }
