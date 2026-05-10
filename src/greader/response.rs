@@ -84,7 +84,7 @@ pub struct Link {
 pub struct Item {
     pub id: ItemId,
     pub origin: ItemOrigin,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(default)]
     pub categories: Vec<StreamTag>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub alternate: Vec<Link>,
