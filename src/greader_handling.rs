@@ -334,6 +334,8 @@ fn load_items_for_ids(ids: &[ItemId], conn: &mut PgConnection) -> DataResult<Str
         .collect();
 
     Ok(StreamItemsContentsResponse {
+        id: StreamId::Tag(StreamTag::State(None, StreamState::ReadingList)),
+        updated: None,
         items: api_items,
     })
 }

@@ -144,6 +144,9 @@ pub struct ItemRef {
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[derive(Deserialize, Serialize)]
 pub struct StreamItemsContentsResponse {
+    pub id: StreamId,
+    #[serde(with = "timestamp::OptSec", default, skip_serializing_if = "Option::is_none")]
+    pub updated: Option<NaiveDateTime>,
     pub items: Vec<Item>,
 }
 
