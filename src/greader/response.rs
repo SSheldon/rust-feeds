@@ -48,7 +48,7 @@ pub struct Subscription {
     pub html_url: Option<String>,
     #[serde(rename = "sortid", default, skip_serializing_if = "Option::is_none")]
     pub sort_id: Option<String>,
-    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(default)]
     pub categories: Vec<SubscriptionCategory>,
 }
 
