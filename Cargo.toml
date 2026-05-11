@@ -6,23 +6,23 @@ edition = "2021"
 
 [dependencies]
 atom_syndication = { version = "0.12", default-features = false }
-base64 = "0.21"
+base64 = "0.22"
 bytes = "1.0"
 chrono = "0.4"
 clap = "4.3"
-env_logger = "0.10"
+env_logger = "0.11"
 fever-api = { path = "fever-api" }
 futures = "0.3"
-reqwest = "0.11"
+reqwest = "0.13"
 rss = { version = "2.0", default-features = false }
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
-serde_html_form = "0.2"
+serde_html_form = "0.4"
 sha2 = "0.10"
 tokio = { version = "1.0", features = ["rt-multi-thread"] }
 url = "2.0"
-warp = { version = "0.3", default-features = false }
+warp = { version = "0.4", features = ["server"] }
 
 [dependencies.diesel]
 version = "2.0"
