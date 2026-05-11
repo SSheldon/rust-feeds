@@ -1,7 +1,7 @@
 use std::fmt;
 use std::str::FromStr;
 
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Utc};
 use serde::{self, Deserialize, Serialize};
 use serde_derive::{Deserialize, Serialize};
 
@@ -350,9 +350,9 @@ pub struct StreamContentsParams {
     #[serde(rename = "xt", default)]
     pub exclude: Option<StreamTag>,
     #[serde(rename = "ot", default, with = "timestamp::OptSec")]
-    pub oldest_time: Option<NaiveDateTime>,
+    pub oldest_time: Option<DateTime<Utc>>,
     #[serde(rename = "nt", default, with = "timestamp::OptSec")]
-    pub newest_time: Option<NaiveDateTime>,
+    pub newest_time: Option<DateTime<Utc>>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -369,9 +369,9 @@ pub struct StreamItemsIdsParams {
     #[serde(rename = "xt", default)]
     pub exclude: Option<StreamTag>,
     #[serde(rename = "ot", default, with = "timestamp::OptSec")]
-    pub oldest_time: Option<NaiveDateTime>,
+    pub oldest_time: Option<DateTime<Utc>>,
     #[serde(rename = "nt", default, with = "timestamp::OptSec")]
-    pub newest_time: Option<NaiveDateTime>,
+    pub newest_time: Option<DateTime<Utc>>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -382,9 +382,9 @@ pub struct StreamItemsCountParams {
     #[serde(rename = "xt", default)]
     pub exclude: Option<StreamTag>,
     #[serde(rename = "ot", default, with = "timestamp::OptSec")]
-    pub oldest_time: Option<NaiveDateTime>,
+    pub oldest_time: Option<DateTime<Utc>>,
     #[serde(rename = "nt", default, with = "timestamp::OptSec")]
-    pub newest_time: Option<NaiveDateTime>,
+    pub newest_time: Option<DateTime<Utc>>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -411,7 +411,7 @@ pub struct MarkAllAsReadParams {
     #[serde(rename = "s")]
     pub stream_id: StreamId,
     #[serde(rename = "ts", default, with = "timestamp::OptUSec")]
-    pub older_than: Option<NaiveDateTime>,
+    pub older_than: Option<DateTime<Utc>>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]

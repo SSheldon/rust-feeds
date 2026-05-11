@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use chrono::NaiveDateTime;
+use chrono::{DateTime, NaiveDateTime, Utc};
 use diesel;
 use diesel::prelude::*;
 use diesel::pg::{Pg, PgConnection};
@@ -57,8 +57,8 @@ fn format_item(item: DbItem) -> Item {
         summary: ItemSummary {
             content: item.content,
         },
-        timestamp: item.fetched,
-        published: item.published,
+        timestamp: item.fetched.and_utc(),
+        published: item.published.and_utc(),
         updated: None,
         crawl_time: None,
     }
@@ -100,8 +100,8 @@ struct ItemsFilter {
     feed_id: Option<i32>,
     read_state: Option<bool>,
     saved_state: Option<bool>,
-    min_time: Option<NaiveDateTime>,
-    max_time: Option<NaiveDateTime>,
+    min_time: Option<DateTime<Utc>>,
+    max_time: Option<DateTime<Utc>>,
 }
 
 impl ItemsFilter {
@@ -182,8 +182,8 @@ impl ItemsFilter {
     fn new(
         stream_id: &StreamId,
         exclude: Option<&StreamTag>,
-        oldest_time: Option<NaiveDateTime>,
-        newest_time: Option<NaiveDateTime>,
+        oldest_time: Option<DateTime<Utc>>,
+        newest_time: Option<DateTime<Utc>>,
     ) -> Self {
         let mut filter = Self::stream(stream_id);
         if let Some(tag) = exclude {
@@ -206,10 +206,10 @@ impl ItemsFilter {
                 Box::new(item::is_saved.eq(is_saved))
             }),
             self.min_time.map::<BoxedItemExpr, _>(|min_time| {
-                Box::new(item::fetched.ge(min_time))
+                Box::new(item::fetched.ge(min_time.naive_utc()))
             }),
             self.max_time.map::<BoxedItemExpr, _>(|max_time| {
-                Box::new(item::fetched.le(max_time))
+                Box::new(item::fetched.le(max_time.naive_utc()))
             }),
         ].into_iter().fold(None, |x, y| {
             merge(x, y, |a, b| Box::new(a.and(b)))
@@ -242,8 +242,8 @@ impl ItemsQuery {
         number: u32,
         continuation: Option<&str>,
         exclude: Option<&StreamTag>,
-        oldest_time: Option<NaiveDateTime>,
-        newest_time: Option<NaiveDateTime>,
+        oldest_time: Option<DateTime<Utc>>,
+        newest_time: Option<DateTime<Utc>>,
     ) -> Self {
         let filter = ItemsFilter::new(
             stream_id,
@@ -310,7 +310,7 @@ fn load_item_ids(query: ItemsQuery, conn: &mut PgConnection) -> DataResult<Strea
         .map(|(id, fetched)| {
             ItemRef {
                 id: ItemId(id as i64),
-                timestamp: fetched,
+                timestamp: fetched.and_utc(),
                 direct_stream_ids: vec![],
             }
         })
@@ -335,7 +335,7 @@ fn load_items_for_ids(ids: &[ItemId], conn: &mut PgConnection) -> DataResult<Str
 
     Ok(StreamItemsContentsResponse {
         id: StreamId::Tag(StreamTag::State(None, StreamState::ReadingList)),
-        updated: Some(NaiveDateTime::MIN),
+        updated: Some(DateTime::UNIX_EPOCH),
         items: api_items,
     })
 }
@@ -408,7 +408,7 @@ fn load_unread_counts(conn: &mut PgConnection) -> DataResult<UnreadCountResponse
             UnreadCount {
                 id: StreamId::Feed(id.to_string()),
                 count: count as u32,
-                newest_item_time: latest,
+                newest_item_time: latest.as_ref().map(NaiveDateTime::and_utc),
             }
         })
         .collect();

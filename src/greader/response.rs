@@ -1,4 +1,4 @@
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Utc};
 use serde_derive::{Deserialize, Serialize};
 
 use super::request::{ItemId, StreamId, StreamTag};
@@ -28,7 +28,7 @@ pub struct UnreadCount {
     pub count: u32,
     pub id: StreamId,
     #[serde(rename = "newestItemTimestampUsec", with = "timestamp::OptUSec", default, skip_serializing_if = "Option::is_none")]
-    pub newest_item_time: Option<NaiveDateTime>,
+    pub newest_item_time: Option<DateTime<Utc>>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -67,7 +67,7 @@ pub struct StreamContentsResponse {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub alternate: Vec<Link>,
     #[serde(with = "timestamp::OptSec", default, skip_serializing_if = "Option::is_none")]
-    pub updated: Option<NaiveDateTime>,
+    pub updated: Option<DateTime<Utc>>,
     pub items: Vec<Item>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub continuation: Option<String>,
@@ -93,13 +93,13 @@ pub struct Item {
     pub title: String,
     pub summary: ItemSummary,
     #[serde(rename = "timestampUsec", with = "timestamp::USec")]
-    pub timestamp: NaiveDateTime,
+    pub timestamp: DateTime<Utc>,
     #[serde(with = "timestamp::Sec")]
-    pub published: NaiveDateTime,
+    pub published: DateTime<Utc>,
     #[serde(with = "timestamp::OptSec", default, skip_serializing_if = "Option::is_none")]
-    pub updated: Option<NaiveDateTime>,
+    pub updated: Option<DateTime<Utc>>,
     #[serde(rename = "crawlTimeMsec", with = "timestamp::OptMSec", default, skip_serializing_if = "Option::is_none")]
-    pub crawl_time: Option<NaiveDateTime>,
+    pub crawl_time: Option<DateTime<Utc>>,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -136,7 +136,7 @@ pub struct ItemRef {
     #[serde(serialize_with = "serialize_decimal_str")]
     pub id: ItemId,
     #[serde(rename = "timestampUsec", with = "timestamp::USec")]
-    pub timestamp: NaiveDateTime,
+    pub timestamp: DateTime<Utc>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub direct_stream_ids: Vec<StreamId>,
 }
@@ -146,7 +146,7 @@ pub struct ItemRef {
 pub struct StreamItemsContentsResponse {
     pub id: StreamId,
     #[serde(with = "timestamp::OptSec", default, skip_serializing_if = "Option::is_none")]
-    pub updated: Option<NaiveDateTime>,
+    pub updated: Option<DateTime<Utc>>,
     pub items: Vec<Item>,
 }
 

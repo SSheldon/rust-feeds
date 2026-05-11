@@ -2,7 +2,7 @@ use std::fmt::Display;
 use std::marker::PhantomData;
 use std::str::FromStr;
 
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Utc};
 use serde::{self, Deserialize, Serialize};
 
 use super::request::ParseError;
@@ -32,16 +32,16 @@ pub trait Transform {
 pub enum Sec {}
 
 impl Transform for Sec {
-    type Value = NaiveDateTime;
+    type Value = DateTime<Utc>;
     type Raw = i64;
     type Error = ParseError;
 
-    fn from_raw(i: i64) -> Result<NaiveDateTime, ParseError> {
-        NaiveDateTime::from_timestamp_opt(i, 0)
+    fn from_raw(i: i64) -> Result<DateTime<Utc>, ParseError> {
+        DateTime::from_timestamp_secs(i)
             .ok_or_else(|| ParseError { type_name: "Sec", value: i.to_string() })
     }
 
-    fn to_raw(timestamp: &NaiveDateTime) -> i64 {
+    fn to_raw(timestamp: &DateTime<Utc>) -> i64 {
         timestamp.timestamp()
     }
 }
@@ -49,17 +49,17 @@ impl Transform for Sec {
 pub enum MSec {}
 
 impl Transform for MSec {
-    type Value = NaiveDateTime;
+    type Value = DateTime<Utc>;
     type Raw = String;
     type Error = ParseError;
 
-    fn from_raw(s: String) -> Result<NaiveDateTime, ParseError> {
+    fn from_raw(s: String) -> Result<DateTime<Utc>, ParseError> {
         i64::from_str(&s).ok()
-            .and_then(NaiveDateTime::from_timestamp_millis)
+            .and_then(DateTime::from_timestamp_millis)
             .ok_or_else(|| ParseError { type_name: "MSec", value: s })
     }
 
-    fn to_raw(timestamp: &NaiveDateTime) -> String {
+    fn to_raw(timestamp: &DateTime<Utc>) -> String {
         timestamp.timestamp_millis().to_string()
     }
 }
@@ -67,17 +67,17 @@ impl Transform for MSec {
 pub enum USec {}
 
 impl Transform for USec {
-    type Value = NaiveDateTime;
+    type Value = DateTime<Utc>;
     type Raw = String;
     type Error = ParseError;
 
-    fn from_raw(s: String) -> Result<NaiveDateTime, ParseError> {
+    fn from_raw(s: String) -> Result<DateTime<Utc>, ParseError> {
         i64::from_str(&s).ok()
-            .and_then(NaiveDateTime::from_timestamp_micros)
+            .and_then(DateTime::from_timestamp_micros)
             .ok_or_else(|| ParseError { type_name: "USec", value: s })
     }
 
-    fn to_raw(timestamp: &NaiveDateTime) -> String {
+    fn to_raw(timestamp: &DateTime<Utc>) -> String {
         timestamp.timestamp_micros().to_string()
     }
 }
