@@ -13,7 +13,6 @@ use fever_api::{
 
 use crate::config::{PgConnectionPool, PooledPgConnection};
 use crate::error::Error;
-use crate::fetch;
 use crate::greader::auth::LoginParams as GReaderLoginParams;
 use crate::greader::request::{
     Endpoint as GReaderEndpoint,
@@ -53,29 +52,6 @@ async fn parse_request(
         query_pairs, body_params, request);
 
     request.ok_or_else(warp::reject::not_found)
-}
-
-async fn accept_refresh(
-    query_pairs: Vec<(String, String)>,
-) -> Result<(), warp::Rejection> {
-    let is_refresh = match query_pairs.first() {
-        Some(&(ref action, _)) if action == "refresh" => true,
-        _ => false,
-    };
-
-    if is_refresh {
-        Ok(())
-    } else {
-        Err(warp::reject::not_found())
-    }
-}
-
-async fn handle_refresh(
-    mut conn: PooledPgConnection,
-) -> Result<impl warp::Reply, warp::Rejection> {
-    fetch::fetch_items(&mut conn).await
-        .map(|_| warp::reply())
-        .map_err(|err| warp::reject::custom(err))
 }
 
 async fn handle_request(
@@ -216,15 +192,7 @@ pub async fn serve(
             handle_request(request, key.clone(), conn)
         });
 
-    let refresh = warp::get()
-        .and(warp::query::<Vec<(String, String)>>())
-        .and_then(accept_refresh)
-        .untuple_one()
-        .and(connect_db(pool.clone()))
-        .and_then(handle_refresh);
-
-    let fever = warp::path::end()
-        .and(api.or(refresh));
+    let fever = warp::path::end().and(api);
 
     let login_creds = creds.clone();
     let greader_login = warp::path("accounts")
