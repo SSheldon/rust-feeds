@@ -88,8 +88,6 @@ async fn handle_greader_login(
     params: GReaderLoginParams,
     creds: Option<(String, String)>,
 ) -> Result<warp::reply::Response, warp::Rejection> {
-    println!("{:?}", params);
-
     let creds = creds.as_ref().map(deref_str_pair);
     let response = crate::greader_auth::handle_login(&params, creds)
         .map(|response| response.to_string())
@@ -103,8 +101,6 @@ async fn check_greader_auth(
     header: String,
     token: Option<String>,
 ) -> Result<(), warp::Rejection> {
-    println!("{:?}", header);
-
     let token_accepted = crate::greader_auth::check(&header, token.as_deref())
         .map_err(fill_err!("Error parsing authorization header"))
         .map_err(warp::reject::custom)?;
@@ -168,9 +164,8 @@ async fn handle_greader_request(
     request: GReaderRequest,
     mut conn: PooledPgConnection,
 ) -> Result<impl warp::Reply, warp::Rejection> {
-    println!("{:?}", request);
+    println!("parsed: {:?}", request);
     let response = crate::greader_handling::handle_api_request(&request, &mut conn);
-    println!("{:?}", response);
     response.map_err(|err| warp::reject::custom(err))
 }
 
