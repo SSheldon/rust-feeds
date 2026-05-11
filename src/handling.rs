@@ -63,7 +63,7 @@ fn format_item(item: DbItem) -> fever_api::Item {
         html: item.content,
         is_saved: item.is_saved,
         is_read: item.is_read,
-        created_on_time: item.published,
+        created_on_time: item.published.and_utc(),
     }
 }
 

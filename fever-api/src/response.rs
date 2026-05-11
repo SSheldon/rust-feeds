@@ -1,4 +1,4 @@
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Utc};
 use serde::{self, Serialize};
 use serde_derive::Serialize;
 
@@ -11,17 +11,17 @@ fn serialize_bool_as_number<S>(value: &bool, serializer: S)
     i.serialize(serializer)
 }
 
-fn serialize_datetime_as_timestamp<S>(value: &NaiveDateTime, serializer: S)
+fn serialize_datetime_as_timestamp<S>(value: &DateTime<Utc>, serializer: S)
         -> Result<S::Ok, S::Error>
         where S: serde::Serializer {
     let t = value.timestamp();
     t.serialize(serializer)
 }
 
-fn serialize_opt_datetime_as_timestamp<S>(value: &Option<NaiveDateTime>, serializer: S)
+fn serialize_opt_datetime_as_timestamp<S>(value: &Option<DateTime<Utc>>, serializer: S)
         -> Result<S::Ok, S::Error>
         where S: serde::Serializer {
-    let t = value.as_ref().map(NaiveDateTime::timestamp);
+    let t = value.as_ref().map(DateTime::timestamp);
     t.serialize(serializer)
 }
 
@@ -58,7 +58,7 @@ pub struct Feed {
     pub is_spark: bool,
     #[serde(skip_serializing_if = "Option::is_none",
             serialize_with = "serialize_opt_datetime_as_timestamp")]
-    pub last_updated_on_time: Option<NaiveDateTime>,
+    pub last_updated_on_time: Option<DateTime<Utc>>,
 }
 
 #[derive(Serialize)]
@@ -76,7 +76,7 @@ pub struct Item {
     #[serde(serialize_with = "serialize_bool_as_number")]
     pub is_read: bool,
     #[serde(serialize_with = "serialize_datetime_as_timestamp")]
-    pub created_on_time: NaiveDateTime,
+    pub created_on_time: DateTime<Utc>,
 }
 
 #[derive(Serialize)]
@@ -112,7 +112,7 @@ pub struct Response {
     pub auth: bool,
     #[serde(skip_serializing_if = "Option::is_none",
             serialize_with = "serialize_opt_datetime_as_timestamp")]
-    pub last_refreshed_on_time: Option<NaiveDateTime>,
+    pub last_refreshed_on_time: Option<DateTime<Utc>>,
     #[serde(flatten)]
     pub payload: ResponsePayload,
 }

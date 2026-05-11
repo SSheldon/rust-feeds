@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Utc};
 
 use crate::{Key, join_ids};
 
@@ -20,8 +20,8 @@ pub enum RequestType {
     MarkItemUnread(u32),
     MarkItemSaved(u32),
     MarkItemUnsaved(u32),
-    MarkFeedRead(u32, NaiveDateTime),
-    MarkGroupRead(u32, NaiveDateTime),
+    MarkFeedRead(u32, DateTime<Utc>),
+    MarkGroupRead(u32, DateTime<Utc>),
 }
 
 impl RequestType {
@@ -42,7 +42,7 @@ impl RequestType {
                 let id = body_params.get("id").and_then(|v| v.parse().ok());
                 let before = body_params.get("before")
                     .and_then(|v| v.parse().ok())
-                    .and_then(|t| NaiveDateTime::from_timestamp_opt(t, 0));
+                    .and_then(DateTime::from_timestamp_secs);
                 match (mark, mark_as) {
                     (None, None) => Some(RequestType::None),
                     (Some("item"), Some("read")) =>
