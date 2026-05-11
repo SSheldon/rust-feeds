@@ -2,7 +2,7 @@
 name = "fever-api"
 version = "0.0.0"
 authors = ["Steven Sheldon"]
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 chrono = "0.4"
