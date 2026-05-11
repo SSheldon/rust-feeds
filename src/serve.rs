@@ -232,8 +232,7 @@ pub async fn serve(
         .and(connect_db(pool.clone()))
         .and_then(handle_greader_request);
 
-    let greader = warp::path("api")
-        .and(warp::path("greader.php"))
+    let greader = warp::path("greader")
         .and(greader_login.or(greader_api));
 
     let route = fever.or(greader).with(warp::log("feeds"));
