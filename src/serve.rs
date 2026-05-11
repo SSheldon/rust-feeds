@@ -235,7 +235,11 @@ pub async fn serve(
     let greader = warp::path("greader")
         .and(greader_login.or(greader_api));
 
-    let route = fever.or(greader).with(warp::log("feeds"));
+    let index = warp::path::end()
+        .and(warp::get())
+        .map(|| "hello, world");
+
+    let route = index.or(fever).or(greader).with(warp::log("feeds"));
 
     warp::serve(route).run(([0, 0, 0, 0], port)).await;
 }
