@@ -183,7 +183,8 @@ pub async fn serve(
         .map(deref_str_pair)
         .map(|(user, pass)| ApiKey::new(user, pass));
 
-    let api = warp::post()
+    let api = warp::path::end()
+        .and(warp::post())
         .and(warp::query::<Vec<(String, String)>>())
         .and(warp::body::form::<HashMap<String, String>>())
         .and_then(parse_request)
@@ -192,7 +193,7 @@ pub async fn serve(
             handle_request(request, key.clone(), conn)
         });
 
-    let fever = warp::path::end().and(api);
+    let fever = warp::path("fever").and(api);
 
     let login_creds = creds.clone();
     let greader_login = warp::path("accounts")
