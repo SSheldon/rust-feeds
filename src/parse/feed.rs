@@ -41,7 +41,7 @@ impl Feed {
                     .or(feed.links().first())
                     .map(|link| link.href())
             }
-        }.map(str::trim)
+        }.map(str::trim).filter(|url| !url.is_empty())
     }
 
     pub fn len(&self) -> usize {
