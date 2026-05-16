@@ -113,11 +113,13 @@ fn parse_new_entries(
     Ok(entries)
 }
 
+const USER_AGENT: &str = "Mozilla/5.0 Gecko (compatible; RssReader; +https://github.com/SSheldon/rust-feeds)";
+
 async fn fetch_feed(url: &str, client: &Client)
 -> Result<Bytes, reqwest::Error> {
     println!("Fetching items from {}...", url);
     let response = client.get(url)
-        .header(reqwest::header::USER_AGENT, "Mozilla/5.0 Gecko")
+        .header(reqwest::header::USER_AGENT, USER_AGENT)
         .send()
         .await?;
     response.bytes().await
